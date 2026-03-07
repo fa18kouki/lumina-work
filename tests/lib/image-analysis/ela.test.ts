@@ -144,37 +144,41 @@ describe("analyzeEla", () => {
   });
 
   it("閾値超過でisManipulated: trueを返す", async () => {
-    // 極端に不均一な画像を作成（高い閾値を超えるように）
+    // 極端に不均一な画像を作成
+    // 1. 低品質で安定した背景を作成
     const baseCompressed = await sharp(
       await createUniformImage(400, 400, { r: 50, g: 50, b: 50 })
     )
-      .jpeg({ quality: 30 })
+      .jpeg({ quality: 20 })
       .toBuffer();
+    const stable = await sharp(baseCompressed).jpeg({ quality: 20 }).toBuffer();
 
-    // さらに圧縮して安定させる
-    const doubleCompressed = await sharp(baseCompressed)
-      .jpeg({ quality: 30 })
-      .toBuffer();
-
-    // 鮮明な大きいパッチを合成
-    const manipulated = await sharp(doubleCompressed)
+    // 2. 複数の鮮明なパッチを合成（広範囲の不均一性を作る）
+    const manipulated = await sharp(stable)
       .composite([
         {
           input: await sharp({
-            create: {
-              width: 200,
-              height: 200,
-              channels: 3,
-              background: { r: 255, g: 255, b: 0 },
-            },
-          })
-            .png()
-            .toBuffer(),
-          left: 100,
+            create: { width: 200, height: 100, channels: 3, background: { r: 255, g: 0, b: 0 } },
+          }).png().toBuffer(),
+          left: 0,
+          top: 0,
+        },
+        {
+          input: await sharp({
+            create: { width: 100, height: 200, channels: 3, background: { r: 0, g: 255, b: 0 } },
+          }).png().toBuffer(),
+          left: 300,
           top: 100,
         },
+        {
+          input: await sharp({
+            create: { width: 150, height: 150, channels: 3, background: { r: 0, g: 0, b: 255 } },
+          }).png().toBuffer(),
+          left: 50,
+          top: 250,
+        },
       ])
-      .jpeg({ quality: 95 })
+      .jpeg({ quality: 98 })
       .toBuffer();
 
     const result = await analyzeEla(manipulated);
