@@ -60,15 +60,16 @@ enum UserRole {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String?   @unique
-  phone         String?   @unique
-  emailVerified DateTime? @map("email_verified")
-  phoneVerified DateTime? @map("phone_verified")
-  image         String?
-  role          UserRole  @default(CAST)
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id             String    @id @default(cuid())
+  email          String?   @unique
+  phone          String?   @unique
+  emailVerified  DateTime? @map("email_verified")
+  phoneVerified  DateTime? @map("phone_verified")
+  image          String?
+  role           UserRole  @default(CAST)
+  supabaseAuthId String?   @unique @map("supabase_auth_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   // 認証関連
   accounts Account[]
@@ -87,12 +88,10 @@ model User {
 // ==================== キャスト ====================
 
 enum CastRank {
-  UNRANKED
-  BRONZE
-  SILVER
-  GOLD
-  PLATINUM
-  S_RANK // Sランク（最高位）
+  C // Cランク
+  B // Bランク
+  A // Aランク
+  S // Sランク（最高位）
 }
 
 enum IdVerificationStatus {
@@ -166,7 +165,7 @@ model Cast {
   // ステータス
   idVerified           Boolean              @default(false) @map("id_verified")
   idVerificationStatus IdVerificationStatus @default(PENDING) @map("id_verification_status")
-  rank                 CastRank             @default(UNRANKED)
+  rank                 CastRank             @default(C)
   penaltyCount         Int                  @default(0) @map("penalty_count")
   isSuspended          Boolean              @default(false) @map("is_suspended")
 
@@ -236,12 +235,18 @@ model Store {
 
   // 営業情報
   businessHours String? @map("business_hours")
-  salarySystem  String? @map("salary_system")
+  salarySystem  Json?   @map("salary_system")
   benefits      String[]
 
   // 求める条件
   mustConditions Json? @map("must_conditions")
   wantConditions Json? @map("want_conditions")
+
+  // 流入元（オンボーディングで収集）
+  referralSource String? @map("referral_source")
+
+  // 通知設定
+  notificationSettings Json? @map("notification_settings")
 
   // ステータス
   isVerified Boolean @default(false) @map("is_verified")
@@ -381,16 +386,29 @@ model Message {
   id       String  @id @default(cuid())
   matchId  String  @map("match_id")
   senderId String  @map("sender_id")
-  content  String  @db.Text
+  content  String? @db.Text
   isRead   Boolean @default(false) @map("is_read")
 
   createdAt DateTime @default(now()) @map("created_at")
 
   // リレーション
-  match  Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  sender User  @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  match  Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  sender User           @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  images MessageImage[]
 
   @@map("messages")
+}
+
+model MessageImage {
+  id        String   @id @default(cuid())
+  messageId String   @map("message_id")
+  url       String
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("message_images")
 }
 
 // ==================== LINE連携（公式アカウント） ====================
