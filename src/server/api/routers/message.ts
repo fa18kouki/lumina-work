@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { TRPCError } from "@trpc/server";
+import { dispatchNotification } from "@/server/notifications";
+import { shouldThrottle } from "@/server/notifications/throttle";
 
 export const messageRouter = createTRPCRouter({
   /**
@@ -10,8 +12,12 @@ export const messageRouter = createTRPCRouter({
     .input(
       z.object({
         matchId: z.string(),
-        content: z.string().min(1).max(2000),
-      })
+        content: z.string().max(2000).optional(),
+        imageUrls: z.array(z.string().url()).max(5).optional(),
+      }).refine(
+        (data) => (data.content && data.content.trim().length > 0) || (data.imageUrls && data.imageUrls.length > 0),
+        { message: "テキストまたは画像のいずれかが必要です" }
+      )
     )
     .mutation(async ({ ctx, input }) => {
       const user = await ctx.prisma.user.findUnique({
@@ -25,7 +31,7 @@ export const messageRouter = createTRPCRouter({
       const castId = user?.cast?.id;
       const storeId = user?.store?.id;
 
-      // マッチングが自分に関連しているか確認
+      // 自分に関連するか確認
       const match = await ctx.prisma.match.findFirst({
         where: {
           id: input.matchId,
@@ -35,12 +41,29 @@ export const messageRouter = createTRPCRouter({
             { storeId: storeId ?? "" },
           ],
         },
+        include: {
+          cast: {
+            select: {
+              userId: true,
+              nickname: true,
+              lineUserId: true,
+              user: { select: { email: true } },
+            },
+          },
+          store: {
+            select: {
+              userId: true,
+              name: true,
+              user: { select: { email: true } },
+            },
+          },
+        },
       });
 
       if (!match) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "マッチングが見つからないか、メッセージを送信できません",
+          message: "該当するやりとりが見つからないか、メッセージを送信できません",
         });
       }
 
@@ -48,9 +71,57 @@ export const messageRouter = createTRPCRouter({
         data: {
           matchId: input.matchId,
           senderId: ctx.session.user.id,
-          content: input.content,
+          content: input.content?.trim() || null,
+          ...(input.imageUrls && input.imageUrls.length > 0
+            ? {
+                images: {
+                  create: input.imageUrls.map((url, index) => ({
+                    url,
+                    order: index,
+                  })),
+                },
+              }
+            : {}),
+        },
+        include: {
+          images: { orderBy: { order: "asc" } },
         },
       });
+
+      // 受信者に通知送信
+      const isSenderCast = match.cast.userId === ctx.session.user.id;
+      const messagePreview = input.content?.trim().slice(0, 50) ?? "画像が送信されました";
+
+      if (isSenderCast) {
+        // キャストが送信 → 店舗に通知
+        // InApp通知は常に作成（スロットリングはLINE/Email用）
+        await dispatchNotification({
+          type: "MESSAGE_RECEIVED_STORE",
+          payload: {
+            recipientUserId: match.store.userId,
+            matchId: input.matchId,
+            storeEmail: shouldThrottle(input.matchId, match.store.userId)
+              ? null // スロットリング中はEmailスキップ
+              : match.store.user.email,
+            senderName: match.cast.nickname ?? "キャスト",
+            messagePreview,
+          },
+        });
+      } else {
+        // 店舗が送信 → キャストに通知
+        const throttled = shouldThrottle(input.matchId, match.cast.userId);
+        await dispatchNotification({
+          type: "MESSAGE_RECEIVED_CAST",
+          payload: {
+            recipientUserId: match.cast.userId,
+            matchId: input.matchId,
+            castLineUserId: throttled ? null : match.cast.lineUserId,
+            castEmail: throttled ? null : match.cast.user.email,
+            senderName: match.store.name,
+            messagePreview,
+          },
+        });
+      }
 
       return message;
     }),
@@ -78,7 +149,7 @@ export const messageRouter = createTRPCRouter({
       const castId = user?.cast?.id;
       const storeId = user?.store?.id;
 
-      // マッチングが自分に関連しているか確認
+      // 自分に関連するか確認
       const match = await ctx.prisma.match.findFirst({
         where: {
           id: input.matchId,
@@ -92,7 +163,7 @@ export const messageRouter = createTRPCRouter({
       if (!match) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "マッチングが見つかりません",
+          message: "該当するやりとりが見つかりません",
         });
       }
 
@@ -105,6 +176,7 @@ export const messageRouter = createTRPCRouter({
               image: true,
             },
           },
+          images: { orderBy: { order: "asc" } },
         },
         take: input.limit + 1,
         cursor: input.cursor ? { id: input.cursor } : undefined,
@@ -152,7 +224,7 @@ export const messageRouter = createTRPCRouter({
       return { count: 0 };
     }
 
-    // 自分が関連するマッチングを取得
+    // 自分が関連するやりとりを取得
     const matches = await ctx.prisma.match.findMany({
       where: {
         OR: [
