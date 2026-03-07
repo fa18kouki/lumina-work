@@ -3,22 +3,24 @@
 import { useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useAppSession } from "@/lib/demo-session";
-import { Bot, Store, MessageSquare, UserCircle } from "lucide-react";
+import { useAppSession } from "@/lib/auth-helpers";
+import { Bot, Store, MessageSquare, UserCircle, Heart } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
-import { createMockCastProfile, getMockStoresForSearch } from "@/lib/mock-data";
+import { trpc } from "@/lib/trpc";
 import { QuickActionCard } from "@/components/cast/QuickActionCard";
 import { StoreCard } from "@/components/cast/StoreCard";
 
-// ローカル画像パス
-const STORE_IMAGES = [
-  "/service-scene-01.png",
-  "/service-scene-02.png",
-  "/service-scene-03.png",
-  "/service-scene-04.png",
-];
-
 const AVATAR_IMAGE = "/gold-dress-back.png";
+
+function formatSalary(salarySystem: unknown): string {
+  if (!salarySystem) return "応相談";
+  if (typeof salarySystem === "string") return salarySystem;
+  const sys = salarySystem as Record<string, number>;
+  if (sys.hourlyRateMin) {
+    return `時給 ${sys.hourlyRateMin.toLocaleString()}円〜`;
+  }
+  return "応相談";
+}
 
 export default function CastDashboard() {
   const router = useRouter();
@@ -31,16 +33,17 @@ export default function CastDashboard() {
     }
   }, [session, status, router]);
 
-  if (status === "loading" || !session || session.user.role !== "CAST") {
+  const { data: profile, isLoading: profileLoading } = trpc.cast.getProfile.useQuery();
+  const { data: storesData, isLoading: storesLoading } = trpc.cast.searchStores.useQuery({ limit: 4 });
+  const recommendedStores = storesData?.stores ?? [];
+
+  if (status === "loading" || profileLoading || !session || session.user.role !== "CAST") {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <Spinner />
       </div>
     );
   }
-
-  const profile = createMockCastProfile(session.user.id);
-  const recommendedStores = getMockStoresForSearch().slice(0, 4);
 
   return (
     <div className="space-y-6 pb-4">
@@ -49,7 +52,7 @@ export default function CastDashboard() {
         <div>
           <p className="text-sm text-(--text-sub)">今日も頑張ろう！</p>
           <h1 className="text-2xl font-bold text-(--text-main)">
-            こんにちは、{profile.nickname}さん
+            こんにちは、{profile?.nickname ?? "ゲスト"}さん
           </h1>
         </div>
         <div className="relative">
@@ -73,6 +76,12 @@ export default function CastDashboard() {
           href="/ai-diagnosis"
           label="AI診断"
           icon={Bot}
+          variant="purple"
+        />
+        <QuickActionCard
+          href="/compatibility"
+          label="相性占い"
+          icon={Heart}
           variant="pink"
         />
         <QuickActionCard
@@ -101,14 +110,14 @@ export default function CastDashboard() {
           あなたにおすすめ
         </h2>
         <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
-          {recommendedStores.map((store, index) => (
+          {recommendedStores.map((store) => (
             <StoreCard
               key={store.id}
               id={store.id}
               name={store.name}
-              area={`${store.area} 徒歩${Math.floor(Math.random() * 5) + 3}分`}
-              salary={`時給 ${store.hourlyRateMin.toLocaleString()}円〜`}
-              imageUrl={STORE_IMAGES[index % STORE_IMAGES.length]}
+              area={store.area ?? ""}
+              salary={formatSalary(store.salarySystem)}
+              imageUrl={(store.photos as string[] | null)?.[0] ?? "/service-scene-01.png"}
               variant="vertical"
             />
           ))}

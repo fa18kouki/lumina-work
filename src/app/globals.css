@@ -29,3 +29,8 @@
   --radius-card: 20px;
   --radius-btn: 100px;
 }
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
