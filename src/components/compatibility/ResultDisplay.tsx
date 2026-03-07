@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Heart, Star, RotateCcw } from "lucide-react";
+import { Heart, Star, RotateCcw, Sparkles, MapPin, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { CompatibilityResult } from "@/lib/compatibility/calculate";
 
@@ -22,7 +22,6 @@ function useCountUp(target: number, duration: number) {
     const animate = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // ease-out
       const eased = 1 - Math.pow(1 - progress, 3);
       setValue(Math.round(eased * target));
 
@@ -55,11 +54,36 @@ function StarRating({ stars, delay }: { stars: number; delay: number }) {
       {Array.from({ length: 5 }, (_, i) => (
         <Star
           key={i}
-          className={`w-5 h-5 ${
+          className={`w-4 h-4 ${
             i < stars ? "text-yellow-400 fill-yellow-400" : "text-gray-200"
           }`}
         />
       ))}
+    </div>
+  );
+}
+
+function FadeIn({
+  delay,
+  children,
+}: {
+  delay: number;
+  children: React.ReactNode;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(true), delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+
+  return (
+    <div
+      className={`transition-all duration-500 ${
+        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+      }`}
+    >
+      {children}
     </div>
   );
 }
@@ -71,15 +95,9 @@ export function ResultDisplay({
   onRetry,
 }: ResultDisplayProps) {
   const displayPercentage = useCountUp(result.percentage, 1500);
-  const [showDetails, setShowDetails] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShowDetails(true), 1200);
-    return () => clearTimeout(timer);
-  }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* メインスコア */}
       <div className="text-center space-y-3">
         <p className="text-sm text-(--text-sub)">
@@ -95,48 +113,110 @@ export function ResultDisplay({
             <span className="text-xl">%</span>
           </span>
         </div>
-        <div
-          className={`transition-all duration-500 ${
-            showDetails
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 translate-y-4"
-          }`}
-        >
+        <FadeIn delay={1200}>
           <h2 className="text-xl font-bold text-(--text-main)">
             {result.typeName}
           </h2>
           <p className="text-sm text-(--text-sub) mt-2 leading-relaxed">
             {result.comment}
           </p>
-        </div>
+        </FadeIn>
       </div>
 
-      {/* 詳細項目 */}
-      <div
-        className={`bg-white rounded-2xl p-5 shadow-sm space-y-4 transition-all duration-500 ${
-          showDetails
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 translate-y-4"
-        }`}
-      >
-        <h3 className="text-sm font-semibold text-(--text-main)">詳細</h3>
-        {result.details.map((detail, i) => (
-          <div key={detail.label} className="flex items-center justify-between">
-            <span className="text-sm text-(--text-sub)">{detail.label}</span>
-            <StarRating stars={detail.stars} delay={1400 + i * 200} />
+      {/* 二人の恋愛タイプ */}
+      <FadeIn delay={1600}>
+        <div className="bg-white rounded-2xl p-5 shadow-sm space-y-3">
+          <h3 className="text-sm font-semibold text-(--text-main) flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-(--primary)" />
+            二人の恋愛タイプ
+          </h3>
+          <div className="space-y-2.5">
+            <div className="bg-(--primary-bg) rounded-xl p-3">
+              <p className="text-sm font-medium text-(--primary)">
+                {name1}：{result.loveType1.name}
+              </p>
+              <p className="text-xs text-(--text-sub) mt-0.5">
+                {result.loveType1.description}
+              </p>
+            </div>
+            <div className="bg-blue-50 rounded-xl p-3">
+              <p className="text-sm font-medium text-blue-600">
+                {name2}：{result.loveType2.name}
+              </p>
+              <p className="text-xs text-(--text-sub) mt-0.5">
+                {result.loveType2.description}
+              </p>
+            </div>
           </div>
-        ))}
-      </div>
+        </div>
+      </FadeIn>
+
+      {/* 相性レーダー 5項目 */}
+      <FadeIn delay={2000}>
+        <div className="bg-white rounded-2xl p-5 shadow-sm space-y-3">
+          <h3 className="text-sm font-semibold text-(--text-main)">
+            相性レーダー
+          </h3>
+          {result.details.map((detail, i) => (
+            <div
+              key={detail.label}
+              className="flex items-center justify-between"
+            >
+              <span className="text-sm text-(--text-sub)">{detail.label}</span>
+              <StarRating stars={detail.stars} delay={2200 + i * 150} />
+            </div>
+          ))}
+        </div>
+      </FadeIn>
+
+      {/* ラッキー情報 */}
+      <FadeIn delay={2800}>
+        <div className="bg-white rounded-2xl p-5 shadow-sm">
+          <h3 className="text-sm font-semibold text-(--text-main) mb-3">
+            ラッキー情報
+          </h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center gap-2">
+              <Palette className="w-4 h-4 text-(--primary) shrink-0" />
+              <div>
+                <p className="text-xs text-(--text-sub)">ラッキーカラー</p>
+                <p className="text-sm font-medium text-(--text-main)">
+                  {result.lucky.color}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-(--primary) shrink-0" />
+              <div>
+                <p className="text-xs text-(--text-sub)">デートスポット</p>
+                <p className="text-sm font-medium text-(--text-main)">
+                  {result.lucky.dateSpot}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </FadeIn>
+
+      {/* アドバイス */}
+      <FadeIn delay={3200}>
+        <div className="bg-gradient-to-r from-(--primary-bg) to-pink-50 rounded-2xl p-5">
+          <h3 className="text-sm font-semibold text-(--text-main) mb-2">
+            アドバイス
+          </h3>
+          <p className="text-sm text-(--text-sub) leading-relaxed">
+            {result.advice}
+          </p>
+        </div>
+      </FadeIn>
 
       {/* リプレイ */}
-      <Button
-        onClick={onRetry}
-        variant="outline"
-        className="w-full py-3"
-      >
-        <RotateCcw className="w-4 h-4 mr-2" />
-        もう一度占う
-      </Button>
+      <FadeIn delay={3500}>
+        <Button onClick={onRetry} variant="outline" className="w-full py-3">
+          <RotateCcw className="w-4 h-4 mr-2" />
+          もう一度占う
+        </Button>
+      </FadeIn>
     </div>
   );
 }

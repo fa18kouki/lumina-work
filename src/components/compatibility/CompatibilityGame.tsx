@@ -6,6 +6,7 @@ import { DivinationAnimation } from "./DivinationAnimation";
 import { ResultDisplay } from "./ResultDisplay";
 import {
   calculateCompatibility,
+  type CompatibilityInput,
   type CompatibilityResult,
 } from "@/lib/compatibility/calculate";
 
@@ -13,22 +14,20 @@ type GamePhase = "input" | "divining" | "result";
 
 export function CompatibilityGame() {
   const [phase, setPhase] = useState<GamePhase>("input");
-  const [names, setNames] = useState<{ name1: string; name2: string }>({
-    name1: "",
-    name2: "",
-  });
+  const [input, setInput] = useState<CompatibilityInput | null>(null);
   const [result, setResult] = useState<CompatibilityResult | null>(null);
 
-  const handleSubmit = (name1: string, name2: string) => {
-    setNames({ name1, name2 });
+  const handleSubmit = (data: CompatibilityInput) => {
+    setInput(data);
     setPhase("divining");
   };
 
   const handleDivinationComplete = useCallback(() => {
-    const calcResult = calculateCompatibility(names.name1, names.name2);
+    if (!input) return;
+    const calcResult = calculateCompatibility(input);
     setResult(calcResult);
     setPhase("result");
-  }, [names]);
+  }, [input]);
 
   const handleRetry = () => {
     setPhase("input");
@@ -41,11 +40,11 @@ export function CompatibilityGame() {
       {phase === "divining" && (
         <DivinationAnimation onComplete={handleDivinationComplete} />
       )}
-      {phase === "result" && result && (
+      {phase === "result" && result && input && (
         <ResultDisplay
           result={result}
-          name1={names.name1}
-          name2={names.name2}
+          name1={input.name1}
+          name2={input.name2}
           onRetry={handleRetry}
         />
       )}
