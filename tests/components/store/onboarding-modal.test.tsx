@@ -4,8 +4,10 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 
 // Mock tRPC
-const mockMutateAsync = vi.fn();
-const mockInvalidate = vi.fn();
+const { mockMutateAsync, mockInvalidate } = vi.hoisted(() => ({
+  mockMutateAsync: vi.fn(),
+  mockInvalidate: vi.fn(),
+}));
 vi.mock("@/lib/trpc", () => ({
   trpc: {
     store: {
