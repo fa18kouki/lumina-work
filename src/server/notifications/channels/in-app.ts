@@ -1,5 +1,7 @@
 import { prisma } from "@/server/db";
-import type { NotificationEvent, InAppNotificationType } from "../types";
+import { Prisma } from "@prisma/client";
+import type { NotificationType } from "@prisma/client";
+import type { NotificationEvent } from "../types";
 
 function formatDateTime(iso: string): string {
   const date = new Date(iso);
@@ -15,7 +17,7 @@ function formatDateTime(iso: string): string {
 
 async function createNotification(data: {
   userId: string;
-  type: InAppNotificationType;
+  type: NotificationType;
   title: string;
   body: string;
   link?: string;
@@ -28,7 +30,7 @@ async function createNotification(data: {
       title: data.title,
       body: data.body,
       link: data.link ?? null,
-      metadata: data.metadata ?? null,
+      metadata: (data.metadata as Prisma.InputJsonValue) ?? Prisma.JsonNull,
     },
   });
 }

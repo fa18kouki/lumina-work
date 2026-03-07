@@ -6,6 +6,7 @@ import {
   protectedProcedure,
   castProcedure,
 } from "@/server/api/trpc";
+import { dispatchNotification } from "@/server/notifications";
 
 export const castRouter = createTRPCRouter({
   /**
@@ -332,7 +333,7 @@ export const castRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const cast = await ctx.prisma.cast.findUnique({
         where: { userId: ctx.session.user.id },
-        select: { id: true },
+        select: { id: true, nickname: true },
       });
 
       if (!cast) {
@@ -347,9 +348,17 @@ export const castRouter = createTRPCRouter({
         data: {
           status: input.accept ? "ACCEPTED" : "REJECTED",
         },
+        include: {
+          store: {
+            select: {
+              userId: true,
+              user: { select: { email: true } },
+            },
+          },
+        },
       });
 
-      // オファー承諾時にマッチングを作成
+      // オファー承諾時にやりとりを作成
       if (input.accept) {
         await ctx.prisma.match.create({
           data: {
@@ -360,6 +369,53 @@ export const castRouter = createTRPCRouter({
         });
       }
 
+      // 店舗に通知送信
+      const storeUserId = offer.store.userId;
+      const storeEmail = offer.store.user.email;
+      const castNickname = cast.nickname ?? "キャスト";
+
+      if (input.accept) {
+        await dispatchNotification({
+          type: "OFFER_ACCEPTED",
+          payload: {
+            recipientUserId: storeUserId,
+            offerId: offer.id,
+            storeEmail,
+            castNickname,
+          },
+        });
+      } else {
+        await dispatchNotification({
+          type: "OFFER_REJECTED",
+          payload: {
+            recipientUserId: storeUserId,
+            offerId: offer.id,
+            storeEmail,
+            castNickname,
+          },
+        });
+      }
+
       return offer;
+    }),
+
+  /**
+   * 店舗詳細取得
+   */
+  getStoreDetail: castProcedure
+    .input(z.object({ storeId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const store = await ctx.prisma.store.findUnique({
+        where: { id: input.storeId, isVerified: true },
+      });
+
+      if (!store) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "店舗が見つかりません",
+        });
+      }
+
+      return store;
     }),
 });

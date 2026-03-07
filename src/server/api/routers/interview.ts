@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { TRPCError } from "@trpc/server";
+import { dispatchNotification } from "@/server/notifications";
 
 export const interviewRouter = createTRPCRouter({
   /**
@@ -18,8 +19,24 @@ export const interviewRouter = createTRPCRouter({
       const offer = await ctx.prisma.offer.findUnique({
         where: { id: input.offerId },
         include: {
-          cast: { select: { id: true, userId: true } },
-          store: { select: { id: true, userId: true } },
+          cast: {
+            select: {
+              id: true,
+              userId: true,
+              nickname: true,
+              lineUserId: true,
+              user: { select: { email: true } },
+            },
+          },
+          store: {
+            select: {
+              id: true,
+              userId: true,
+              name: true,
+              address: true,
+              user: { select: { email: true } },
+            },
+          },
         },
       });
 
@@ -57,6 +74,32 @@ export const interviewRouter = createTRPCRouter({
           storeId: offer.store.id,
           scheduledAt: new Date(input.scheduledAt),
           notes: input.notes,
+        },
+      });
+
+      // キャスト向け通知
+      await dispatchNotification({
+        type: "INTERVIEW_SCHEDULED_CAST",
+        payload: {
+          recipientUserId: offer.cast.userId,
+          interviewId: interview.id,
+          castLineUserId: offer.cast.lineUserId,
+          castEmail: offer.cast.user.email,
+          storeName: offer.store.name,
+          storeAddress: offer.store.address ?? "",
+          scheduledAt: input.scheduledAt,
+        },
+      });
+
+      // 店舗向け通知
+      await dispatchNotification({
+        type: "INTERVIEW_SCHEDULED_STORE",
+        payload: {
+          recipientUserId: offer.store.userId,
+          interviewId: interview.id,
+          storeEmail: offer.store.user.email,
+          castNickname: offer.cast.nickname ?? "キャスト",
+          scheduledAt: input.scheduledAt,
         },
       });
 
@@ -105,6 +148,8 @@ export const interviewRouter = createTRPCRouter({
             select: {
               id: true,
               nickname: true,
+              age: true,
+              rank: true,
               photos: true,
             },
           },
@@ -164,6 +209,23 @@ export const interviewRouter = createTRPCRouter({
           ],
           status: "SCHEDULED",
         },
+        include: {
+          cast: {
+            select: {
+              userId: true,
+              nickname: true,
+              lineUserId: true,
+              user: { select: { email: true } },
+            },
+          },
+          store: {
+            select: {
+              userId: true,
+              name: true,
+              user: { select: { email: true } },
+            },
+          },
+        },
       });
 
       if (!interview) {
@@ -173,7 +235,7 @@ export const interviewRouter = createTRPCRouter({
         });
       }
 
-      return ctx.prisma.interview.update({
+      const result = await ctx.prisma.interview.update({
         where: { id: input.interviewId },
         data: {
           status: "CANCELLED",
@@ -182,6 +244,40 @@ export const interviewRouter = createTRPCRouter({
             : interview.notes,
         },
       });
+
+      const scheduledAt = interview.scheduledAt.toISOString();
+
+      // キャンセルした側の相手方に通知
+      const isCancelledByStore = storeId === interview.storeId;
+
+      if (isCancelledByStore) {
+        // 店舗がキャンセル → キャストに通知
+        await dispatchNotification({
+          type: "INTERVIEW_CANCELLED_CAST",
+          payload: {
+            recipientUserId: interview.cast.userId,
+            interviewId: interview.id,
+            castLineUserId: interview.cast.lineUserId,
+            castEmail: interview.cast.user.email,
+            storeName: interview.store.name,
+            scheduledAt,
+          },
+        });
+      } else {
+        // キャストがキャンセル → 店舗に通知
+        await dispatchNotification({
+          type: "INTERVIEW_CANCELLED_STORE",
+          payload: {
+            recipientUserId: interview.store.userId,
+            interviewId: interview.id,
+            storeEmail: interview.store.user.email,
+            castNickname: interview.cast.nickname ?? "キャスト",
+            scheduledAt,
+          },
+        });
+      }
+
+      return result;
     }),
 
   /**
@@ -214,6 +310,17 @@ export const interviewRouter = createTRPCRouter({
           storeId,
           status: "SCHEDULED",
         },
+        include: {
+          cast: {
+            select: {
+              userId: true,
+              lineUserId: true,
+            },
+          },
+          store: {
+            select: { name: true },
+          },
+        },
       });
 
       if (!interview) {
@@ -223,10 +330,23 @@ export const interviewRouter = createTRPCRouter({
         });
       }
 
-      return ctx.prisma.interview.update({
+      const result = await ctx.prisma.interview.update({
         where: { id: input.interviewId },
         data: { status: "COMPLETED" },
       });
+
+      // キャストに面接完了通知
+      await dispatchNotification({
+        type: "INTERVIEW_COMPLETED",
+        payload: {
+          recipientUserId: interview.cast.userId,
+          interviewId: interview.id,
+          castLineUserId: interview.cast.lineUserId,
+          storeName: interview.store.name,
+        },
+      });
+
+      return result;
     }),
 
   /**
@@ -260,7 +380,16 @@ export const interviewRouter = createTRPCRouter({
           status: "SCHEDULED",
         },
         include: {
-          cast: { select: { id: true, userId: true, penaltyCount: true } },
+          cast: {
+            select: {
+              id: true,
+              userId: true,
+              penaltyCount: true,
+              lineUserId: true,
+              user: { select: { email: true } },
+            },
+          },
+          store: { select: { name: true } },
         },
       });
 
@@ -270,6 +399,8 @@ export const interviewRouter = createTRPCRouter({
           message: "面接が見つかりません",
         });
       }
+
+      const newPenaltyCount = interview.cast.penaltyCount + 1;
 
       // トランザクションで更新
       await ctx.prisma.$transaction([
@@ -284,7 +415,7 @@ export const interviewRouter = createTRPCRouter({
           data: {
             penaltyCount: { increment: 1 },
             // 3回以上で利用停止
-            isSuspended: interview.cast.penaltyCount >= 2,
+            isSuspended: newPenaltyCount >= 3,
           },
         }),
         // ペナルティ記録を作成
@@ -297,6 +428,30 @@ export const interviewRouter = createTRPCRouter({
           },
         }),
       ]);
+
+      // キャストにノーショー通知
+      await dispatchNotification({
+        type: "NO_SHOW_REPORTED",
+        payload: {
+          recipientUserId: interview.cast.userId,
+          interviewId: interview.id,
+          castLineUserId: interview.cast.lineUserId,
+          castEmail: interview.cast.user.email,
+          storeName: interview.store.name,
+          penaltyCount: newPenaltyCount,
+        },
+      });
+
+      // 3回以上でアカウント停止通知も送信
+      if (newPenaltyCount >= 3) {
+        await dispatchNotification({
+          type: "ACCOUNT_SUSPENDED",
+          payload: {
+            recipientUserId: interview.cast.userId,
+            castEmail: interview.cast.user.email,
+          },
+        });
+      }
 
       return { success: true };
     }),
