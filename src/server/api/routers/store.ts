@@ -30,7 +30,7 @@ export const storeRouter = createTRPCRouter({
         area: z.string().min(1).max(50),
         address: z.string().min(1).max(200),
         description: z.string().max(2000).optional(),
-        photos: z.array(z.string().url()).max(20).optional(),
+        photos: z.array(z.string().url()).max(5).optional(),
         businessHours: z.string().max(200).optional(),
         salarySystem: z.object({
           hourlyRateMin: z.number().min(1000).max(100000),
@@ -163,6 +163,8 @@ export const storeRouter = createTRPCRouter({
         minAge: z.number().min(18).optional(),
         maxAge: z.number().max(99).optional(),
         rank: z.enum(["C", "B", "A", "S"]).optional(),
+        minExperience: z.number().min(0).optional(),
+        maxExperience: z.number().min(0).optional(),
         cursor: z.string().optional(),
         limit: z.number().min(1).max(50).default(20),
       })
@@ -178,6 +180,12 @@ export const storeRouter = createTRPCRouter({
           ...(input.minAge && { age: { gte: input.minAge } }),
           ...(input.maxAge && { age: { lte: input.maxAge } }),
           ...(input.rank && { rank: input.rank }),
+          ...((input.minExperience != null || input.maxExperience != null) && {
+            totalExperienceYears: {
+              ...(input.minExperience != null && { gte: input.minExperience }),
+              ...(input.maxExperience != null && { lte: input.maxExperience }),
+            },
+          }),
         },
         take: input.limit + 1,
         cursor: input.cursor ? { id: input.cursor } : undefined,
@@ -261,6 +269,7 @@ export const storeRouter = createTRPCRouter({
       await dispatchNotification({
         type: "OFFER_RECEIVED",
         payload: {
+          recipientUserId: cast.userId,
           offerId: offer.id,
           castUserId: cast.userId,
           castLineUserId: cast.lineUserId,
