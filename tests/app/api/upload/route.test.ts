@@ -31,14 +31,13 @@ import {
   getPublicUrl,
 } from "@/lib/supabase-storage";
 import { analyzeEla } from "@/lib/image-analysis/ela";
-import { NextRequest } from "next/server";
 
-function createFormDataRequest(file: Buffer, filename: string, contentType: string): NextRequest {
+function createFormDataRequest(file: Buffer, filename: string, contentType: string): Request {
   const formData = new FormData();
   const blob = new Blob([file], { type: contentType });
   formData.append("file", blob, filename);
 
-  return new NextRequest("http://localhost:3000/api/upload", {
+  return new Request("http://localhost:3000/api/upload", {
     method: "POST",
     body: formData,
   });
@@ -57,7 +56,7 @@ describe("POST /api/upload", () => {
     }).jpeg().toBuffer();
 
     const request = createFormDataRequest(image, "test.jpg", "image/jpeg");
-    const response = await POST(request);
+    const response = await POST(request as never);
 
     expect(response.status).toBe(401);
   });
@@ -65,12 +64,12 @@ describe("POST /api/upload", () => {
   it("ファイルがない場合400を返す", async () => {
     vi.mocked(auth).mockResolvedValue({ user: { id: "user-1" } } as never);
 
-    const request = new NextRequest("http://localhost:3000/api/upload", {
+    const request = new Request("http://localhost:3000/api/upload", {
       method: "POST",
       body: new FormData(),
     });
 
-    const response = await POST(request);
+    const response = await POST(request as never);
     expect(response.status).toBe(400);
   });
 
@@ -83,7 +82,7 @@ describe("POST /api/upload", () => {
       "text/plain"
     );
 
-    const response = await POST(request);
+    const response = await POST(request as never);
     expect(response.status).toBe(400);
   });
 
@@ -101,7 +100,7 @@ describe("POST /api/upload", () => {
     }).jpeg().toBuffer();
 
     const request = createFormDataRequest(image, "test.jpg", "image/jpeg");
-    const response = await POST(request);
+    const response = await POST(request as never);
 
     expect(response.status).toBe(422);
     const body = await response.json();
@@ -127,7 +126,7 @@ describe("POST /api/upload", () => {
     }).jpeg().toBuffer();
 
     const request = createFormDataRequest(image, "test.jpg", "image/jpeg");
-    const response = await POST(request);
+    const response = await POST(request as never);
 
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -149,7 +148,7 @@ describe("POST /api/upload", () => {
     }).jpeg().toBuffer();
 
     const request = createFormDataRequest(image, "test.jpg", "image/jpeg");
-    const response = await POST(request);
+    const response = await POST(request as never);
 
     expect(response.status).toBe(404);
   });

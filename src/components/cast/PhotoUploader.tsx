@@ -46,18 +46,20 @@ export function PhotoUploader({
             throw new Error("JPG、PNG、WebP形式のみ対応しています");
           }
 
-          // 拡張子を取得
-          const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
+          // FormDataでファイルを送信（サーバーでELA加工検出を実施）
+          const formData = new FormData();
+          formData.append("file", file);
 
-          // 署名付きアップロードURL取得
           const response = await fetch("/api/upload", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ fileExt }),
+            body: formData,
           });
 
           if (!response.ok) {
             const data = await response.json();
+            if (response.status === 422) {
+              throw new Error(data.error || "加工が検出されました");
+            }
             throw new Error(data.error || "アップロードURLの取得に失敗しました");
           }
 
