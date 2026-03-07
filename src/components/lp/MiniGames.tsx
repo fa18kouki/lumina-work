@@ -72,13 +72,13 @@ const games: GameCardProps[] = [
     title: "心理テスト",
     description: "簡単な質問に答えて、あなたの隠れた魅力を診断",
     icon: Brain,
-    comingSoon: true,
+    href: "/games/psychology",
   },
   {
     title: "タイプ診断",
     description: "あなたの好みのタイプを分析します",
     icon: Sparkles,
-    comingSoon: true,
+    href: "/games/type-diagnosis",
   },
 ];
 
