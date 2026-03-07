@@ -130,16 +130,3 @@ export type NotificationEvent =
   | { type: "INTERVIEW_COMPLETED"; payload: InterviewCompletedPayload }
   | { type: "ACCOUNT_SUSPENDED"; payload: AccountSuspendedPayload }
   | { type: "OFFER_EXPIRED"; payload: OfferExpiredPayload };
-
-/** Prisma NotificationType enum に対応する通知タイプ（InApp保存用） */
-export type InAppNotificationType =
-  | "OFFER_RECEIVED"
-  | "OFFER_ACCEPTED"
-  | "OFFER_REJECTED"
-  | "INTERVIEW_SCHEDULED"
-  | "INTERVIEW_CANCELLED"
-  | "MESSAGE_RECEIVED"
-  | "NO_SHOW_REPORTED"
-  | "INTERVIEW_COMPLETED"
-  | "ACCOUNT_SUSPENDED"
-  | "OFFER_EXPIRED";
