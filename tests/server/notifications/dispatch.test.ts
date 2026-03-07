@@ -27,6 +27,7 @@ describe("dispatchNotification", () => {
     type: "OFFER_RECEIVED",
     payload: {
       offerId: "offer-1",
+      recipientUserId: "user-1",
       castUserId: "user-1",
       castLineUserId: "U123",
       castEmail: "test@example.com",

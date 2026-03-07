@@ -34,6 +34,7 @@ describe("sendEmailNotification", () => {
       type: "OFFER_RECEIVED",
       payload: {
         offerId: "offer-1",
+        recipientUserId: "user-1",
         castUserId: "user-1",
         castLineUserId: null,
         castEmail: "cast@example.com",
@@ -68,6 +69,7 @@ describe("sendEmailNotification", () => {
       type: "OFFER_RECEIVED",
       payload: {
         offerId: "offer-1",
+        recipientUserId: "user-1",
         castUserId: "user-1",
         castLineUserId: null,
         castEmail: null,
@@ -93,6 +95,7 @@ describe("sendEmailNotification", () => {
       type: "OFFER_RECEIVED",
       payload: {
         offerId: "offer-1",
+        recipientUserId: "user-1",
         castUserId: "user-1",
         castLineUserId: null,
         castEmail: "cast@example.com",

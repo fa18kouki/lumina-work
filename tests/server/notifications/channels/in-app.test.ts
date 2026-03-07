@@ -24,6 +24,7 @@ describe("createInAppNotification", () => {
     const event: NotificationEvent = {
       type: "OFFER_RECEIVED",
       payload: {
+        recipientUserId: "user-1",
         offerId: "offer-1",
         castUserId: "user-1",
         castLineUserId: null,
@@ -62,6 +63,7 @@ describe("createInAppNotification", () => {
     const event: NotificationEvent = {
       type: "OFFER_RECEIVED",
       payload: {
+        recipientUserId: "user-2",
         offerId: "offer-2",
         castUserId: "user-2",
         castLineUserId: null,
