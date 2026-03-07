@@ -6,6 +6,7 @@ export { ServiceSteps } from "./ServiceSteps";
 export { AppFeatures } from "./AppFeatures";
 export { PickupStores } from "./PickupStores";
 export { StoreShowcase } from "./StoreShowcase";
+export { MiniGames } from "./MiniGames";
 export { UserVoices } from "./UserVoices";
 export { FAQ } from "./FAQ";
 export { CTA } from "./CTA";
