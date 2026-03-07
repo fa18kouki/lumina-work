@@ -4,6 +4,7 @@ import {
   createTRPCRouter,
   protectedProcedure,
   storeProcedure,
+  publicProcedure,
 } from "@/server/api/trpc";
 import { dispatchNotification } from "@/server/notifications";
 
@@ -31,15 +32,30 @@ export const storeRouter = createTRPCRouter({
         description: z.string().max(2000).optional(),
         photos: z.array(z.string().url()).max(20).optional(),
         businessHours: z.string().max(200).optional(),
-        salarySystem: z.string().max(500).optional(),
+        salarySystem: z.object({
+          hourlyRateMin: z.number().min(1000).max(100000),
+          hourlyRateMax: z.number().min(1000).max(100000),
+          companionBackMin: z.number().min(0).optional(),
+          companionBackMax: z.number().min(0).optional(),
+          drinkBackMin: z.number().min(0).optional(),
+          drinkBackMax: z.number().min(0).optional(),
+          nominationBackMin: z.number().min(0).optional(),
+          nominationBackMax: z.number().min(0).optional(),
+          floorNominationBackMin: z.number().min(0).optional(),
+          floorNominationBackMax: z.number().min(0).optional(),
+          salesBackMinPercent: z.number().min(0).max(100).optional(),
+          salesBackMaxPercent: z.number().min(0).max(100).optional(),
+        }).optional(),
         benefits: z.array(z.string()).optional(),
         mustConditions: z.record(z.string(), z.unknown()).optional(),
         wantConditions: z.record(z.string(), z.unknown()).optional(),
+        referralSource: z.string().max(100).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const mustConditions = input.mustConditions as Prisma.InputJsonValue | undefined;
       const wantConditions = input.wantConditions as Prisma.InputJsonValue | undefined;
+      const salarySystem = input.salarySystem as Prisma.InputJsonValue | undefined;
 
       const store = await ctx.prisma.store.upsert({
         where: { userId: ctx.session.user.id },
@@ -50,10 +66,11 @@ export const storeRouter = createTRPCRouter({
           description: input.description,
           photos: input.photos ?? [],
           businessHours: input.businessHours,
-          salarySystem: input.salarySystem,
+          salarySystem,
           benefits: input.benefits ?? [],
           mustConditions,
           wantConditions,
+          referralSource: input.referralSource,
         },
         create: {
           userId: ctx.session.user.id,
@@ -63,10 +80,11 @@ export const storeRouter = createTRPCRouter({
           description: input.description,
           photos: input.photos ?? [],
           businessHours: input.businessHours,
-          salarySystem: input.salarySystem,
+          salarySystem,
           benefits: input.benefits ?? [],
           mustConditions,
           wantConditions,
+          referralSource: input.referralSource,
         },
       });
 
@@ -80,6 +98,62 @@ export const storeRouter = createTRPCRouter({
     }),
 
   /**
+   * 店舗設定取得
+   */
+  getSettings: storeProcedure.query(async ({ ctx }) => {
+    const store = await ctx.prisma.store.findUnique({
+      where: { userId: ctx.session.user.id },
+      select: { notificationSettings: true },
+    });
+
+    const user = await ctx.prisma.user.findUnique({
+      where: { id: ctx.session.user.id },
+      select: { email: true, phone: true },
+    });
+
+    const defaultNotifications = {
+      newApplicant: true,
+      offerResponse: true,
+      interviewReminder: true,
+      messageReceived: true,
+      systemAnnouncement: true,
+    };
+
+    const notifications = (store?.notificationSettings as Record<string, boolean> | null) ?? defaultNotifications;
+
+    return {
+      notifications: { ...defaultNotifications, ...notifications },
+      account: {
+        email: user?.email ?? "",
+        phone: user?.phone ?? "",
+      },
+    };
+  }),
+
+  /**
+   * 通知設定更新
+   */
+  updateNotificationSettings: storeProcedure
+    .input(
+      z.object({
+        newApplicant: z.boolean(),
+        offerResponse: z.boolean(),
+        interviewReminder: z.boolean(),
+        messageReceived: z.boolean(),
+        systemAnnouncement: z.boolean(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const store = await ctx.prisma.store.update({
+        where: { userId: ctx.session.user.id },
+        data: { notificationSettings: input },
+        select: { notificationSettings: true },
+      });
+
+      return store.notificationSettings as Record<string, boolean>;
+    }),
+
+  /**
    * キャスト検索
    */
   searchCasts: storeProcedure
@@ -88,7 +162,7 @@ export const storeRouter = createTRPCRouter({
         area: z.string().optional(),
         minAge: z.number().min(18).optional(),
         maxAge: z.number().max(99).optional(),
-        rank: z.enum(["UNRANKED", "BRONZE", "SILVER", "GOLD", "PLATINUM"]).optional(),
+        rank: z.enum(["C", "B", "A", "S"]).optional(),
         cursor: z.string().optional(),
         limit: z.number().min(1).max(50).default(20),
       })
@@ -253,4 +327,27 @@ export const storeRouter = createTRPCRouter({
         nextCursor,
       };
     }),
+
+  /**
+   * 公開店舗一覧取得（認証不要）
+   */
+  getPublicList: publicProcedure.query(async ({ ctx }) => {
+    const stores = await ctx.prisma.store.findMany({
+      where: { isVerified: true },
+      select: {
+        id: true,
+        name: true,
+        area: true,
+        description: true,
+        photos: true,
+        salarySystem: true,
+        benefits: true,
+        businessHours: true,
+      },
+      take: 10,
+      orderBy: { createdAt: "desc" },
+    });
+
+    return stores;
+  }),
 });
