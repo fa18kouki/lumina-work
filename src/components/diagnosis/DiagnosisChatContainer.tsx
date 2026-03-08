@@ -31,8 +31,8 @@ function ChatMessage({
         className={cn(
           "max-w-[85%] rounded-2xl px-4 py-3",
           type === "user"
-            ? "bg-cyan-500 text-white"
-            : "bg-gray-800 text-gray-100"
+            ? "bg-pink-500 text-white"
+            : "bg-white text-gray-900 border border-gray-200 shadow-sm"
         )}
       >
         <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>
@@ -51,10 +51,10 @@ function ChatMessage({
                   className={cn(
                     "px-4 py-2 rounded-full text-sm font-medium transition-all",
                     isSelected
-                      ? "bg-cyan-500 text-white"
+                      ? "bg-pink-500 text-white"
                       : isDisabled
-                        ? "bg-gray-700 text-gray-500 cursor-not-allowed"
-                        : "bg-gray-700 text-white hover:bg-gray-600 active:scale-95"
+                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        : "bg-gray-100 text-gray-700 hover:bg-pink-50 hover:text-pink-600 active:scale-95"
                   )}
                 >
                   {option.label}
@@ -72,15 +72,15 @@ function ChatMessage({
 function TypingIndicator() {
   return (
     <div className="flex justify-start">
-      <div className="bg-gray-800 rounded-2xl px-4 py-3">
+      <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
         <div className="flex space-x-1">
-          <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" />
+          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
           <div
-            className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+            className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
             style={{ animationDelay: "0.1s" }}
           />
           <div
-            className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+            className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
             style={{ animationDelay: "0.2s" }}
           />
         </div>
@@ -100,16 +100,16 @@ function ProgressBar({
   percentage: number;
 }) {
   return (
-    <div className="w-full px-4 py-3 bg-gray-800/50 border-b border-gray-700">
+    <div className="w-full px-4 py-3 bg-gray-50 border-b border-gray-200">
       <div className="flex justify-between items-center mb-2">
-        <span className="text-xs text-gray-400">診断進捗</span>
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-gray-500">診断進捗</span>
+        <span className="text-xs text-gray-500">
           {current} / {total}
         </span>
       </div>
-      <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
+      <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-cyan-500 to-pink-500 transition-all duration-500"
+          className="h-full bg-pink-500 transition-all duration-500"
           style={{ width: `${percentage}%` }}
         />
       </div>
@@ -150,7 +150,7 @@ function InputArea({
   };
 
   return (
-    <div className="p-4 bg-gray-800/50 border-t border-gray-700">
+    <div className="p-4 bg-gray-50 border-t border-gray-200">
       <form onSubmit={handleSubmit} className="flex gap-2">
         <input
           ref={inputRef}
@@ -160,8 +160,8 @@ function InputArea({
           placeholder={placeholder || "入力してください..."}
           disabled={disabled}
           className={cn(
-            "flex-1 px-4 py-3 rounded-full bg-gray-700 text-white",
-            "placeholder-gray-500 outline-none focus:ring-2 focus:ring-cyan-500",
+            "flex-1 px-4 py-3 rounded-full bg-white text-gray-900 border border-gray-200",
+            "placeholder-gray-400 outline-none focus:ring-2 focus:ring-pink-500",
             "disabled:opacity-50 disabled:cursor-not-allowed"
           )}
         />
@@ -169,8 +169,8 @@ function InputArea({
           type="submit"
           disabled={disabled || !value.trim()}
           className={cn(
-            "px-6 py-3 rounded-full bg-cyan-500 text-white font-medium",
-            "hover:bg-cyan-600 transition-colors",
+            "px-6 py-3 rounded-full bg-pink-500 text-white font-medium",
+            "hover:bg-pink-600 transition-colors",
             "disabled:opacity-50 disabled:cursor-not-allowed"
           )}
         >
@@ -180,7 +180,7 @@ function InputArea({
       <button
         onClick={onSkip}
         disabled={disabled}
-        className="mt-2 text-sm text-gray-500 hover:text-gray-400 transition-colors"
+        className="mt-2 text-sm text-gray-400 hover:text-gray-600 transition-colors"
       >
         スキップ
       </button>
@@ -192,7 +192,7 @@ function InputArea({
 function CompletionScreen({ onViewStores }: { onViewStores: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center p-8 text-center">
-      <div className="w-20 h-20 mb-6 bg-gradient-to-r from-cyan-500 to-pink-500 rounded-full flex items-center justify-center">
+      <div className="w-20 h-20 mb-6 bg-pink-500 rounded-full flex items-center justify-center">
         <svg
           className="w-10 h-10 text-white"
           fill="none"
@@ -207,18 +207,18 @@ function CompletionScreen({ onViewStores }: { onViewStores: () => void }) {
           />
         </svg>
       </div>
-      <h2 className="text-xl font-bold text-white mb-2">診断完了！</h2>
-      <p className="text-gray-400 mb-6">
+      <h2 className="text-xl font-bold text-gray-900 mb-2">診断完了！</h2>
+      <p className="text-gray-500 mb-6">
         あなたにぴったりのお店を見つけましょう
       </p>
       <button
         onClick={onViewStores}
         className={cn(
           "px-8 py-4 rounded-full",
-          "bg-gradient-to-r from-cyan-500 to-pink-500",
+          "bg-pink-500",
           "text-white font-bold text-lg",
-          "hover:opacity-90 transition-opacity",
-          "shadow-lg shadow-cyan-500/25"
+          "hover:bg-pink-600 transition-colors",
+          "shadow-lg shadow-pink-500/25"
         )}
       >
         店舗を探す
@@ -304,7 +304,7 @@ export function DiagnosisChatContainer({
   if (isLoading && messages.length === 0) {
     return (
       <div className={cn("flex items-center justify-center h-full", className)}>
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500" />
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500" />
       </div>
     );
   }
@@ -312,7 +312,7 @@ export function DiagnosisChatContainer({
   return (
     <div
       className={cn(
-        "flex flex-col h-full bg-gray-900 rounded-2xl overflow-hidden",
+        "flex flex-col h-full bg-gray-50 rounded-2xl overflow-hidden border border-gray-200",
         className
       )}
     >

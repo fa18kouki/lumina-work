@@ -22,6 +22,8 @@ interface DiagnosisChatProps {
   onSelectOption: (option: ChatOption) => void;
   isTyping?: boolean;
   className?: string;
+  /** 最後のAIメッセージの下にカスタム入力を表示（エリア選択など） */
+  renderCustomInput?: () => React.ReactNode;
 }
 
 export function DiagnosisChat({
@@ -29,6 +31,7 @@ export function DiagnosisChat({
   onSelectOption,
   isTyping = false,
   className,
+  renderCustomInput,
 }: DiagnosisChatProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
@@ -51,7 +54,7 @@ export function DiagnosisChat({
   return (
     <div
       className={cn(
-        "flex flex-col h-full bg-gray-900 rounded-2xl overflow-hidden",
+        "flex flex-col h-full bg-gray-50 rounded-2xl overflow-hidden border border-gray-200",
         className
       )}
     >
@@ -73,8 +76,8 @@ export function DiagnosisChat({
                 className={cn(
                   "max-w-[85%] rounded-2xl px-4 py-3",
                   message.type === "user"
-                    ? "bg-cyan-500 text-white"
-                    : "bg-gray-800 text-gray-100"
+                    ? "bg-pink-500 text-white"
+                    : "bg-white text-gray-900 border border-gray-200 shadow-sm"
                 )}
               >
                 {/* メッセージ本文 */}
@@ -83,7 +86,7 @@ export function DiagnosisChat({
                 </p>
 
                 {/* 選択肢（最後のAIメッセージのみ操作可能） */}
-                {message.options && message.options.length > 0 && (
+                {message.options && message.options.length > 0 && !renderCustomInput && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {message.options.map((option) => {
                       const optionKey = `${message.id}-${option.id}`;
@@ -101,10 +104,10 @@ export function DiagnosisChat({
                           className={cn(
                             "px-4 py-2 rounded-full text-sm font-medium transition-all",
                             isSelected
-                              ? "bg-cyan-500 text-white"
+                              ? "bg-pink-500 text-white"
                               : isDisabled
-                                ? "bg-gray-700 text-gray-500 cursor-not-allowed"
-                                : "bg-gray-700 text-white hover:bg-gray-600 active:scale-95"
+                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                : "bg-gray-100 text-gray-700 hover:bg-pink-50 hover:text-pink-600 active:scale-95"
                           )}
                         >
                           {option.label}
@@ -118,18 +121,25 @@ export function DiagnosisChat({
           );
         })}
 
+        {/* カスタム入力（エリア選択など） */}
+        {renderCustomInput && !isTyping && messages.length > 0 && (
+          <div className="px-1">
+            {renderCustomInput()}
+          </div>
+        )}
+
         {/* タイピングインジケーター */}
         {isTyping && (
           <div className="flex justify-start">
-            <div className="bg-gray-800 rounded-2xl px-4 py-3">
+            <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
               <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" />
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
                 <div
-                  className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
                   style={{ animationDelay: "0.1s" }}
                 />
                 <div
-                  className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
                   style={{ animationDelay: "0.2s" }}
                 />
               </div>
@@ -160,14 +170,14 @@ export function StepIndicator({
   return (
     <div className={cn("w-full", className)}>
       <div className="flex justify-between items-center mb-2">
-        <span className="text-xs text-gray-400">診断進捗</span>
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-gray-500">診断進捗</span>
+        <span className="text-xs text-gray-500">
           {currentStep} / {totalSteps}
         </span>
       </div>
-      <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+      <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-cyan-500 to-pink-500 transition-all duration-500"
+          className="h-full bg-pink-500 transition-all duration-500"
           style={{ width: `${progress}%` }}
         />
       </div>
