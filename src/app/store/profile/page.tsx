@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { trpc } from "@/lib/trpc";
-import { AREAS } from "@/lib/constants";
+import { AreaSelect } from "@/components/ui/area-select";
+import { SalaryInput, type SalaryData } from "@/components/store/salary-input";
+import { StorePhotoUploader } from "@/components/store/store-photo-uploader";
 
 const BENEFITS = [
   "日払いOK",
@@ -31,14 +33,20 @@ export default function StoreProfilePage() {
   const { data: profile, isLoading } = trpc.store.getProfile.useQuery();
   const utils = trpc.useUtils();
 
+  const defaultSalary: SalaryData = {
+    hourlyRateMin: 0,
+    hourlyRateMax: 0,
+  };
+
   const [formData, setFormData] = useState({
     name: "",
     area: "",
     address: "",
     description: "",
     businessHours: "",
-    salarySystem: "",
+    salarySystem: defaultSalary,
     benefits: [] as string[],
+    photos: [] as string[],
   });
 
   const upsertProfile = trpc.store.upsertProfile.useMutation({
@@ -53,21 +61,36 @@ export default function StoreProfilePage() {
 
   useEffect(() => {
     if (profile) {
+      const salary = profile.salarySystem as SalaryData | null;
       setFormData({
         name: profile.name ?? "",
         area: profile.area ?? "",
         address: profile.address ?? "",
         description: profile.description ?? "",
         businessHours: profile.businessHours ?? "",
-        salarySystem: profile.salarySystem ?? "",
+        salarySystem: salary ?? defaultSalary,
         benefits: profile.benefits ?? [],
+        photos: profile.photos ?? [],
       });
     }
   }, [profile]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    upsertProfile.mutate(formData);
+    const { salarySystem, ...rest } = formData;
+    const hasSalary = salarySystem.hourlyRateMin > 0 && salarySystem.hourlyRateMax > 0;
+    // undefinedのフィールドを除去してクリーンなJSONにする
+    const cleanSalary = hasSalary
+      ? Object.fromEntries(
+          Object.entries(salarySystem).filter(([, v]) => v !== undefined && v !== 0 || false)
+        ) as SalaryData
+      : undefined;
+    // hourlyRateMin/Maxは0でも必須なので再セット
+    if (cleanSalary && hasSalary) {
+      cleanSalary.hourlyRateMin = salarySystem.hourlyRateMin;
+      cleanSalary.hourlyRateMax = salarySystem.hourlyRateMax;
+    }
+    upsertProfile.mutate({ ...rest, salarySystem: cleanSalary, photos: formData.photos });
   };
 
   const toggleBenefit = (benefit: string) => {
@@ -118,19 +141,11 @@ export default function StoreProfilePage() {
               <label className="block text-sm font-medium text-(--text-main) mb-1">
                 エリア <span className="text-red-500">*</span>
               </label>
-              <select
+              <AreaSelect
                 value={formData.area}
-                onChange={(e) => setFormData({ ...formData, area: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-(--primary)"
-                required
-              >
-                <option value="">選択してください</option>
-                {AREAS.map((area) => (
-                  <option key={area} value={area}>
-                    {area}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setFormData({ ...formData, area: v })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+              />
             </div>
 
             <div>
@@ -167,27 +182,28 @@ export default function StoreProfilePage() {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="店舗の特徴やアピールポイントを入力してください"
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-(--primary) resize-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 resize-none"
               />
             </div>
           </div>
         </Card>
 
+        {/* 店舗写真 */}
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold text-(--text-main) mb-4">店舗写真</h2>
+          <StorePhotoUploader
+            photos={formData.photos}
+            onPhotosChange={(photos) => setFormData({ ...formData, photos })}
+          />
+        </Card>
+
         {/* 給与体系 */}
         <Card className="p-6">
           <h2 className="text-lg font-semibold text-(--text-main) mb-4">給与体系</h2>
-          <div>
-            <textarea
-              value={formData.salarySystem}
-              onChange={(e) => setFormData({ ...formData, salarySystem: e.target.value })}
-              placeholder="例: 時給4,000円〜10,000円（経験・能力による）&#10;バック: ドリンクバック500円/杯、同伴バック3,000円&#10;日給保証: 20,000円〜（体験入店時）"
-              rows={5}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-(--primary) resize-none"
-            />
-            <p className="text-sm text-(--text-sub) mt-1">
-              時給、バック、保証など給与に関する情報を入力してください
-            </p>
-          </div>
+          <SalaryInput
+            value={formData.salarySystem}
+            onChange={(salary) => setFormData({ ...formData, salarySystem: salary })}
+          />
         </Card>
 
         {/* 待遇・福利厚生 */}
@@ -199,9 +215,9 @@ export default function StoreProfilePage() {
                 key={benefit}
                 type="button"
                 onClick={() => toggleBenefit(benefit)}
-                className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
                   formData.benefits.includes(benefit)
-                    ? "bg-(--primary) text-white"
+                    ? "bg-slate-800 text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >

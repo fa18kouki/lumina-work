@@ -1,34 +1,58 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Crown } from "lucide-react";
+import { Check, Crown, ExternalLink } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
-import { useDemoSession } from "@/lib/demo-session";
+import { useStoreSession } from "@/lib/auth-helpers";
+import { trpc } from "@/lib/trpc";
 import {
-  createMockSubscription,
   SUBSCRIPTION_PLANS,
   type SubscriptionPlanId,
-} from "@/lib/mock-data";
+} from "@/lib/constants";
 
 export default function StoreSubscriptionPage() {
   const router = useRouter();
-  const { session } = useDemoSession();
-  const [currentPlan, setCurrentPlan] = useState<SubscriptionPlanId>("FREE");
+  const { user, status } = useStoreSession();
   const [toast, setToast] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!session) {
-      router.push("/login");
-    } else if (session.user.role !== "STORE") {
-      router.push("/dashboard");
-    } else {
-      const sub = createMockSubscription(session.user.id);
-      setCurrentPlan(sub.plan);
-    }
-  }, [session, router]);
+  const {
+    data: subscription,
+    isLoading: subLoading,
+  } = trpc.subscription.getSubscription.useQuery(undefined, {
+    enabled: status === "authenticated",
+  });
 
-  if (!session || session.user.role !== "STORE") {
+  const createCheckout = trpc.subscription.createCheckoutSession.useMutation({
+    onSuccess: (data) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: (error) => {
+      setToast(error.message);
+      setTimeout(() => setToast(null), 4000);
+    },
+  });
+
+  const createPortal = trpc.subscription.createPortalSession.useMutation({
+    onSuccess: (data) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: (error) => {
+      setToast(error.message);
+      setTimeout(() => setToast(null), 4000);
+    },
+  });
+
+  if (status === "unauthenticated") {
+    router.push("/store/login");
+    return null;
+  }
+
+  if (status === "loading" || !user || subLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <Spinner />
@@ -36,16 +60,18 @@ export default function StoreSubscriptionPage() {
     );
   }
 
+  const currentPlan = (subscription?.plan ?? "FREE") as SubscriptionPlanId;
+  const hasStripeSubscription = subscription && "stripeCustomerId" in subscription && subscription.stripeCustomerId;
+
   const handlePlanAction = (planId: SubscriptionPlanId) => {
     if (planId === currentPlan) return;
+    if (planId === "FREE") return;
 
-    const plan = SUBSCRIPTION_PLANS.find((p) => p.id === planId);
-    if (!plan) return;
+    createCheckout.mutate({ plan: planId as "BASIC" | "PREMIUM" });
+  };
 
-    setToast(
-      `デモモード: ${plan.name}プランへの変更は、Stripe連携後にご利用いただけます。`
-    );
-    setTimeout(() => setToast(null), 4000);
+  const handleManageSubscription = () => {
+    createPortal.mutate();
   };
 
   const getButtonLabel = (planId: SubscriptionPlanId) => {
@@ -57,6 +83,8 @@ export default function StoreSubscriptionPage() {
     return targetIndex > currentIndex ? "アップグレード" : "ダウングレード";
   };
 
+  const isPending = createCheckout.isPending || createPortal.isPending;
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-(--text-main)">
@@ -64,11 +92,23 @@ export default function StoreSubscriptionPage() {
       </h1>
 
       {/* 現在のプラン */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <p className="text-xs text-(--text-sub) mb-1">現在のプラン</p>
-        <p className="text-lg font-bold text-(--text-main)">
-          {SUBSCRIPTION_PLANS.find((p) => p.id === currentPlan)?.name}プラン
-        </p>
+      <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-5 flex items-center justify-between">
+        <div>
+          <p className="text-xs text-(--text-sub) mb-1">現在のプラン</p>
+          <p className="text-lg font-bold text-(--text-main)">
+            {SUBSCRIPTION_PLANS.find((p) => p.id === currentPlan)?.name}プラン
+          </p>
+        </div>
+        {hasStripeSubscription && (
+          <button
+            onClick={handleManageSubscription}
+            disabled={isPending}
+            className="inline-flex items-center gap-1 text-sm text-slate-700 font-semibold hover:underline disabled:opacity-50"
+          >
+            <ExternalLink className="w-4 h-4" />
+            支払い管理
+          </button>
+        )}
       </div>
 
       {/* プランカード */}
@@ -80,9 +120,9 @@ export default function StoreSubscriptionPage() {
           return (
             <div
               key={plan.id}
-              className={`relative bg-white rounded-2xl border-2 shadow-sm p-5 flex flex-col ${
+              className={`relative bg-white rounded-lg border-2 shadow-sm p-5 flex flex-col ${
                 isRecommended
-                  ? "border-(--primary)"
+                  ? "border-slate-700"
                   : isCurrent
                     ? "border-(--secondary-blue-text)"
                     : "border-gray-100"
@@ -90,7 +130,7 @@ export default function StoreSubscriptionPage() {
             >
               {isRecommended && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="inline-flex items-center gap-1 bg-(--primary) text-white text-xs font-bold px-3 py-1 rounded-full">
+                  <span className="inline-flex items-center gap-1 bg-slate-700 text-white text-xs font-bold px-3 py-1 rounded-md">
                     <Crown className="w-3 h-3" />
                     おすすめ
                   </span>
@@ -129,16 +169,16 @@ export default function StoreSubscriptionPage() {
 
               <button
                 onClick={() => handlePlanAction(plan.id)}
-                disabled={isCurrent}
-                className={`w-full py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                disabled={isCurrent || isPending}
+                className={`w-full py-2.5 rounded-md text-sm font-medium transition-colors ${
                   isCurrent
                     ? "bg-gray-100 text-(--text-sub) cursor-default"
                     : isRecommended
-                      ? "bg-(--primary) text-white hover:opacity-90"
-                      : "bg-white border border-gray-200 text-(--text-main) hover:bg-gray-50"
+                      ? "bg-slate-800 text-white hover:bg-slate-900 disabled:opacity-50"
+                      : "bg-white border border-gray-200 text-(--text-main) hover:bg-gray-50 disabled:opacity-50"
                 }`}
               >
-                {getButtonLabel(plan.id)}
+                {isPending ? "処理中..." : getButtonLabel(plan.id)}
               </button>
             </div>
           );
@@ -148,7 +188,7 @@ export default function StoreSubscriptionPage() {
       {/* トースト */}
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-          <div className="bg-gray-900 text-white text-sm px-5 py-3 rounded-xl shadow-lg">
+          <div className="bg-gray-900 text-white text-sm px-5 py-3 rounded-md shadow-lg">
             {toast}
           </div>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -8,31 +8,23 @@ import { Spinner } from "@/components/ui/spinner";
 import { RankBadge } from "@/components/ui/rank-badge";
 import { Thumbnail } from "@/components/ui/thumbnail";
 import { trpc } from "@/lib/trpc";
-import { useDemoSession } from "@/lib/demo-session";
-import { getMockChatMessages, getMockChatPartner } from "@/lib/mock-data";
 import { ChevronLeft, Send } from "lucide-react";
 
 export default function StoreChatPage() {
   const params = useParams();
   const matchId = params.matchId as string;
-  const { session: demoSession } = useDemoSession();
-  const isDemo = !!demoSession;
 
   const [message, setMessage] = useState("");
-  const [localMessages, setLocalMessages] = useState<
-    { id: string; content: string; matchId: string; sender: { id: string; role: string }; createdAt: Date }[]
-  >([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const utils = trpc.useUtils();
 
   const { data: messagesData, isLoading } = trpc.message.getMessages.useQuery(
     { matchId, limit: 50 },
-    { refetchInterval: 5000, enabled: !isDemo }
+    { refetchInterval: 5000 }
   );
 
   const { data: matchesData } = trpc.match.getMatches.useQuery(
     { status: "ACCEPTED", limit: 1 },
-    { enabled: !isDemo }
   );
 
   const sendMessage = trpc.message.send.useMutation({
@@ -42,44 +34,15 @@ export default function StoreChatPage() {
     },
   });
 
-  // デモ用モックデータ
-  const mockPartner = useMemo(
-    () => (isDemo ? getMockChatPartner(matchId, "STORE") : null),
-    [isDemo, matchId]
-  );
-  const mockMessages = useMemo(
-    () => (isDemo ? getMockChatMessages(matchId, "STORE") : []),
-    [isDemo, matchId]
-  );
+  const messages = messagesData?.messages ?? [];
 
-  // デモ用ローカルメッセージ初期化
-  useEffect(() => {
-    if (isDemo) setLocalMessages(mockMessages);
-  }, [isDemo, mockMessages]);
+  const currentMatch = matchesData?.matches?.find((m) => m.id === matchId);
 
-  const messages = isDemo
-    ? localMessages
-    : (messagesData?.messages ?? []);
-
-  const currentMatch = isDemo
-    ? null
-    : matchesData?.matches?.find((m) => m.id === matchId);
-
-  const partnerName: string = isDemo
-    ? (mockPartner && "nickname" in mockPartner ? (mockPartner.nickname as string) : "キャスト")
-    : (currentMatch?.cast?.nickname ?? "キャスト");
-  const partnerAge = isDemo
-    ? (mockPartner && "age" in mockPartner ? mockPartner.age : null)
-    : currentMatch?.cast?.age;
-  const partnerRank = isDemo
-    ? (mockPartner && "rank" in mockPartner ? mockPartner.rank : null)
-    : currentMatch?.cast?.rank;
-  const partnerPhoto = isDemo
-    ? (mockPartner && "photos" in mockPartner ? mockPartner.photos?.[0] : undefined)
-    : currentMatch?.cast?.photos?.[0];
-  const partnerId = isDemo
-    ? `cast_sender_${matchId}`
-    : currentMatch?.cast?.id;
+  const partnerName: string = currentMatch?.cast?.nickname ?? "キャスト";
+  const partnerAge = currentMatch?.cast?.age;
+  const partnerRank = currentMatch?.cast?.rank;
+  const partnerPhoto = currentMatch?.cast?.photos?.[0];
+  const partnerId = currentMatch?.cast?.id;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -88,25 +51,10 @@ export default function StoreChatPage() {
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim()) return;
-
-    if (isDemo) {
-      setLocalMessages((prev) => [
-        ...prev,
-        {
-          id: `msg_local_${Date.now()}`,
-          content: message,
-          matchId,
-          sender: { id: "store_self", role: "STORE" },
-          createdAt: new Date(),
-        },
-      ]);
-      setMessage("");
-    } else {
-      sendMessage.mutate({ matchId, content: message });
-    }
+    sendMessage.mutate({ matchId, content: message });
   };
 
-  if (!isDemo && isLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <Spinner />
@@ -153,10 +101,10 @@ export default function StoreChatPage() {
                 className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[85%] sm:max-w-[70%] px-4 py-2 rounded-2xl ${
+                  className={`max-w-[85%] sm:max-w-[70%] px-4 py-2 rounded-lg ${
                     isOwn
-                      ? "bg-(--primary) text-white rounded-br-md"
-                      : "bg-gray-100 text-(--text-main) rounded-bl-md"
+                      ? "bg-slate-800 text-white rounded-br-sm"
+                      : "bg-gray-100 text-(--text-main) rounded-bl-sm"
                   }`}
                 >
                   <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
@@ -185,13 +133,13 @@ export default function StoreChatPage() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="メッセージを入力..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-(--primary) focus:border-transparent"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
           />
           <Button
             type="submit"
             disabled={!message.trim()}
-            isLoading={!isDemo && sendMessage.isPending}
-            className="rounded-full px-6"
+            isLoading={sendMessage.isPending}
+            className="rounded-md px-6"
           >
             <Send className="w-5 h-5" />
           </Button>

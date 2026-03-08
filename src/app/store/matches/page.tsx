@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,20 +10,16 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { TabFilter } from "@/components/ui/tab-filter";
 import { Thumbnail } from "@/components/ui/thumbnail";
 import { trpc } from "@/lib/trpc";
-import { useDemoSession } from "@/lib/demo-session";
-import { getMockMatchesForStorePage, type MatchStatus } from "@/lib/mock-data";
+import { type MatchStatus } from "@prisma/client";
 import { Heart, MessageCircle } from "lucide-react";
 
 const STATUS_TABS = [
-  { value: "ACCEPTED", label: "マッチング成立" },
+  { value: "ACCEPTED", label: "やりとり中" },
   { value: "PENDING", label: "承諾待ち" },
   { value: "REJECTED", label: "辞退済み" },
 ];
 
 export default function StoreMatchesPage() {
-  const { session: demoSession } = useDemoSession();
-  const isDemo = !!demoSession;
-
   const [status, setStatus] = useState<MatchStatus>("ACCEPTED");
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -31,26 +27,16 @@ export default function StoreMatchesPage() {
       { status, limit: 20 },
       {
         getNextPageParam: (lastPage) => lastPage.nextCursor,
-        enabled: !isDemo,
       }
     );
 
-  const mockMatches = useMemo(() => {
-    if (!isDemo || !demoSession) return [];
-    return getMockMatchesForStorePage(demoSession.user.id).filter(
-      (m) => m.status === status
-    );
-  }, [isDemo, demoSession, status]);
-
-  const matches = isDemo
-    ? mockMatches
-    : (data?.pages.flatMap((page) => page.matches) ?? []);
+  const matches = data?.pages.flatMap((page) => page.matches) ?? [];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-(--text-main)">マッチング</h1>
-        <p className="text-(--text-sub) mt-1">マッチングしたキャストとやりとりできます</p>
+        <h1 className="text-2xl font-bold text-(--text-main)">やりとり</h1>
+        <p className="text-(--text-sub) mt-1">応募・承諾済みのキャストとやりとりできます</p>
       </div>
 
       <TabFilter
@@ -60,7 +46,7 @@ export default function StoreMatchesPage() {
         variant="pill"
       />
 
-      {!isDemo && isLoading ? (
+      {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Spinner />
         </div>
@@ -69,10 +55,10 @@ export default function StoreMatchesPage() {
           icon={Heart}
           title={
             status === "ACCEPTED"
-              ? "マッチングしたキャストがいません"
+              ? "やりとり中のキャストがいません"
               : status === "PENDING"
-              ? "承諾待ちのマッチングがありません"
-              : "辞退されたマッチングがありません"
+              ? "承諾待ちのキャストがいません"
+              : "辞退されたキャストがいません"
           }
           action={status === "ACCEPTED" ? { label: "キャストを検索する", href: "/store/casts" } : undefined}
         />
@@ -96,13 +82,8 @@ export default function StoreMatchesPage() {
                     {match.cast?.rank && <RankBadge rank={match.cast.rank} />}
                   </div>
                   <p className="text-sm text-(--text-sub)">{match.cast?.age}歳</p>
-                  {"lastMessage" in match && match.lastMessage && (
-                    <p className="text-xs text-(--text-sub) mt-1 truncate">
-                      {match.lastMessage}
-                    </p>
-                  )}
                   <p className="text-xs text-gray-400 mt-1">
-                    マッチング日: {new Date(match.createdAt).toLocaleDateString("ja-JP")}
+                    やりとり開始日: {new Date(match.createdAt).toLocaleDateString("ja-JP")}
                   </p>
                 </div>
 
@@ -126,7 +107,7 @@ export default function StoreMatchesPage() {
             </Card>
           ))}
 
-          {!isDemo && hasNextPage && (
+          {hasNextPage && (
             <div className="flex justify-center pt-4">
               <Button
                 variant="outline"

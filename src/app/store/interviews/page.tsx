@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarCheck, Clock, FileText } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
@@ -9,11 +9,9 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Thumbnail } from "@/components/ui/thumbnail";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { useDemoSession } from "@/lib/demo-session";
-import {
-  createMockInterviewsForStore,
-  type InterviewManagementStatus,
-} from "@/lib/mock-data";
+import { useStoreSession } from "@/lib/auth-helpers";
+import { trpc } from "@/lib/trpc";
+import { type InterviewStatus } from "@prisma/client";
 
 const TABS = [
   { value: "ALL", label: "すべて" },
@@ -31,51 +29,51 @@ type ConfirmAction = {
 
 export default function StoreInterviewsPage() {
   const router = useRouter();
-  const { session } = useDemoSession();
+  const { user, status } = useStoreSession();
   const [activeTab, setActiveTab] = useState("ALL");
-  const [interviews, setInterviews] = useState<
-    ReturnType<typeof createMockInterviewsForStore>
-  >([]);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(
     null
   );
 
-  useEffect(() => {
-    if (!session) {
-      router.push("/login");
-    } else if (session.user.role !== "STORE") {
-      router.push("/dashboard");
-    } else {
-      setInterviews(createMockInterviewsForStore(session.user.id));
-    }
-  }, [session, router]);
+  const utils = trpc.useUtils();
+  const { data, isLoading } = trpc.interview.getInterviews.useQuery({});
+
+  const completeMutation = trpc.interview.complete.useMutation({
+    onSuccess: () => utils.interview.getInterviews.invalidate(),
+  });
+  const noShowMutation = trpc.interview.reportNoShow.useMutation({
+    onSuccess: () => utils.interview.getInterviews.invalidate(),
+  });
+  const cancelMutation = trpc.interview.cancel.useMutation({
+    onSuccess: () => utils.interview.getInterviews.invalidate(),
+  });
 
   const handleConfirm = useCallback(() => {
     if (!confirmAction) return;
 
-    const statusMap: Record<ConfirmAction["type"], InterviewManagementStatus> = {
-      complete: "COMPLETED",
-      noshow: "NO_SHOW",
-      cancel: "CANCELLED",
-    };
-
-    setInterviews((prev) =>
-      prev.map((iv) =>
-        iv.id === confirmAction.interviewId
-          ? { ...iv, status: statusMap[confirmAction.type] }
-          : iv
-      )
-    );
+    switch (confirmAction.type) {
+      case "complete":
+        completeMutation.mutate({ interviewId: confirmAction.interviewId });
+        break;
+      case "noshow":
+        noShowMutation.mutate({ interviewId: confirmAction.interviewId });
+        break;
+      case "cancel":
+        cancelMutation.mutate({ interviewId: confirmAction.interviewId });
+        break;
+    }
     setConfirmAction(null);
-  }, [confirmAction]);
+  }, [confirmAction, completeMutation, noShowMutation, cancelMutation]);
 
-  if (!session || session.user.role !== "STORE") {
+  if (status === "loading" || isLoading || !user) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <Spinner />
       </div>
     );
   }
+
+  const interviews = data?.interviews ?? [];
 
   const filtered =
     activeTab === "ALL"
@@ -136,12 +134,12 @@ export default function StoreInterviewsPage() {
           {filtered.map((interview) => (
             <div
               key={interview.id}
-              className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm"
+              className="bg-white rounded-lg border border-gray-100 p-4 shadow-sm"
             >
               <div className="flex items-start gap-3">
                 <Thumbnail
-                  src={interview.cast.photos[0]}
-                  alt={interview.cast.nickname}
+                  src={interview.cast?.photos?.[0]}
+                  alt={interview.cast?.nickname ?? "キャスト"}
                   size="sm"
                   shape="circle"
                   fallbackType="user"
@@ -149,7 +147,7 @@ export default function StoreInterviewsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-bold text-(--text-main) text-sm">
-                      {interview.cast.nickname}
+                      {interview.cast?.nickname ?? "キャスト"}
                     </span>
                     <StatusBadge
                       status={interview.status}
@@ -192,10 +190,10 @@ export default function StoreInterviewsPage() {
                       setConfirmAction({
                         type: "complete",
                         interviewId: interview.id,
-                        castName: interview.cast.nickname,
+                        castName: interview.cast?.nickname ?? "キャスト",
                       })
                     }
-                    className="flex-1 px-3 py-2 rounded-xl text-xs font-medium bg-(--primary) text-white hover:opacity-90 transition-colors"
+                    className="flex-1 px-3 py-2 rounded-md text-xs font-medium bg-slate-800 text-white hover:bg-slate-900 transition-colors"
                   >
                     完了にする
                   </button>
@@ -204,10 +202,10 @@ export default function StoreInterviewsPage() {
                       setConfirmAction({
                         type: "noshow",
                         interviewId: interview.id,
-                        castName: interview.cast.nickname,
+                        castName: interview.cast?.nickname ?? "キャスト",
                       })
                     }
-                    className="flex-1 px-3 py-2 rounded-xl text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                    className="flex-1 px-3 py-2 rounded-md text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                   >
                     無断欠席
                   </button>
@@ -216,10 +214,10 @@ export default function StoreInterviewsPage() {
                       setConfirmAction({
                         type: "cancel",
                         interviewId: interview.id,
-                        castName: interview.cast.nickname,
+                        castName: interview.cast?.nickname ?? "キャスト",
                       })
                     }
-                    className="flex-1 px-3 py-2 rounded-xl text-xs font-medium bg-gray-100 text-(--text-sub) hover:bg-gray-200 transition-colors"
+                    className="flex-1 px-3 py-2 rounded-md text-xs font-medium bg-gray-100 text-(--text-sub) hover:bg-gray-200 transition-colors"
                   >
                     キャンセル
                   </button>
