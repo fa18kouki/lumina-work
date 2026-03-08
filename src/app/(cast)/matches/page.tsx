@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAppSession } from "@/lib/demo-session";
+import { useAppSession } from "@/lib/auth-helpers";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -41,7 +41,7 @@ export default function MatchesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-(--text-main)">マッチング</h1>
+      <h1 className="text-2xl font-bold text-(--text-main)">やりとり中</h1>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
@@ -52,7 +52,7 @@ export default function MatchesPage() {
           <CardContent>
             <EmptyState
               icon={Heart}
-              title="マッチング中の店舗はありません"
+              title="やりとり中の店舗はありません"
               action={{ label: "オファーを確認する", href: "/offers" }}
             />
           </CardContent>
@@ -76,7 +76,7 @@ export default function MatchesPage() {
                       {match.store.area}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
-                      マッチング: {new Date(match.createdAt).toLocaleDateString("ja-JP")}
+                      やりとり開始: {new Date(match.createdAt).toLocaleDateString("ja-JP")}
                     </p>
                   </div>
 

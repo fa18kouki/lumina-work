@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAppSession } from "@/lib/demo-session";
+import { useAppSession } from "@/lib/auth-helpers";
 import { trpc } from "@/lib/trpc";
 import { Spinner } from "@/components/ui/spinner";
 import { ProfileWizard, type ProfileFormData } from "@/components/cast/ProfileWizard";

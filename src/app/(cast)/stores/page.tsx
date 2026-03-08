@@ -2,20 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAppSession } from "@/lib/demo-session";
+import { useAppSession } from "@/lib/auth-helpers";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
-import { getMockStoresForSearch } from "@/lib/mock-data";
+import { trpc } from "@/lib/trpc";
 import { TagFilter } from "@/components/cast/TagFilter";
 import { StoreCard } from "@/components/cast/StoreCard";
-
-const STORE_IMAGES = [
-  "/service-scene-05.png",
-  "/service-scene-06.png",
-  "/service-scene-08.png",
-  "/service-scene-09.png",
-];
 
 const FILTER_TAGS = [
   "すべて",
@@ -27,12 +20,15 @@ const FILTER_TAGS = [
   "ノルマなし",
 ];
 
-const STORE_TAGS: Record<string, string[]> = {
-  "Club Elegant": ["未経験OK", "日払い"],
-  "Lounge Royal": ["高時給", "送り有"],
-  "Bar Luxe": ["アットホーム", "ノルマなし"],
-  "Night Garden": ["自由出勤", "短期OK"],
-};
+function formatSalary(salarySystem: unknown): string {
+  if (!salarySystem) return "応相談";
+  if (typeof salarySystem === "string") return salarySystem;
+  const sys = salarySystem as Record<string, number>;
+  if (sys.hourlyRateMin) {
+    return `時給 ${sys.hourlyRateMin.toLocaleString()}円〜`;
+  }
+  return "応相談";
+}
 
 export default function StoresPage() {
   const router = useRouter();
@@ -47,36 +43,24 @@ export default function StoresPage() {
     }
   }, [session, status, router]);
 
-  if (status === "loading" || !session || session.user.role !== "CAST") {
+  const { data: storesData, isLoading } = trpc.cast.searchStores.useQuery({
+    area: searchQuery || undefined,
+  });
+  const allStores = storesData?.stores ?? [];
+
+  const filteredStores = allStores.filter((store) => {
+    if (selectedTag === "すべて") return true;
+    const benefits = (store.benefits as string[] | null) ?? [];
+    return benefits.some((b) => b.includes(selectedTag.replace("OK", "").replace("あり", "")));
+  });
+
+  if (status === "loading" || isLoading || !session || session.user.role !== "CAST") {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <Spinner />
       </div>
     );
   }
-
-  const allStores = getMockStoresForSearch();
-
-  const filteredStores = allStores.filter((store) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      store.area.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesTag =
-      selectedTag === "すべて" ||
-      (selectedTag === "未経験歓迎" &&
-        STORE_TAGS[store.name]?.includes("未経験OK")) ||
-      (selectedTag === "日払いOK" &&
-        STORE_TAGS[store.name]?.includes("日払い")) ||
-      (selectedTag === "高時給" && store.hourlyRateMin >= 4000) ||
-      (selectedTag === "送りあり" &&
-        STORE_TAGS[store.name]?.includes("送り有")) ||
-      (selectedTag === "ノルマなし" &&
-        STORE_TAGS[store.name]?.includes("ノルマなし"));
-
-    return matchesSearch && matchesTag;
-  });
 
   return (
     <div className="space-y-4">
@@ -108,15 +92,15 @@ export default function StoresPage() {
         {filteredStores.length === 0 ? (
           <EmptyState icon={Search} title="該当する店舗が見つかりませんでした" />
         ) : (
-          filteredStores.map((store, index) => (
+          filteredStores.map((store) => (
             <StoreCard
               key={store.id}
               id={store.id}
               name={store.name}
-              area={`${store.area} / 徒歩${Math.floor(Math.random() * 5) + 3}分`}
-              salary={`時給 ${store.hourlyRateMin.toLocaleString()}円〜`}
-              imageUrl={STORE_IMAGES[index % STORE_IMAGES.length]}
-              tags={STORE_TAGS[store.name] || ["未経験OK"]}
+              area={store.area ?? ""}
+              salary={formatSalary(store.salarySystem)}
+              imageUrl={(store.photos as string[] | null)?.[0] ?? "/service-scene-05.png"}
+              tags={(store.benefits as string[] | null) ?? []}
               variant="horizontal"
             />
           ))

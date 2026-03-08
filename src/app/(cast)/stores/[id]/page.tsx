@@ -4,38 +4,29 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
-import { useAppSession } from "@/lib/demo-session";
+import { useAppSession } from "@/lib/auth-helpers";
 import {
   ChevronLeft,
   Heart,
   MapPin,
   Clock,
-  DollarSign,
-  Shirt,
-  Car,
   Smile,
   MessageCircle,
 } from "lucide-react";
-import { getMockStoresForSearch } from "@/lib/mock-data";
-
-// ローカル画像パス
-const STORE_IMAGES: Record<string, string> = {
-  "Club Elegant": "/champagne-night-view.png",
-  "Lounge Royal": "/navy-dress-silhouette.png",
-  "Bar Luxe": "/light-blue-dress-service.png",
-  "Night Garden": "/two-women-service.png",
-};
+import { Spinner } from "@/components/ui/spinner";
+import { trpc } from "@/lib/trpc";
 
 const DEFAULT_IMAGE = "/service-scene-10.png";
 
-// 勤務条件データ
-const CONDITIONS = [
-  { icon: Clock, text: "19:00〜LAST（週1日〜OK）" },
-  { icon: DollarSign, text: "各種バック・ボーナス充実" },
-  { icon: Shirt, text: "ドレス・ヘアメ無料" },
-  { icon: Car, text: "送りあり（23区内）" },
-  { icon: Smile, text: "ノルマなし / 罰金なし" },
-];
+function formatSalary(salarySystem: unknown): string {
+  if (!salarySystem) return "応相談";
+  if (typeof salarySystem === "string") return salarySystem;
+  const sys = salarySystem as Record<string, number>;
+  if (sys.hourlyRateMin) {
+    return `時給 ${sys.hourlyRateMin.toLocaleString()}円〜`;
+  }
+  return "応相談";
+}
 
 type Tab = "details" | "photos" | "reviews";
 
@@ -53,17 +44,26 @@ export default function StoreDetailPage() {
     }
   }, [session, status, router]);
 
-  if (status === "loading" || !session || session.user.role !== "CAST") {
+  const storeId = params.id as string;
+  const { data: store, isLoading: storeLoading } = trpc.cast.getStoreDetail.useQuery({ storeId });
+
+  if (status === "loading" || storeLoading || !session || session.user.role !== "CAST") {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-(--primary)" />
+        <Spinner />
       </div>
     );
   }
 
-  const stores = getMockStoresForSearch();
-  const store = stores.find((s) => s.id === params.id) || stores[0];
-  const imageUrl = STORE_IMAGES[store.name] || DEFAULT_IMAGE;
+  if (!store) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <p className="text-(--text-sub)">店舗が見つかりませんでした</p>
+      </div>
+    );
+  }
+
+  const imageUrl = (store.photos as string[] | null)?.[0] ?? DEFAULT_IMAGE;
 
   return (
     <div className="min-h-screen bg-(--bg-gray) -m-4 md:-m-8">
@@ -108,8 +108,7 @@ export default function StoreDetailPage() {
               <span>東京都{store.area}区 X-X-X</span>
             </div>
             <span className="inline-block px-5 py-1.5 bg-(--primary-bg) text-(--primary) text-2xl font-bold rounded-full">
-              時給 {store.hourlyRateMin.toLocaleString()}円〜
-              {store.hourlyRateMax.toLocaleString()}円
+              {formatSalary(store.salarySystem)}
             </span>
           </div>
 
@@ -146,9 +145,7 @@ export default function StoreDetailPage() {
                   お店の特徴
                 </h2>
                 <p className="text-sm leading-relaxed text-(--text-sub)">
-                  {store.area}駅から徒歩3分の好立地✨
-                  <br />
-                  白を基調とした洗練された店内で、客層の良さが自慢です。アットホームな雰囲気で、未経験の方でも先輩スタッフが丁寧にサポートするので安心して働けます！
+                  {store.description ?? "詳細情報はまだ登録されていません。"}
                 </p>
               </section>
 
@@ -157,19 +154,22 @@ export default function StoreDetailPage() {
                 <h2 className="text-base font-bold text-(--text-main) mb-3 pl-2.5 border-l-4 border-(--primary)">
                   勤務条件
                 </h2>
+                {store.businessHours && (
+                  <div className="flex items-center gap-2.5 text-sm text-(--text-main) mb-2.5">
+                    <Clock className="w-4 h-4 text-(--primary)" />
+                    <span>{store.businessHours}</span>
+                  </div>
+                )}
                 <ul className="space-y-2.5">
-                  {CONDITIONS.map((condition, index) => {
-                    const Icon = condition.icon;
-                    return (
-                      <li
-                        key={index}
-                        className="flex items-center gap-2.5 text-sm text-(--text-main)"
-                      >
-                        <Icon className="w-4 h-4 text-(--primary)" />
-                        <span>{condition.text}</span>
-                      </li>
-                    );
-                  })}
+                  {((store.benefits as string[] | null) ?? []).map((benefit, index) => (
+                    <li
+                      key={index}
+                      className="flex items-center gap-2.5 text-sm text-(--text-main)"
+                    >
+                      <Smile className="w-4 h-4 text-(--primary)" />
+                      <span>{benefit}</span>
+                    </li>
+                  ))}
                 </ul>
               </section>
             </div>

@@ -2,11 +2,12 @@
 
 import { useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useAppSession } from "@/lib/demo-session";
+import { useAppSession } from "@/lib/auth-helpers";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { trpc } from "@/lib/trpc";
+import { SalaryDisplay } from "@/components/store/salary-display";
 import {
   ChevronLeft,
   MapPin,
@@ -218,10 +219,7 @@ export default function OfferDetailPage() {
             <h2 className="text-base font-bold text-(--text-main) mb-3 pl-2.5 border-l-4 border-(--primary)">
               給与体系
             </h2>
-            <div className="flex items-center gap-2 text-sm text-(--text-main)">
-              <DollarSign className="w-4 h-4 text-(--primary)" />
-              <span>{offer.store.salarySystem}</span>
-            </div>
+            <SalaryDisplay data={offer.store.salarySystem as Record<string, number>} />
           </section>
         )}
 
