@@ -1,15 +1,15 @@
+import Image from "next/image";
 import Link from "next/link";
 
 const legalLinks = [
-  { label: "プライバシーポリシー", href: "#" },
-  { label: "利用規約", href: "#" },
-  { label: "特定商取引法に基づく表記", href: "#" },
+  { label: "プライバシーポリシー", href: "/privacy" },
+  { label: "利用規約", href: "/terms" },
+  { label: "特定商取引法に基づく表記", href: "/tokushoho" },
 ];
 
 const supportInfo = [
   { label: "苦情処理窓口" },
   { label: "メール: support@lumina.jp" },
-  { label: "届け出番号: 職業紹介 XX-XX-XXXXXX", small: true },
 ];
 
 export function Footer() {
@@ -20,9 +20,11 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
           {/* Brand */}
           <div>
-            <h3 className="text-lg font-bold text-white mb-4">LUMINA</h3>
+            <div className="mb-4">
+              <Image src="/Header_1920x1080_Website.png" alt="LUMINA" width={160} height={90} className="rounded-lg" />
+            </div>
             <p className="text-sm">
-              AIを活用した、新しい働き方マッチングサービス
+              AIを活用した、新しい働き方サポートサービス
             </p>
           </div>
 
@@ -50,7 +52,7 @@ export function Footer() {
               {supportInfo.map((item) => (
                 <li
                   key={item.label}
-                  className={item.small ? "text-xs" : "text-sm"}
+                  className="text-sm"
                 >
                   {item.label}
                 </li>
@@ -77,13 +79,13 @@ export function Footer() {
         <div className="border-t border-gray-800 pt-8">
           {/* Disclaimers */}
           <div className="text-center text-xs mb-6 space-y-1">
-            <p>当サービスは職業紹介事業として適切に届出を行っております。</p>
+            <p>当サービスは募集情報等提供事業として適切に届出を行っております。</p>
             <p>18歳未満の方はご利用いただけません。</p>
           </div>
 
           {/* Copyright */}
           <p className="text-center text-sm">
-            © 2026 LUMINA. All rights reserved.
+            &copy; 2026 LUMINA. All rights reserved.
           </p>
         </div>
       </div>

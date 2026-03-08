@@ -1,7 +1,5 @@
 "use client";
 
-import { useTheme } from "@/lib/theme-provider";
-
 function QuoteIcon() {
   return (
     <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -38,30 +36,18 @@ const voices = [
 ];
 
 export function UserVoices() {
-  const { isDark } = useTheme();
-
   return (
-    <section className={`py-16 md:py-24 ${isDark ? "bg-gray-950" : "bg-white"}`}>
+    <section className="py-16 md:py-24 bg-white">
       <div className="max-w-4xl mx-auto px-4">
         {/* ヘッダー */}
         <div className="text-center mb-10">
-          <span
-            className={`text-sm tracking-widest uppercase ${
-              isDark ? "text-gray-500" : "text-gray-400"
-            }`}
-          >
+          <span className="text-sm tracking-widest uppercase text-gray-400">
             VOICES
           </span>
-          <h2
-            className={`text-2xl md:text-3xl font-bold mt-2 ${
-              isDark ? "text-white" : "text-gray-900"
-            }`}
-          >
+          <h2 className="text-2xl md:text-3xl font-bold mt-2 text-gray-900">
             利用者の声
           </h2>
-          <p
-            className={`text-sm mt-2 ${isDark ? "text-gray-400" : "text-gray-500"}`}
-          >
+          <p className="text-sm mt-2 text-gray-500">
             実際にご利用いただいた方々のリアルな声
           </p>
         </div>
@@ -71,51 +57,27 @@ export function UserVoices() {
           {voices.map((voice) => (
             <div
               key={voice.id}
-              className={`rounded-2xl p-6 border ${
-                isDark
-                  ? "bg-gray-900 border-gray-800"
-                  : "bg-pink-50 border-pink-100"
-              }`}
+              className="rounded-2xl p-6 border bg-pink-50 border-pink-100"
             >
               {/* アイコン */}
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center mb-4 ${
-                  isDark
-                    ? "bg-gradient-to-r from-cyan-500 to-pink-500"
-                    : "bg-pink-500"
-                }`}
-              >
+              <div className="w-10 h-10 rounded-full flex items-center justify-center mb-4 bg-pink-500">
                 <QuoteIcon />
               </div>
 
               {/* コメント */}
-              <p
-                className={`text-sm leading-relaxed mb-4 ${
-                  isDark ? "text-gray-300" : "text-gray-600"
-                }`}
-              >
+              <p className="text-sm leading-relaxed mb-4 text-gray-600">
                 {voice.comment}
               </p>
 
               {/* プロフィール */}
               <div className="flex items-center gap-2">
-                <span
-                  className={`font-semibold ${isDark ? "text-white" : "text-gray-900"}`}
-                >
+                <span className="font-semibold text-gray-900">
                   {voice.name}
                 </span>
-                <span
-                  className={`text-xs px-2 py-0.5 rounded ${
-                    isDark
-                      ? "bg-gray-800 text-gray-400"
-                      : "bg-pink-100 text-pink-600"
-                  }`}
-                >
+                <span className="text-xs px-2 py-0.5 rounded bg-pink-100 text-pink-600">
                   {voice.age}
                 </span>
-                <span
-                  className={`text-xs ${isDark ? "text-gray-500" : "text-gray-400"}`}
-                >
+                <span className="text-xs text-gray-400">
                   {voice.occupation}
                 </span>
               </div>

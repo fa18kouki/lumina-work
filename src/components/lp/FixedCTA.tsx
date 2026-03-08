@@ -1,15 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useTheme } from "@/lib/theme-provider";
-import { useDemoSession } from "@/lib/demo-session";
+import { useSession } from "next-auth/react";
 
 export function FixedCTA() {
-  const { isDark } = useTheme();
-  const { session } = useDemoSession();
+  const { data: session } = useSession();
 
   const isLoggedIn = !!session;
-  const isStore = session?.user.role === "STORE";
+  const isStore = session?.user?.role === "STORE";
 
   const href = isLoggedIn
     ? isStore ? "/store/dashboard" : "/dashboard"
@@ -20,25 +18,17 @@ export function FixedCTA() {
     : "AI時給診断をスタートする";
 
   const sublabel = isLoggedIn
-    ? `${session.user.name}としてログイン中`
+    ? `${session?.user?.name ?? "ユーザー"}としてログイン中`
     : "自分の市場価値を知る";
 
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 z-50 pt-8 pb-4 px-4 pointer-events-none ${
-        isDark
-          ? "bg-gradient-to-t from-black via-black to-transparent"
-          : "bg-gradient-to-t from-white via-white to-transparent"
-      }`}
+      className="fixed bottom-0 left-0 right-0 z-50 pt-8 pb-4 px-4 pointer-events-none bg-gradient-to-t from-white via-white to-transparent"
     >
       <div className="max-w-lg mx-auto pointer-events-auto">
         <Link
           href={href}
-          className={`flex items-center justify-between w-full font-semibold py-4 px-6 rounded-2xl shadow-lg transition-all active:scale-[0.98] ${
-            isDark
-              ? "bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 shadow-cyan-500/25"
-              : "bg-pink-500 text-white hover:bg-pink-600 shadow-pink-500/25"
-          }`}
+          className="flex items-center justify-between w-full font-semibold py-4 px-6 rounded-2xl shadow-lg transition-all active:scale-[0.98] bg-pink-500 text-white hover:bg-pink-600 shadow-pink-500/25"
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
@@ -67,7 +57,7 @@ export function FixedCTA() {
               )}
             </div>
             <div className="text-left">
-              <p className={`text-xs ${isDark ? "text-cyan-100" : "text-pink-100"}`}>
+              <p className="text-xs text-pink-100">
                 {sublabel}
               </p>
               <p className="text-white font-semibold">{label}</p>

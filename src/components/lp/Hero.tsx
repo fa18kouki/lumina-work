@@ -1,68 +1,34 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
-import { useTheme } from "@/lib/theme-provider";
-import { useDemoSession } from "@/lib/demo-session";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
 
 export function Hero() {
-  const { isDark } = useTheme();
-  const { session } = useDemoSession();
+  const { data: session } = useSession();
 
   return (
     <section
-      className={`relative min-h-screen overflow-hidden ${isDark ? "bg-black" : "bg-gradient-to-br from-pink-50 via-pink-100 to-purple-100"}`}
+      className="relative min-h-screen overflow-hidden bg-gradient-to-br from-pink-50 via-pink-100 to-purple-100"
     >
-      {/* 背景画像（ダークモード時のみ） */}
-      {isDark && (
-        <div className="absolute inset-0">
-          <Image
-            src="/champagne-night-view.png"
-            alt="LUMINA - エレガントな雰囲気"
-            fill
-            className="object-cover opacity-60"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/30" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-transparent to-black/50" />
-        </div>
-      )}
-
-      {/* ライトモード時の装飾 */}
-      {!isDark && (
-        <>
-          <div className="absolute top-20 left-10 w-32 h-32 bg-pink-400 rounded-full blur-3xl opacity-50" />
-          <div className="absolute top-40 right-20 w-40 h-40 bg-pink-200 rounded-full blur-3xl opacity-30" />
-          <div className="absolute bottom-40 left-1/4 w-36 h-36 bg-purple-200 rounded-full blur-3xl opacity-40" />
-          <div className="absolute bottom-20 right-1/3 w-28 h-28 bg-pink-400 rounded-full blur-3xl opacity-50" />
-        </>
-      )}
+      {/* 装飾 */}
+      <div className="absolute top-20 left-10 w-32 h-32 bg-pink-400 rounded-full blur-3xl opacity-50" />
+      <div className="absolute top-40 right-20 w-40 h-40 bg-pink-200 rounded-full blur-3xl opacity-30" />
+      <div className="absolute bottom-40 left-1/4 w-36 h-36 bg-purple-200 rounded-full blur-3xl opacity-40" />
+      <div className="absolute bottom-20 right-1/3 w-28 h-28 bg-pink-400 rounded-full blur-3xl opacity-50" />
 
       {/* ヘッダー */}
       <header className="relative z-20 px-4 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div
-              className={`w-8 h-8 ${isDark ? "bg-gradient-to-r from-cyan-400 to-pink-500" : "bg-pink-500"} rounded-lg flex items-center justify-center`}
-            >
-              <span className="text-white font-bold text-sm">L</span>
-            </div>
-            <span
-              className={`font-bold text-xl ${isDark ? "text-white" : "text-gray-900"}`}
-            >
-              LUMINA
-            </span>
+            <Image src="/Image.png" alt="LUMINA" width={140} height={42} priority />
           </div>
 
           <div className="flex items-center gap-3">
             {session ? (
               <Link
                 href={session.user.role === "STORE" ? "/store/dashboard" : "/dashboard"}
-                className={`text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
-                  isDark
-                    ? "bg-white/10 text-white hover:bg-white/20"
-                    : "bg-pink-500 text-white hover:bg-pink-600"
-                }`}
+                className="text-sm font-medium px-4 py-2 rounded-lg transition-colors bg-pink-500 text-white hover:bg-pink-600"
               >
                 {session.user.role === "STORE" ? "管理画面へ" : "マイページへ"}
               </Link>
@@ -70,21 +36,13 @@ export function Hero() {
               <>
                 <Link
                   href="/login"
-                  className={`text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
-                    isDark
-                      ? "text-white hover:bg-white/10"
-                      : "text-gray-700 hover:bg-gray-100"
-                  }`}
+                  className="text-sm font-medium px-4 py-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-100"
                 >
                   ログイン
                 </Link>
                 <Link
                   href="/store/login"
-                  className={`text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
-                    isDark
-                      ? "text-gray-400 hover:text-white hover:bg-white/10"
-                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                  }`}
+                  className="text-sm font-medium px-4 py-2 rounded-lg transition-colors text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                 >
                   店舗の方
                 </Link>
@@ -99,7 +57,7 @@ export function Hero() {
         <div className="max-w-xl">
           {/* バッジ */}
           <div
-            className={`inline-flex items-center gap-2 ${isDark ? "bg-pink-500/90" : "bg-pink-500"} text-white px-4 py-2 rounded-full text-sm font-medium mb-6 shadow-lg`}
+            className="inline-flex items-center gap-2 bg-pink-500 text-white px-4 py-2 rounded-full text-sm font-medium mb-6 shadow-lg"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <path
@@ -113,34 +71,26 @@ export function Hero() {
 
           {/* キャッチコピー */}
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6">
-            <span className={isDark ? "text-white" : "text-gray-900"}>
+            <span className="text-gray-900">
               今の時給、
             </span>
             <br />
-            <span
-              className={`font-extrabold ${isDark ? "text-white" : "text-pink-500"}`}
-            >
+            <span className="font-extrabold text-pink-500">
               安すぎない？
             </span>
           </h1>
 
           {/* サブテキスト */}
-          <p
-            className={`text-lg md:text-xl mb-8 leading-relaxed ${isDark ? "text-gray-300" : "text-gray-600"}`}
-          >
+          <p className="text-lg md:text-xl mb-8 leading-relaxed text-gray-600">
             AIがあなたの市場価値を診断。
             <br className="hidden sm:block" />
-            適正時給とマッチする店舗を見つけよう。
+            適正時給と希望条件に合う店舗を見つけよう。
           </p>
 
           {/* CTA */}
           <Link
             href="/diagnosis"
-            className={`inline-flex items-center gap-3 font-semibold py-4 px-8 rounded-xl text-lg transition-all active:scale-[0.98] shadow-lg ${
-              isDark
-                ? "bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 shadow-cyan-500/25"
-                : "bg-pink-500 text-white hover:bg-pink-600 shadow-pink-500/25"
-            }`}
+            className="inline-flex items-center gap-3 font-semibold py-4 px-8 rounded-xl text-lg transition-all active:scale-[0.98] shadow-lg bg-pink-500 text-white hover:bg-pink-600 shadow-pink-500/25"
           >
             <span>AI時給診断をスタートする</span>
             <svg
@@ -159,9 +109,7 @@ export function Hero() {
           </Link>
 
           {/* 所要時間 */}
-          <p
-            className={`text-sm mt-4 ${isDark ? "text-gray-400" : "text-gray-500"}`}
-          >
+          <p className="text-sm mt-4 text-gray-500">
             たった30秒 / 完全匿名OK
           </p>
         </div>

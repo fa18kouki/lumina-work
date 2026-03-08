@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTheme } from "@/lib/theme-provider";
 
 function ChevronDownIcon({ className }: { className?: string }) {
   return (
@@ -50,7 +49,6 @@ const faqs = [
 ];
 
 export function FAQ() {
-  const { isDark } = useTheme();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const toggleFAQ = (index: number) => {
@@ -58,27 +56,17 @@ export function FAQ() {
   };
 
   return (
-    <section className={`py-16 md:py-24 ${isDark ? "bg-black" : "bg-gray-50"}`}>
+    <section className="py-16 md:py-24 bg-gray-50">
       <div className="max-w-2xl mx-auto px-4">
         {/* ヘッダー */}
         <div className="text-center mb-10">
-          <span
-            className={`text-sm tracking-widest uppercase ${
-              isDark ? "text-gray-500" : "text-gray-400"
-            }`}
-          >
+          <span className="text-sm tracking-widest uppercase text-gray-400">
             FAQ
           </span>
-          <h2
-            className={`text-2xl md:text-3xl font-bold mt-2 ${
-              isDark ? "text-white" : "text-gray-900"
-            }`}
-          >
+          <h2 className="text-2xl md:text-3xl font-bold mt-2 text-gray-900">
             よくある質問
           </h2>
-          <p
-            className={`text-sm mt-2 ${isDark ? "text-gray-400" : "text-gray-500"}`}
-          >
+          <p className="text-sm mt-2 text-gray-500">
             皆さまからよく寄せられる質問にお答えします
           </p>
         </div>
@@ -88,30 +76,18 @@ export function FAQ() {
           {faqs.map((faq, index) => (
             <div
               key={index}
-              className={`rounded-xl overflow-hidden border ${
-                isDark
-                  ? "bg-gray-900 border-gray-800"
-                  : "bg-white border-gray-200"
-              }`}
+              className="rounded-xl overflow-hidden border bg-white border-gray-200"
             >
               {/* Question button */}
               <button
                 onClick={() => toggleFAQ(index)}
-                className={`w-full flex items-center justify-between p-5 text-left transition-colors ${
-                  isDark ? "hover:bg-gray-800/50" : "hover:bg-gray-50"
-                }`}
+                className="w-full flex items-center justify-between p-5 text-left transition-colors hover:bg-gray-50"
               >
-                <span
-                  className={`text-sm font-medium ${
-                    isDark ? "text-white" : "text-gray-900"
-                  }`}
-                >
+                <span className="text-sm font-medium text-gray-900">
                   {faq.question}
                 </span>
                 <ChevronDownIcon
-                  className={`w-5 h-5 transition-transform duration-200 shrink-0 ml-4 ${
-                    isDark ? "text-gray-400" : "text-gray-500"
-                  } ${openIndex === index ? "rotate-180" : ""}`}
+                  className={`w-5 h-5 transition-transform duration-200 shrink-0 ml-4 text-gray-500 ${openIndex === index ? "rotate-180" : ""}`}
                 />
               </button>
 
@@ -121,16 +97,8 @@ export function FAQ() {
                   openIndex === index ? "max-h-96" : "max-h-0"
                 }`}
               >
-                <div
-                  className={`px-5 pb-5 pt-0 border-t ${
-                    isDark ? "border-gray-800" : "border-gray-100"
-                  }`}
-                >
-                  <p
-                    className={`text-sm leading-relaxed pt-4 ${
-                      isDark ? "text-gray-400" : "text-gray-600"
-                    }`}
-                  >
+                <div className="px-5 pb-5 pt-0 border-t border-gray-100">
+                  <p className="text-sm leading-relaxed pt-4 text-gray-600">
                     {faq.answer}
                   </p>
                 </div>
