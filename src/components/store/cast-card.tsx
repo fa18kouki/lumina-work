@@ -74,7 +74,7 @@ export function CastCard({ cast, onDetail, onOffer }: CastCardProps) {
               {cast.desiredAreas.slice(0, 3).map((area) => (
                 <span
                   key={area}
-                  className="px-2 py-0.5 bg-(--primary-bg) text-(--primary) text-xs rounded"
+                  className="px-2 py-0.5 bg-slate-50 text-slate-700 text-xs rounded"
                 >
                   {area}
                 </span>

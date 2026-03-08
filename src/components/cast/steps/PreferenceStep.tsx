@@ -1,7 +1,7 @@
 "use client";
 
 import type { ProfileFormData } from "../ProfileWizard";
-import { AREAS } from "@/lib/constants";
+import { AreaSelector } from "@/components/ui/area-selector";
 
 interface PreferenceStepProps {
   data: ProfileFormData;
@@ -52,22 +52,10 @@ export function PreferenceStep({ data, onDataChange }: PreferenceStepProps) {
           <label className="mb-2 block text-sm font-medium text-gray-700">
             希望エリア（複数選択可）
           </label>
-          <div className="flex flex-wrap gap-2">
-            {AREAS.map((area) => (
-              <button
-                key={area}
-                type="button"
-                onClick={() => toggleArrayItem("desiredAreas", area)}
-                className={`rounded-full px-4 py-2 text-sm transition-colors ${
-                  data.desiredAreas?.includes(area)
-                    ? "bg-pink-500 text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                {area}
-              </button>
-            ))}
-          </div>
+          <AreaSelector
+            value={data.desiredAreas || []}
+            onChange={(areas) => onDataChange({ desiredAreas: areas })}
+          />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">

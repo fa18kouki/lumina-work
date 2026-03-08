@@ -1,7 +1,8 @@
 "use client";
 
 import { Plus, X } from "lucide-react";
-import { AREAS, BUSINESS_TYPES, type BusinessType } from "@/lib/constants";
+import { BUSINESS_TYPES, type BusinessType } from "@/lib/constants";
+import { AreaSelect } from "@/components/ui/area-select";
 
 export type { BusinessType };
 
@@ -64,20 +65,11 @@ export function ExperienceInput({
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 エリア
               </label>
-              <select
+              <AreaSelect
                 value={exp.area}
-                onChange={(e) =>
-                  handleUpdateExperience(index, "area", e.target.value)
-                }
+                onChange={(v) => handleUpdateExperience(index, "area", v)}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500"
-              >
-                <option value="">選択してください</option>
-                {AREAS.map((area) => (
-                  <option key={area} value={area}>
-                    {area}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             <div>

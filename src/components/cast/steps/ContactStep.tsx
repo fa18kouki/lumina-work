@@ -14,13 +14,13 @@ export function ContactStep({ data, onDataChange }: ContactStepProps) {
       <div>
         <h2 className="mb-1 text-lg font-bold text-gray-900">連絡先</h2>
         <p className="text-sm text-gray-500">
-          マッチング後の連絡手段として使用されます
+          店舗との連絡手段として使用されます
         </p>
       </div>
 
       <div className="rounded-lg bg-pink-50 p-4">
         <p className="text-sm text-pink-700">
-          システムは仲介しません。マッチング後は当事者間で直接やり取りしていただきます。
+          システムは仲介しません。応募後は当事者間で直接やり取りしていただきます。
         </p>
       </div>
 
