@@ -91,7 +91,7 @@
 | **フロントエンド** | React, TypeScript, Tailwind CSS |
 | **バックエンド** | Node.js, NestJS, GraphQL |
 | **データベース** | PostgreSQL, Redis |
-| **インフラ** | AWS (ECS, S3, RDSなど), Docker |
+| **インフラ** | Vercel, Supabase |
 | **AI・機械学習** | Python, TensorFlow/PyTorch, scikit-learn, BigQuery ML |
 | **外部サービス** | Twilio (SMS認証), SendGrid (メール配信), Google Cloud Vision API (画像解析) |
 
