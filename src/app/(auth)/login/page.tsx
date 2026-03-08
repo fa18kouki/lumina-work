@@ -1,59 +1,49 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { Suspense } from "react";
-import { useDemoSession } from "@/lib/demo-session";
 import { useDiagnosis } from "@/lib/diagnosis-provider";
 
 function LoginContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useDemoSession();
   const { session: diagnosisSession } = useDiagnosis();
 
   // 診断経由かどうか
   const diagnosisId = searchParams.get("diagnosisId");
-  const fromDiagnosis = Boolean(diagnosisId || diagnosisSession?.result);
+  const fromDiagnosisParam = searchParams.get("fromDiagnosis");
+  const fromDiagnosis = Boolean(diagnosisId || fromDiagnosisParam || diagnosisSession?.result);
+
+  const callbackUrl = fromDiagnosis ? "/ai-diagnosis" : "/dashboard";
 
   const handleLogin = () => {
-    login("CAST");
-
-    if (fromDiagnosis) {
-      // 診断経由: sessionStorageのデータを保持したまま認証済み診断ページへ遷移
-      // diagnosis-context.tsx の startDiagnosis() が自動的にデータを引き継ぐ
-      router.push("/ai-diagnosis");
-    } else {
-      // 通常ログイン: ダッシュボードへ遷移
-      router.push("/dashboard");
-    }
+    signIn("line", { callbackUrl });
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black">
+    <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="max-w-md w-full space-y-8 p-6">
         {/* ロゴ */}
         <div className="text-center">
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-r from-cyan-400 to-pink-500 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-lg">L</span>
-            </div>
-            <span className="text-white font-bold text-2xl">LUMINA</span>
+          <div className="flex items-center justify-center mb-6">
+            <Image src="/Image.png" alt="LUMINA" width={180} height={54} priority />
           </div>
 
           {fromDiagnosis ? (
             <>
-              <h1 className="text-2xl font-bold text-white">
-                オファーを受け取るには
+              <h1 className="text-2xl font-bold text-gray-900">
+                店舗情報を確認するには
               </h1>
-              <p className="mt-2 text-gray-400">
-                LINE登録で、お店との連絡が可能になります
+              <p className="mt-2 text-gray-500">
+                LINE登録で、希望条件を満たす店舗の詳細を確認できます
               </p>
             </>
           ) : (
             <>
-              <h1 className="text-2xl font-bold text-white">キャストログイン</h1>
-              <p className="mt-2 text-gray-400">
+              <h1 className="text-2xl font-bold text-gray-900">キャストログイン</h1>
+              <p className="mt-2 text-gray-500">
                 LINEアカウントでログインしてご利用ください
               </p>
             </>
@@ -62,17 +52,17 @@ function LoginContent() {
 
         {/* 診断結果サマリー（診断経由の場合） */}
         {fromDiagnosis && diagnosisSession?.result && (
-          <div className="bg-gradient-to-r from-cyan-500/20 to-pink-500/20 rounded-2xl p-4 border border-gray-800">
+          <div className="bg-pink-50 rounded-2xl p-4 border border-pink-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-400 text-sm">あなたの推定時給</p>
-                <p className="text-xl font-bold text-white">
+                <p className="text-gray-500 text-sm">あなたの推定時給</p>
+                <p className="text-xl font-bold text-gray-900">
                   {diagnosisSession.result.estimatedHourlyRate.toLocaleString()}円〜
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-gray-400 text-sm">ランク</p>
-                <p className="text-xl font-bold text-cyan-400">
+                <p className="text-gray-500 text-sm">ランク</p>
+                <p className="text-xl font-bold text-pink-500">
                   {diagnosisSession.result.estimatedRank}
                 </p>
               </div>
@@ -94,13 +84,13 @@ function LoginContent() {
           </button>
 
           {/* 注意事項 */}
-          <p className="text-center text-xs text-gray-500">
+          <p className="text-center text-xs text-gray-400">
             ログインすることで、
-            <Link href="#" className="text-cyan-400 hover:underline">
+            <Link href="/terms" className="text-pink-500 hover:underline">
               利用規約
             </Link>
             と
-            <Link href="#" className="text-cyan-400 hover:underline">
+            <Link href="/privacy" className="text-pink-500 hover:underline">
               プライバシーポリシー
             </Link>
             に同意したものとみなされます
@@ -110,10 +100,10 @@ function LoginContent() {
         {/* 戻るリンク */}
         <div className="text-center pt-4">
           <Link
-            href={fromDiagnosis ? "/diagnosis/offers" : "/"}
-            className="text-sm text-gray-400 hover:text-gray-300"
+            href={fromDiagnosis ? "/diagnosis/result" : "/"}
+            className="text-sm text-gray-400 hover:text-gray-600"
           >
-            {fromDiagnosis ? "オファー一覧に戻る" : "トップページに戻る"}
+            {fromDiagnosis ? "診断結果に戻る" : "トップページに戻る"}
           </Link>
         </div>
       </div>
@@ -125,8 +115,8 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-black">
-          <div className="animate-spin w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full" />
+        <div className="min-h-screen flex items-center justify-center bg-white">
+          <div className="animate-spin w-8 h-8 border-2 border-pink-500 border-t-transparent rounded-full" />
         </div>
       }
     >
