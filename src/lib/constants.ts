@@ -1,42 +1,5 @@
 /** システム共通エリアリスト（全ページで使用） */
-export const AREAS = [
-  // 関東
-  "新宿",
-  "歌舞伎町",
-  "渋谷",
-  "六本木",
-  "銀座",
-  "赤坂",
-  "恵比寿",
-  "池袋",
-  "上野",
-  "錦糸町",
-  "横浜",
-  "川崎",
-  "大宮",
-  "千葉",
-  "船橋",
-  // 中部
-  "名古屋",
-  "栄",
-  // 関西
-  "大阪",
-  "梅田",
-  "難波",
-  "京都",
-  "神戸",
-  // 九州
-  "福岡",
-  "中洲",
-  // 北海道・東北
-  "札幌",
-  "すすきの",
-  "仙台",
-  // 中国
-  "広島",
-] as const;
-
-export type Area = (typeof AREAS)[number];
+export { AREAS, type Area } from "./areas";
 
 /** 業種リスト */
 export const BUSINESS_TYPES = [
@@ -49,3 +12,53 @@ export const BUSINESS_TYPES = [
 ] as const;
 
 export type BusinessType = (typeof BUSINESS_TYPES)[number]["value"];
+
+/** サブスクリプションプラン定義 */
+export const SUBSCRIPTION_PLANS = [
+  {
+    id: "FREE" as const,
+    name: "フリー",
+    price: 0,
+    priceLabel: "¥0",
+    description: "まずはお試しで始めたい店舗向け",
+    features: [
+      "月5件までオファー送信",
+      "基本的なキャスト検索",
+      "メッセージ機能",
+    ],
+  },
+  {
+    id: "BASIC" as const,
+    name: "ベーシック",
+    price: 99999,
+    priceLabel: "¥99,999",
+    description: "本格的に採用活動を行う店舗向け",
+    features: [
+      "月30件までオファー送信",
+      "詳細なキャスト検索・フィルター",
+      "メッセージ機能",
+      "面接管理機能",
+      "応募者分析レポート",
+    ],
+  },
+  {
+    id: "PREMIUM" as const,
+    name: "プレミアム",
+    price: 99999,
+    priceLabel: "¥99,999",
+    description: "大量採用・複数店舗を運営する企業向け",
+    features: [
+      "オファー送信無制限",
+      "AI 検索優先表示",
+      "詳細なキャスト検索・フィルター",
+      "メッセージ機能",
+      "面接管理機能",
+      "応募者分析レポート",
+      "優先サポート",
+      "複数店舗管理",
+    ],
+    recommended: true,
+  },
+] as const;
+
+export type SubscriptionPlanId = (typeof SUBSCRIPTION_PLANS)[number]["id"];

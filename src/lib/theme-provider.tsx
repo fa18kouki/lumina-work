@@ -16,18 +16,17 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: "dark",
-  isDark: true,
+  theme: "light",
+  isDark: false,
 });
 
-// 18:00〜6:00はダークテーマ、それ以外はライトテーマ
+// 常にライトテーマを使用
 function getThemeByTime(): Theme {
-  const hour = new Date().getHours();
-  return hour >= 18 || hour < 6 ? "dark" : "light";
+  return "light";
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark"); // SSR時はダークをデフォルト
+  const [theme, setTheme] = useState<Theme>("light"); // 常にライトテーマ
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -43,8 +42,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
-  // マウント前はSSRと一致させるためダークを返す
-  const currentTheme = mounted ? theme : "dark";
+  const currentTheme = mounted ? theme : "light";
 
   return (
     <ThemeContext.Provider

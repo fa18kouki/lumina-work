@@ -11,6 +11,9 @@ export type DiagnosisStep =
 export type CastRank = "S" | "A" | "B" | "C";
 
 export interface DiagnosisAnswers {
+  // 基本情報
+  age?: number;
+
   // 経験・スキル（Cast.totalExperienceYears 等に対応）
   totalExperienceYears?: number;
   previousHourlyRate?: number;
@@ -24,6 +27,9 @@ export interface DiagnosisAnswers {
 
   // 強み・特徴
   strengths?: string[];
+
+  // 顔写真URL
+  photos?: string[];
 }
 
 export interface DiagnosisResult {

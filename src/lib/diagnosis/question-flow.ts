@@ -8,6 +8,7 @@ import type {
   StepInfo,
   DiagnosisAnswers,
 } from "./types";
+import { getAllAreas } from "../areas";
 
 // ステップ定義
 export const DIAGNOSIS_STEPS: StepInfo[] = [
@@ -19,21 +20,12 @@ export const DIAGNOSIS_STEPS: StepInfo[] = [
   { step: "AVAILABILITY", label: "稼働状況", questionCount: 2 },
 ];
 
-// エリア選択肢
-const AREA_OPTIONS = [
-  { id: "ginza", label: "銀座", value: "銀座" },
-  { id: "roppongi", label: "六本木", value: "六本木" },
-  { id: "shibuya", label: "渋谷", value: "渋谷" },
-  { id: "shinjuku", label: "新宿", value: "新宿" },
-  { id: "ikebukuro", label: "池袋", value: "池袋" },
-  { id: "kabukicho", label: "歌舞伎町", value: "歌舞伎町" },
-  { id: "ueno", label: "上野", value: "上野" },
-  { id: "gotanda", label: "五反田", value: "五反田" },
-  { id: "yokohama", label: "横浜", value: "横浜" },
-  { id: "osaka", label: "大阪", value: "大阪" },
-  { id: "nagoya", label: "名古屋", value: "名古屋" },
-  { id: "fukuoka", label: "福岡", value: "福岡" },
-];
+// エリア選択肢（全国エリアデータから自動生成）
+const AREA_OPTIONS = getAllAreas().map((area) => ({
+  id: area.id,
+  label: area.label,
+  value: area.label,
+}));
 
 // 業種選択肢
 const BUSINESS_TYPE_OPTIONS = [
@@ -105,7 +97,7 @@ export const QUESTIONS: Question[] = [
     id: "birthDate",
     step: "BASIC_INFO",
     type: "date",
-    content: "生年月日を教えてください（マッチング精度向上のため）",
+    content: "生年月日を教えてください（より正確な診断のため）",
     placeholder: "1995-01-15",
     validation: { required: false },
     followUp: "了解しました！",
@@ -135,7 +127,7 @@ export const QUESTIONS: Question[] = [
     id: "lineId",
     step: "CONTACT",
     type: "text",
-    content: "LINE IDを教えてください（任意）\n※マッチング後の連絡に使用します",
+    content: "LINE IDを教えてください（任意）\n※店舗との連絡に使用します",
     placeholder: "例: your_line_id",
     validation: { required: false },
     followUp: "ありがとうございます！",

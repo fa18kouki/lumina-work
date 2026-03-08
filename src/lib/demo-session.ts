@@ -20,6 +20,7 @@ export interface DemoSession {
 
 // セッションキー
 const SESSION_KEY = "demo_session";
+const DEMO_COOKIE_KEY = "demo_session_token";
 
 // ランダムID生成
 export function generateDemoUserId(): string {
@@ -41,6 +42,8 @@ export function createDemoSession(role: DemoRole): DemoSession {
 
   if (typeof window !== "undefined") {
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    // ミドルウェアで認識できるようにcookieも設定
+    document.cookie = `${DEMO_COOKIE_KEY}=${role}; path=/; max-age=86400; SameSite=Lax`;
   }
 
   return session;
@@ -71,6 +74,7 @@ export function getDemoSession(): DemoSession | null {
 export function clearDemoSession(): void {
   if (typeof window !== "undefined") {
     localStorage.removeItem(SESSION_KEY);
+    document.cookie = `${DEMO_COOKIE_KEY}=; path=/; max-age=0`;
   }
 }
 
