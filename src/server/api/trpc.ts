@@ -2,8 +2,10 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import type { Session } from "next-auth";
+import { cookies } from "next/headers";
 import { prisma } from "@/server/db";
 import { auth } from "@/lib/auth";
+import { createServerClient } from "@/lib/supabase-auth";
 
 /**
  * コンテキスト型の定義
@@ -23,10 +25,61 @@ export const createInnerTRPCContext = (opts: CreateContextOptions) => {
 };
 
 /**
+ * Supabase Auth セッションから NextAuth 形式のセッションを復元
+ */
+async function getSupabaseSession(): Promise<Session | null> {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(cookieStore);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    let prismaUser = await prisma.user.findUnique({
+      where: { supabaseAuthId: user.id },
+      select: { id: true, email: true, image: true, role: true },
+    });
+
+    // Prisma ユーザーが存在しない場合（callback を経由せずログインした場合など）自動作成
+    if (!prismaUser) {
+      prismaUser = await prisma.user.create({
+        data: {
+          email: user.email,
+          emailVerified: user.email_confirmed_at
+            ? new Date(user.email_confirmed_at)
+            : null,
+          role: "STORE",
+          supabaseAuthId: user.id,
+        },
+        select: { id: true, email: true, image: true, role: true },
+      });
+    }
+
+    return {
+      user: {
+        id: prismaUser.id,
+        email: prismaUser.email,
+        name: null,
+        image: prismaUser.image,
+        role: prismaUser.role,
+      },
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * APIリクエスト用コンテキスト作成
  */
 export const createTRPCContext = async () => {
-  const session = await auth();
+  // NextAuth セッションを優先（キャスト側）
+  let session = await auth();
+
+  // NextAuth セッションがない場合、Supabase Auth を確認（店舗側）
+  if (!session) {
+    session = await getSupabaseSession();
+  }
 
   return createInnerTRPCContext({
     session,

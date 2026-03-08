@@ -9,11 +9,11 @@ import {
 } from "./schemas";
 
 /**
- * マッチング/面接監視ルーター
+ * やりとり/面接監視ルーター
  */
 export const adminOversightRouter = createTRPCRouter({
   /**
-   * 全マッチング一覧（管理用）
+   * 全やりとり一覧（管理用）
    */
   listMatches: adminProcedure
     .input(

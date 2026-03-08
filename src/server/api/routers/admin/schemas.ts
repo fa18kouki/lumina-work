@@ -20,13 +20,7 @@ export const dateRangeInput = z.object({
  * Enum スキーマ
  */
 export const userRoleEnum = z.enum(["CAST", "STORE", "ADMIN"]);
-export const castRankEnum = z.enum([
-  "UNRANKED",
-  "BRONZE",
-  "SILVER",
-  "GOLD",
-  "PLATINUM",
-]);
+export const castRankEnum = z.enum(["C", "B", "A", "S"]);
 export const matchStatusEnum = z.enum(["PENDING", "ACCEPTED", "REJECTED"]);
 export const offerStatusEnum = z.enum([
   "PENDING",

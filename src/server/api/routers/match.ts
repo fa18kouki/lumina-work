@@ -3,7 +3,7 @@ import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 
 export const matchRouter = createTRPCRouter({
   /**
-   * マッチング一覧取得
+   * やりとり一覧取得
    */
   getMatches: protectedProcedure
     .input(
@@ -72,7 +72,7 @@ export const matchRouter = createTRPCRouter({
     }),
 
   /**
-   * マッチングステータス更新
+   * ステータス更新
    */
   updateStatus: protectedProcedure
     .input(
@@ -90,7 +90,7 @@ export const matchRouter = createTRPCRouter({
       const castId = user?.cast?.id;
       const storeId = user?.store?.id;
 
-      // マッチングが自分に関連しているか確認
+      // 自分に関連するか確認
       const match = await ctx.prisma.match.findFirst({
         where: {
           id: input.matchId,
@@ -102,7 +102,7 @@ export const matchRouter = createTRPCRouter({
       });
 
       if (!match) {
-        throw new Error("マッチングが見つかりません");
+        throw new Error("該当するやりとりが見つかりません");
       }
 
       return ctx.prisma.match.update({
