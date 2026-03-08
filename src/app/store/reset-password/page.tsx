@@ -1,19 +1,29 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
+import { Lock, Eye, EyeOff } from "lucide-react";
 import { createBrowserClient } from "@/lib/supabase-auth";
 
-export default function StoreRegisterPage() {
-  const [email, setEmail] = useState("");
+export default function ResetPasswordPage() {
+  const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
+
+  useEffect(() => {
+    // Supabase はリダイレクト時にURL fragmentからセッションを自動復元する
+    const supabase = createBrowserClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setHasSession(!!session);
+    });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,30 +41,35 @@ export default function StoreRegisterPage() {
     setIsLoading(true);
     try {
       const supabase = createBrowserClient();
-      const { error: signUpError } = await supabase.auth.signUp({
-        email,
+      const { error: updateError } = await supabase.auth.updateUser({
         password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/store/dashboard`,
-        },
       });
 
-      if (signUpError) {
-        if (signUpError.message.includes("already registered")) {
-          setError("このメールアドレスは既に登録されています");
-        } else {
-          setError("登録に失敗しました。もう一度お試しください");
-        }
+      if (updateError) {
+        setError("パスワードの更新に失敗しました。もう一度お試しください");
         return;
       }
 
-      setEmailSent(true);
+      setSuccess(true);
+      setTimeout(() => {
+        router.push("/store/dashboard");
+      }, 2000);
     } catch {
-      setError("登録に失敗しました。もう一度お試しください");
+      setError("エラーが発生しました。もう一度お試しください");
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (!hasSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full space-y-8 p-8 text-center">
+          <p className="text-gray-600">セッションを確認中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -63,31 +78,21 @@ export default function StoreRegisterPage() {
           <div className="flex items-center justify-center mb-6">
             <Image src="/Image.png" alt="LUMINA" width={200} height={60} priority />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">店舗アカウント登録</h1>
+          <h1 className="text-2xl font-bold text-gray-900">新しいパスワードを設定</h1>
           <p className="mt-2 text-gray-600">
-            メールアドレスとパスワードで登録します
+            新しいパスワードを入力してください
           </p>
         </div>
 
         <div className="mt-8">
-          {emailSent ? (
+          {success ? (
             <div className="p-6 bg-blue-50 border border-blue-200 rounded-lg text-center space-y-2">
               <p className="text-blue-800 font-medium text-lg">
-                確認メールを送信しました
+                パスワードを更新しました
               </p>
               <p className="text-blue-600 text-sm">
-                {email} に送信されたリンクをクリックして登録を完了してください
+                ダッシュボードにリダイレクトします...
               </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmailSent(false);
-                  setError("");
-                }}
-                className="text-sm text-blue-700 hover:underline mt-2"
-              >
-                別のメールアドレスで登録する
-              </button>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -99,31 +104,10 @@ export default function StoreRegisterPage() {
 
               <div>
                 <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  メールアドレス
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="example@email.com"
-                    required
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-slate-500 focus:border-slate-500 outline-none transition-colors text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label
                   htmlFor="password"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  パスワード
+                  新しいパスワード
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -156,7 +140,7 @@ export default function StoreRegisterPage() {
                   htmlFor="confirmPassword"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  パスワード（確認）
+                  新しいパスワード（確認）
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -175,58 +159,22 @@ export default function StoreRegisterPage() {
 
               <button
                 type="submit"
-                disabled={isLoading || !email || !password || !confirmPassword}
+                disabled={isLoading || !password || !confirmPassword}
                 className="w-full flex items-center justify-center gap-2 px-4 py-4 border border-transparent text-lg font-medium rounded-md text-white bg-slate-800 hover:bg-slate-900 disabled:bg-slate-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors"
               >
-                {isLoading ? (
-                  <span className="flex items-center gap-2">
-                    <svg
-                      className="animate-spin h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                    登録中...
-                  </span>
-                ) : (
-                  "アカウントを登録"
-                )}
+                {isLoading ? "更新中..." : "パスワードを更新"}
               </button>
             </form>
           )}
         </div>
 
-        <div className="text-center space-y-2">
-          <div>
-            <span className="text-sm text-gray-600">すでにアカウントをお持ちですか？</span>{" "}
-            <Link
-              href="/store/login"
-              className="text-sm text-slate-700 font-semibold"
-            >
-              ログイン
-            </Link>
-          </div>
-          <div>
-            <Link
-              href="/"
-              className="text-sm text-gray-500 hover:text-gray-700"
-            >
-              トップページに戻る
-            </Link>
-          </div>
+        <div className="text-center">
+          <Link
+            href="/store/login"
+            className="text-sm text-gray-500 hover:text-gray-700"
+          >
+            ログインに戻る
+          </Link>
         </div>
       </div>
     </div>
