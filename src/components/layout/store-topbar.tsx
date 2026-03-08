@@ -3,8 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Store, Bell } from "lucide-react";
-import { useDemoSession } from "@/lib/demo-session";
-import { createMockStoreProfile } from "@/lib/mock-data";
+import { useStoreSession } from "@/lib/auth-helpers";
+import { trpc } from "@/lib/trpc";
 
 const MOCK_NOTIFICATIONS = [
   {
@@ -34,11 +34,11 @@ const MOCK_NOTIFICATIONS = [
 ];
 
 export function StoreTopbar() {
-  const { session } = useDemoSession();
-  const profile = session?.user?.id
-    ? createMockStoreProfile(session.user.id)
-    : null;
-  const storeDisplayName = profile?.name ?? "店舗";
+  const { user } = useStoreSession();
+  const { data: storeProfile } = trpc.store.getProfile.useQuery(undefined, {
+    enabled: !!user,
+  });
+  const storeDisplayName = storeProfile?.name ?? "店舗";
 
   const [showNotifications, setShowNotifications] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -66,7 +66,7 @@ export function StoreTopbar() {
         </span>
       </Link>
 
-      <div className="hidden sm:flex items-center gap-5 text-[var(--text-sub)] bg-[var(--bg-gray)] px-5 py-2 rounded-[20px] font-medium text-base">
+      <div className="hidden sm:flex items-center gap-5 text-[var(--text-sub)] bg-[var(--bg-gray)] px-5 py-2 rounded-md font-medium text-base">
         <Store className="w-4 h-4" aria-hidden />
         {storeDisplayName}
       </div>
@@ -77,21 +77,21 @@ export function StoreTopbar() {
           <button
             type="button"
             onClick={() => setShowNotifications((prev) => !prev)}
-            className="relative text-[var(--text-sub)] hover:text-[var(--primary)] transition-colors p-1"
+            className="relative text-[var(--text-sub)] hover:text-slate-700 transition-colors p-1"
             aria-label="通知"
           >
             <Bell className="w-[22px] h-[22px]" />
             {unreadCount > 0 && (
-              <span className="absolute top-0 right-0 w-2 h-2 bg-[var(--primary)] rounded-full" />
+              <span className="absolute top-0 right-0 w-2 h-2 bg-slate-700 rounded-full" />
             )}
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50">
+            <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden z-50">
               <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="font-semibold text-sm text-[var(--text-main)]">通知</h3>
                 {unreadCount > 0 && (
-                  <span className="text-xs bg-[var(--primary-bg)] text-[var(--primary)] px-2 py-0.5 rounded-full font-medium">
+                  <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-medium">
                     {unreadCount}件の未読
                   </span>
                 )}
@@ -101,12 +101,12 @@ export function StoreTopbar() {
                   <li
                     key={n.id}
                     className={`px-4 py-3 border-b border-gray-50 last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer ${
-                      n.unread ? "bg-[var(--primary-bg)]/30" : ""
+                      n.unread ? "bg-slate-50" : ""
                     }`}
                   >
                     <div className="flex items-start gap-2">
                       {n.unread && (
-                        <span className="w-2 h-2 bg-[var(--primary)] rounded-full mt-1.5 flex-shrink-0" />
+                        <span className="w-2 h-2 bg-slate-700 rounded-full mt-1.5 flex-shrink-0" />
                       )}
                       <div className={n.unread ? "" : "ml-4"}>
                         <p className="text-sm text-[var(--text-main)]">{n.message}</p>

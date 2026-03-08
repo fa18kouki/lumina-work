@@ -44,7 +44,7 @@ export function StoreLayoutWrapper({
       <StoreTopbar />
       <OnboardingGuard />
       <div className="flex flex-1 pt-[70px] min-h-[calc(100vh-70px)]">
-        <aside className="hidden md:flex md:w-[260px] md:shrink-0">
+        <aside className="hidden md:flex md:w-[260px] md:shrink-0 sticky top-[70px] h-[calc(100vh-70px)]">
           <StoreNav />
         </aside>
         <main className="flex-1 p-6 md:p-10 overflow-y-auto min-w-0">

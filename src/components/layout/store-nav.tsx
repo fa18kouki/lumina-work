@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
@@ -12,7 +12,7 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
-import { useDemoSession } from "@/lib/demo-session";
+import { useStoreSignOut } from "@/lib/auth-helpers";
 
 const navItems = [
   { href: "/store/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
@@ -25,12 +25,11 @@ const navItems = [
 
 export function StoreNav() {
   const pathname = usePathname();
-  const router = useRouter();
-  const { logout } = useDemoSession();
+
+  const storeSignOut = useStoreSignOut();
 
   const handleLogout = () => {
-    logout();
-    router.push("/login");
+    storeSignOut();
   };
 
   return (
@@ -44,8 +43,8 @@ export function StoreNav() {
             key={item.href}
             href={item.href}
             className={`
-              flex items-center gap-4 px-5 py-3.5 rounded-xl font-medium text-sm transition-all
-              ${isActive ? "bg-[var(--primary-bg)] text-[var(--primary)] font-bold" : "text-[var(--text-sub)] hover:bg-[#FAFAFA] hover:text-[var(--primary)]"}
+              flex items-center gap-4 px-5 py-3.5 rounded-md font-medium text-sm transition-all
+              ${isActive ? "bg-slate-100 text-slate-900 font-bold" : "text-[var(--text-sub)] hover:bg-slate-50 hover:text-slate-700"}
             `}
           >
             <Icon className="w-5 h-5 shrink-0" aria-hidden />
@@ -58,8 +57,8 @@ export function StoreNav() {
         <Link
           href="/store/settings"
           className={`
-            flex items-center gap-4 px-5 py-3.5 rounded-xl font-medium text-sm transition-all
-            ${pathname === "/store/settings" ? "bg-[var(--primary-bg)] text-[var(--primary)] font-bold" : "text-[var(--text-sub)] hover:bg-[#FAFAFA] hover:text-[var(--primary)]"}
+            flex items-center gap-4 px-5 py-3.5 rounded-md font-medium text-sm transition-all
+            ${pathname === "/store/settings" ? "bg-slate-100 text-slate-900 font-bold" : "text-[var(--text-sub)] hover:bg-slate-50 hover:text-slate-700"}
           `}
         >
           <Settings className="w-5 h-5 shrink-0" aria-hidden />
@@ -67,7 +66,7 @@ export function StoreNav() {
         </Link>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-4 w-full px-5 py-3.5 rounded-xl font-medium text-sm text-[var(--text-sub)] hover:bg-[#FAFAFA] hover:text-[var(--primary)] transition-all"
+          className="flex items-center gap-4 w-full px-5 py-3.5 rounded-md font-medium text-sm text-[var(--text-sub)] hover:bg-slate-50 hover:text-slate-700 transition-all"
         >
           <LogOut className="w-5 h-5 shrink-0" aria-hidden />
           ログアウト

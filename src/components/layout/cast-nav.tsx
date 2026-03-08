@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useDemoSession } from "@/lib/demo-session";
+import { usePathname } from "next/navigation";
+import { appSignOut } from "@/lib/auth-helpers";
 import { trpc } from "@/lib/trpc";
 import { Home, Search, Bot, Bell, MessageCircle, User, LogOut } from "lucide-react";
 
@@ -42,8 +42,6 @@ const navItems = [
 
 export function CastNav() {
   const pathname = usePathname();
-  const router = useRouter();
-  const { logout } = useDemoSession();
 
   const { data: unreadData } = trpc.notification.getUnreadCount.useQuery(
     undefined,
@@ -52,8 +50,7 @@ export function CastNav() {
   const unreadCount = unreadData?.count ?? 0;
 
   const handleLogout = () => {
-    logout();
-    router.push("/login");
+    appSignOut("/login");
   };
 
   return (
