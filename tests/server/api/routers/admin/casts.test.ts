@@ -89,14 +89,14 @@ describe("admin.casts", () => {
     it("ランクでフィルターできる", async () => {
       await createTestCastUser(
         { email: "gold@test.com" },
-        { nickname: "ゴールドキャスト", rank: "GOLD" }
+        { nickname: "Aランクキャスト", rank: "A" }
       );
 
       const caller = createAdminCaller(adminUserId);
-      const result = await caller.admin.casts.list({ rank: "GOLD" });
+      const result = await caller.admin.casts.list({ rank: "A" });
 
       result.casts.forEach((cast) => {
-        expect(cast.rank).toBe("GOLD");
+        expect(cast.rank).toBe("A");
       });
     });
 
@@ -198,7 +198,7 @@ describe("admin.casts", () => {
     beforeEach(async () => {
       const castUser = await createTestCastUser(
         { email: `rank-${Date.now()}@test.com` },
-        { nickname: "ランクテストキャスト", rank: "UNRANKED" }
+        { nickname: "ランクテストキャスト", rank: "C" }
       );
       testCastId = castUser.cast.id;
     });
@@ -207,11 +207,11 @@ describe("admin.casts", () => {
       const caller = createAdminCaller(adminUserId);
       const result = await caller.admin.casts.updateRank({
         castId: testCastId,
-        rank: "SILVER",
+        rank: "B",
       });
 
       expect(result.id).toBe(testCastId);
-      expect(result.rank).toBe("SILVER");
+      expect(result.rank).toBe("B");
     });
 
     it("存在しないキャストはNOT_FOUNDエラー", async () => {
@@ -220,7 +220,7 @@ describe("admin.casts", () => {
       await expect(
         caller.admin.casts.updateRank({
           castId: "non-existent-id",
-          rank: "GOLD",
+          rank: "A",
         })
       ).rejects.toMatchObject({
         code: "NOT_FOUND",

@@ -95,7 +95,7 @@ test.describe("店舗側フロー", () => {
     await areaSelect.selectOption("新宿");
     // ランクフィルター操作
     const rankSelect = page.locator("select").nth(1);
-    await rankSelect.selectOption("GOLD");
+    await rankSelect.selectOption("A");
   });
 
   test("ダッシュボード → オファー管理ページ遷移", async ({ page }) => {

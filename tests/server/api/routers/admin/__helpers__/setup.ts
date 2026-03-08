@@ -114,6 +114,7 @@ export const createTestStoreUser = async (
  */
 export const cleanupTestData = async () => {
   await prisma.penalty.deleteMany({});
+  await prisma.messageImage.deleteMany({});
   await prisma.message.deleteMany({});
   await prisma.interview.deleteMany({});
   await prisma.offer.deleteMany({});
