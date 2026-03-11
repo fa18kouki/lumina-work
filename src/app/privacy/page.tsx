@@ -8,10 +8,13 @@ export default function PrivacyPage() {
   return (
     <LegalPageLayout title="プライバシーポリシー" lastUpdated="2026年3月7日">
       <p>
-        Tagamix合同会社（以下「当社」）は、LUMINAサービス（以下「本サービス」）における利用者の個人情報の取扱いについて、以下のとおりプライバシーポリシーを定めます。
+        株式会社LUMINA（以下「当社」）は、LUMINAサービス（以下「本サービス」）における利用者の個人情報の取扱いについて、以下のとおりプライバシーポリシーを定めます。
       </p>
       <p className="!text-xs !text-red-600">
         ※本文書はドラフトです。正式な運用前に必ず弁護士によるレビューを受けてください。
+      </p>
+      <p className="!text-xs !text-orange-500">
+        ※記載されている会社名・住所・電話番号はすべて架空のものです。実在の企業・個人とは一切関係ありません。
       </p>
 
       <h2>第1条（個人情報の定義）</h2>
@@ -96,7 +99,7 @@ export default function PrivacyPage() {
       <p>請求先：</p>
       <ul>
         <li>メール: support@lumina.jp</li>
-        <li>Tagamix合同会社 個人情報管理責任者 宛</li>
+        <li>株式会社LUMINA 個人情報管理責任者 宛</li>
       </ul>
 
       <h2>第7条（Cookie及びアクセス解析）</h2>
@@ -117,9 +120,9 @@ export default function PrivacyPage() {
         個人情報の取扱いに関するお問い合わせは、下記までご連絡ください。
       </p>
       <ul>
-        <li>Tagamix合同会社</li>
-        <li>所在地: 〒465-0091 愛知県名古屋市名東区よもぎ台2-1112-D</li>
-        <li>TEL: 090-8863-7195</li>
+        <li>株式会社LUMINA</li>
+        <li>所在地: 〒107-0061 東京都港区北青山1丁目2番3号 LUMINA青山ビル5F</li>
+        <li>TEL: 03-1234-5678</li>
         <li>メール: support@lumina.jp</li>
       </ul>
     </LegalPageLayout>

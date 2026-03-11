@@ -4,16 +4,17 @@ export const metadata = {
   title: "特定商取引法に基づく表記 | LUMINA",
 };
 
+// NOTE: 以下の会社情報はすべて架空です。実在の企業・個人とは一切関係ありません。
 const tableData = [
-  { label: "販売業者", value: "Tagamix合同会社" },
-  { label: "代表者", value: "田上英治" },
+  { label: "販売業者", value: "株式会社LUMINA" },
+  { label: "代表者", value: "佐藤 光" },
   {
     label: "所在地",
-    value: "〒465-0091 愛知県名古屋市名東区よもぎ台2-1112-D",
+    value: "〒107-0061 東京都港区北青山1丁目2番3号 LUMINA青山ビル5F",
   },
-  { label: "電話番号", value: "090-8863-7195" },
+  { label: "電話番号", value: "03-1234-5678" },
   { label: "メールアドレス", value: "support@lumina.jp" },
-  { label: "法人番号", value: "6180003028222" },
+  { label: "法人番号", value: "1234567890123" },
   { label: "サービス名称", value: "LUMINA" },
   {
     label: "サービス内容",
@@ -65,6 +66,9 @@ export default function TokushohoPage() {
       </p>
       <p className="!text-xs !text-red-600">
         ※本文書はドラフトです。正式な運用前に必ず弁護士によるレビューを受けてください。
+      </p>
+      <p className="!text-xs !text-orange-500">
+        ※記載されている会社名・代表者・住所・電話番号・法人番号はすべて架空のものです。実在の企業・個人とは一切関係ありません。
       </p>
 
       <div className="mt-8 overflow-x-auto">
