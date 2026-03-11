@@ -52,6 +52,8 @@ function StoreLoginForm() {
         return;
       }
 
+      await fetch("/api/auth/sync-store-user", { method: "POST" });
+
       router.push(callbackUrl);
       router.refresh();
     } catch {

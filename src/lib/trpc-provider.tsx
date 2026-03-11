@@ -1,6 +1,6 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink } from "@trpc/client";
 import { useState } from "react";
 import superjson from "superjson";
@@ -12,8 +12,29 @@ function getBaseUrl() {
   return `http://localhost:${process.env.PORT ?? 3000}`;
 }
 
+function handleUnauthorized(error: unknown) {
+  if (typeof window === "undefined") return;
+  const err = error as { data?: { code?: string; httpStatus?: number } };
+  const isUnauthorized =
+    err?.data?.code === "UNAUTHORIZED" || err?.data?.httpStatus === 401;
+  if (!isUnauthorized) return;
+
+  const path = window.location.pathname;
+  const loginUrl = path.startsWith("/s/") ? "/s/login" : "/c/login";
+  if (!path.includes("login")) {
+    window.location.href = loginUrl;
+  }
+}
+
 export function TRPCProvider({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        queryCache: new QueryCache({
+          onError: handleUnauthorized,
+        }),
+      })
+  );
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [
