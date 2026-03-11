@@ -103,7 +103,7 @@ export function StoreShowcase() {
         </div>
 
         <div className="mt-12 text-center">
-          <GradientButton href="/login">
+          <GradientButton href="/c/login">
             もっと見る
           </GradientButton>
         </div>

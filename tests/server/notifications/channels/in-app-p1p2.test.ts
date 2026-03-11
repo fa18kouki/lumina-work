@@ -40,7 +40,7 @@ describe("createInAppNotification - P1/P2イベント", () => {
       const data = mockCreate.mock.calls[0][0].data;
       expect(data.userId).toBe("user-1");
       expect(data.type).toBe("MESSAGE_RECEIVED");
-      expect(data.link).toBe("/chat/match-1");
+      expect(data.link).toBe("/c/chat/match-1");
     });
   });
 
@@ -68,7 +68,7 @@ describe("createInAppNotification - P1/P2イベント", () => {
       const data = mockCreate.mock.calls[0][0].data;
       expect(data.userId).toBe("store-user-1");
       expect(data.type).toBe("MESSAGE_RECEIVED");
-      expect(data.link).toBe("/store/chat/match-1");
+      expect(data.link).toBe("/s/chat/match-1");
     });
   });
 

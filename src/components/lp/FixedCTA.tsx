@@ -10,7 +10,7 @@ export function FixedCTA() {
   const isStore = session?.user?.role === "STORE";
 
   const href = isLoggedIn
-    ? isStore ? "/store/dashboard" : "/dashboard"
+    ? isStore ? "/s/dashboard" : "/c/dashboard"
     : "/diagnosis";
 
   const label = isLoggedIn

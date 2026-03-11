@@ -41,8 +41,8 @@ describe("createInAppNotification - P0イベント", () => {
           type: "OFFER_ACCEPTED",
           title: "オファー承諾",
           body: "みさきさんがオファーを承諾しました",
-          link: "/store/matches",
-          metadata: { offerId: "offer-1", castNickname: "みさき" },
+          link: "/s/offers",
+          metadata: { offerId: "offer-1", castNickname: "みさき", castEmail: undefined, castLineId: undefined, castPhone: undefined },
         },
       });
     });
@@ -74,7 +74,7 @@ describe("createInAppNotification - P0イベント", () => {
           type: "OFFER_REJECTED",
           title: "オファー辞退",
           body: "みさきさんがオファーを辞退しました",
-          link: "/store/casts",
+          link: "/s/casts",
           metadata: { offerId: "offer-1", castNickname: "みさき" },
         },
       });

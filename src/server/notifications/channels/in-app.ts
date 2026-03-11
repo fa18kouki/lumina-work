@@ -46,7 +46,7 @@ export async function createInAppNotification(
         type: "OFFER_RECEIVED",
         title: "新しいオファー",
         body: `${storeName}からオファーが届きました`,
-        link: "/offers",
+        link: "/c/offers",
         metadata: { offerId, storeName },
       });
       return;
@@ -59,7 +59,7 @@ export async function createInAppNotification(
         type: "OFFER_ACCEPTED",
         title: "オファー承諾",
         body: `${castNickname}さんがオファーを承諾しました`,
-        link: "/store/offers",
+        link: "/s/offers",
         metadata: { offerId, castNickname, castLineId, castPhone, castEmail },
       });
       return;
@@ -72,7 +72,7 @@ export async function createInAppNotification(
         type: "OFFER_REJECTED",
         title: "オファー辞退",
         body: `${castNickname}さんがオファーを辞退しました`,
-        link: "/store/casts",
+        link: "/s/casts",
         metadata: { offerId, castNickname },
       });
       return;
@@ -87,7 +87,7 @@ export async function createInAppNotification(
         type: "INTERVIEW_SCHEDULED",
         title: "面接日程確定",
         body: `${storeName}との面接が${dateStr}に確定しました`,
-        link: "/interviews",
+        link: "/c/matches",
         metadata: { interviewId, storeName, scheduledAt },
       });
       return;
@@ -102,7 +102,7 @@ export async function createInAppNotification(
         type: "INTERVIEW_SCHEDULED",
         title: "面接日程確定",
         body: `${castNickname}さんとの面接が${dateStr}に確定しました`,
-        link: "/store/interviews",
+        link: "/s/interviews",
         metadata: { interviewId, castNickname, scheduledAt },
       });
       return;
@@ -117,7 +117,7 @@ export async function createInAppNotification(
         type: "INTERVIEW_CANCELLED",
         title: "面接キャンセル",
         body: `${storeName}との面接（${dateStr}）がキャンセルされました`,
-        link: "/interviews",
+        link: "/c/matches",
         metadata: { interviewId, storeName, scheduledAt },
       });
       return;
@@ -132,7 +132,7 @@ export async function createInAppNotification(
         type: "INTERVIEW_CANCELLED",
         title: "面接キャンセル",
         body: `${castNickname}さんとの面接（${dateStr}）がキャンセルされました`,
-        link: "/store/interviews",
+        link: "/s/interviews",
         metadata: { interviewId, castNickname, scheduledAt },
       });
       return;
@@ -145,7 +145,7 @@ export async function createInAppNotification(
         type: "MESSAGE_RECEIVED",
         title: "新しいメッセージ",
         body: `${senderName}からメッセージが届きました`,
-        link: `/chat/${matchId}`,
+        link: `/c/chat/${matchId}`,
         metadata: { matchId, senderName },
       });
       return;
@@ -158,7 +158,7 @@ export async function createInAppNotification(
         type: "MESSAGE_RECEIVED",
         title: "新しいメッセージ",
         body: `${senderName}さんからメッセージが届きました`,
-        link: `/store/chat/${matchId}`,
+        link: `/s/chat/${matchId}`,
         metadata: { matchId, senderName },
       });
       return;
@@ -184,7 +184,7 @@ export async function createInAppNotification(
         type: "INTERVIEW_COMPLETED",
         title: "面接完了",
         body: `${storeName}との面接が完了しました。お疲れ様でした！`,
-        link: "/interviews",
+        link: "/c/matches",
         metadata: { interviewId, storeName },
       });
       return;
@@ -208,7 +208,7 @@ export async function createInAppNotification(
         type: "OFFER_EXPIRED",
         title: "オファー期限切れ",
         body: `${castNickname}さんへのオファーが期限切れになりました`,
-        link: "/store/casts",
+        link: "/s/casts",
         metadata: { offerId, castNickname },
       });
       return;

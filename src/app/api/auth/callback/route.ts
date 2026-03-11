@@ -6,11 +6,11 @@ import { prisma } from "@/server/db";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/store/dashboard";
+  const next = searchParams.get("next") ?? "/s/dashboard";
   const roleParam = searchParams.get("role");
 
   if (!code) {
-    return NextResponse.redirect(new URL("/store/login?error=missing_code", origin));
+    return NextResponse.redirect(new URL("/s/login?error=missing_code", origin));
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data.user) {
-    const loginPath = roleParam === "cast" ? "/login" : "/store/login";
+    const loginPath = roleParam === "cast" ? "/c/login" : "/s/login";
     return NextResponse.redirect(
       new URL(`${loginPath}?error=auth_failed`, origin)
     );

@@ -14,11 +14,11 @@ import {
 import { useStoreSignOut } from "@/lib/auth-helpers";
 
 const navItems = [
-  { href: "/store/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
-  { href: "/store/casts", label: "応募者管理", icon: Users },
-  { href: "/store/interviews", label: "面接管理", icon: CalendarCheck },
-  { href: "/store/profile", label: "店舗情報", icon: Store },
-  { href: "/store/subscription", label: "プラン", icon: CreditCard },
+  { href: "/s/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
+  { href: "/s/casts", label: "応募者管理", icon: Users },
+  { href: "/s/interviews", label: "面接管理", icon: CalendarCheck },
+  { href: "/s/profile", label: "店舗情報", icon: Store },
+  { href: "/s/subscription", label: "プラン", icon: CreditCard },
 ];
 
 export function StoreNav() {
@@ -53,10 +53,10 @@ export function StoreNav() {
 
       <div className="mt-auto pt-2">
         <Link
-          href="/store/settings"
+          href="/s/settings"
           className={`
             flex items-center gap-4 px-5 py-3.5 rounded-md font-medium text-sm transition-all
-            ${pathname === "/store/settings" ? "bg-slate-100 text-slate-900 font-bold" : "text-[var(--text-sub)] hover:bg-slate-50 hover:text-slate-700"}
+            ${pathname === "/s/settings" ? "bg-slate-100 text-slate-900 font-bold" : "text-[var(--text-sub)] hover:bg-slate-50 hover:text-slate-700"}
           `}
         >
           <Settings className="w-5 h-5 shrink-0" aria-hidden />

@@ -66,7 +66,7 @@ export function Footer() {
           <p className="text-center text-sm text-gray-400">
             店長の方は
             <Link
-              href="/store/login"
+              href="/s/login"
               className="text-white hover:underline ml-1"
             >
               こちら

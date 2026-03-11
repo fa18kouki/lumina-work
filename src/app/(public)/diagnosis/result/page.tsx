@@ -177,7 +177,7 @@ export default function DiagnosisResultPage() {
           className={`space-y-3 transition-all duration-700 delay-400 ${showAnimation ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
         >
           <Link
-            href="/login?fromDiagnosis=true"
+            href="/c/login?fromDiagnosis=true"
             className="block w-full bg-pink-500 text-white font-semibold py-4 px-6 rounded-xl text-center hover:bg-pink-600 transition-all active:scale-[0.98] shadow-lg shadow-pink-500/25"
           >
             希望条件を満たす店舗を確認する

@@ -106,7 +106,7 @@ export async function sendEmailNotification(
             <p style="color: #333; line-height: 1.6;">${offerMessage.slice(0, 200)}</p>
           `,
           ctaLabel: "オファーを確認する",
-          ctaUrl: `${getAppUrl()}/offers`,
+          ctaUrl: `${getAppUrl()}/c/offers`,
         })
       );
       return;
@@ -140,7 +140,7 @@ export async function sendEmailNotification(
             ${contactSection}
           `,
           ctaLabel: "オファーを確認する",
-          ctaUrl: `${getAppUrl()}/store/offers`,
+          ctaUrl: `${getAppUrl()}/s/offers`,
         })
       );
       return;
@@ -161,7 +161,7 @@ export async function sendEmailNotification(
             </p>
           `,
           ctaLabel: "キャストを探す",
-          ctaUrl: `${getAppUrl()}/store/casts`,
+          ctaUrl: `${getAppUrl()}/s/casts`,
         })
       );
       return;
@@ -185,7 +185,7 @@ export async function sendEmailNotification(
             </div>
           `,
           ctaLabel: "詳細を確認する",
-          ctaUrl: `${getAppUrl()}/interviews`,
+          ctaUrl: `${getAppUrl()}/c/matches`,
         })
       );
       return;
@@ -208,7 +208,7 @@ export async function sendEmailNotification(
             <p style="color: #333;">日時: ${dateStr}</p>
           `,
           ctaLabel: "面接を確認する",
-          ctaUrl: `${getAppUrl()}/store/interviews`,
+          ctaUrl: `${getAppUrl()}/s/interviews`,
         })
       );
       return;
@@ -272,7 +272,7 @@ export async function sendEmailNotification(
             <p style="color: #666; font-style: italic;">${messagePreview.slice(0, 100)}</p>
           `,
           ctaLabel: "メッセージを確認する",
-          ctaUrl: `${getAppUrl()}/chat/${event.payload.matchId}`,
+          ctaUrl: `${getAppUrl()}/c/chat/${event.payload.matchId}`,
         })
       );
       return;
@@ -294,7 +294,7 @@ export async function sendEmailNotification(
             <p style="color: #666; font-style: italic;">${messagePreview.slice(0, 100)}</p>
           `,
           ctaLabel: "メッセージを確認する",
-          ctaUrl: `${getAppUrl()}/store/chat/${event.payload.matchId}`,
+          ctaUrl: `${getAppUrl()}/s/chat/${event.payload.matchId}`,
         })
       );
       return;
@@ -368,7 +368,7 @@ export async function sendEmailNotification(
             </p>
           `,
           ctaLabel: "キャストを探す",
-          ctaUrl: `${getAppUrl()}/store/casts`,
+          ctaUrl: `${getAppUrl()}/s/casts`,
         })
       );
       return;

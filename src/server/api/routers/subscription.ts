@@ -60,8 +60,8 @@ export const subscriptionRouter = createTRPCRouter({
       const session = await getStripe().checkout.sessions.create({
         mode: "subscription",
         line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${process.env.AUTH_URL}/store/subscription?success=true`,
-        cancel_url: `${process.env.AUTH_URL}/store/subscription?cancelled=true`,
+        success_url: `${process.env.AUTH_URL}/s/subscription?success=true`,
+        cancel_url: `${process.env.AUTH_URL}/s/subscription?cancelled=true`,
         metadata: {
           storeId: store.id,
           plan: input.plan,
@@ -92,7 +92,7 @@ export const subscriptionRouter = createTRPCRouter({
 
     const session = await getStripe().billingPortal.sessions.create({
       customer: store.subscription.stripeCustomerId,
-      return_url: `${process.env.AUTH_URL}/store/subscription`,
+      return_url: `${process.env.AUTH_URL}/s/subscription`,
     });
 
     return { url: session.url };

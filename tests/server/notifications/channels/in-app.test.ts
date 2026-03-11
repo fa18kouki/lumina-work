@@ -46,7 +46,7 @@ describe("createInAppNotification", () => {
         type: "OFFER_RECEIVED",
         title: "新しいオファー",
         body: "Club Elegantからオファーが届きました",
-        link: "/offers",
+        link: "/c/offers",
         metadata: {
           offerId: "offer-1",
           storeName: "Club Elegant",

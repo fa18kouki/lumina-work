@@ -33,7 +33,7 @@ export default function DiagnosisOffersPage() {
 
   const handleAcceptOffer = (storeId: string) => {
     setSelectedStoreId(storeId);
-    router.push(`/login?diagnosisId=${session?.id}&offerId=${storeId}`);
+    router.push(`/c/login?diagnosisId=${session?.id}&offerId=${storeId}`);
   };
 
   if (!session?.result) {

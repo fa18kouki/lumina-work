@@ -109,6 +109,6 @@ describe("Auth Configuration", () => {
     await import("@/lib/auth");
 
     const config = NextAuth.mock.calls[0][0];
-    expect(config.pages?.signIn).toBe("/login");
+    expect(config.pages?.signIn).toBe("/c/login");
   });
 });

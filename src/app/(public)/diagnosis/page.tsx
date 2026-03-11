@@ -585,7 +585,7 @@ export default function DiagnosisPage() {
           </Link>
           <div className="flex items-center gap-3">
             <Link
-              href="/login"
+              href="/c/login"
               className="text-xs text-pink-500 hover:text-pink-600 transition-colors"
             >
               ログイン済みの方はこちら

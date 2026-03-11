@@ -187,7 +187,7 @@ export async function sendLineNotification(
         ],
         footerButton: {
           label: "オファーを確認する",
-          uri: `${getAppUrl()}/offers`,
+          uri: `${getAppUrl()}/c/offers`,
         },
       });
 
@@ -229,7 +229,7 @@ export async function sendLineNotification(
         ],
         footerButton: {
           label: "詳細を確認する",
-          uri: `${getAppUrl()}/interviews`,
+          uri: `${getAppUrl()}/c/matches`,
         },
       });
 
@@ -275,7 +275,7 @@ export async function sendLineNotification(
         ],
         footerButton: {
           label: "オファー一覧を見る",
-          uri: `${getAppUrl()}/offers`,
+          uri: `${getAppUrl()}/c/offers`,
         },
       });
 
@@ -319,7 +319,7 @@ export async function sendLineNotification(
         ],
         footerButton: {
           label: "メッセージを確認する",
-          uri: `${getAppUrl()}/chat/${matchId}`,
+          uri: `${getAppUrl()}/c/chat/${matchId}`,
         },
       });
 
@@ -424,7 +424,7 @@ export async function sendLineNotification(
         ],
         footerButton: {
           label: "オファー一覧を見る",
-          uri: `${getAppUrl()}/offers`,
+          uri: `${getAppUrl()}/c/offers`,
         },
       });
 

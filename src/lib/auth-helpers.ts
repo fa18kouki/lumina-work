@@ -99,7 +99,7 @@ export function useStoreSignOut() {
   return useCallback(async () => {
     const supabase = createBrowserClient();
     await supabase.auth.signOut();
-    router.push("/store/login");
+    router.push("/s/login");
     router.refresh();
   }, [router]);
 }

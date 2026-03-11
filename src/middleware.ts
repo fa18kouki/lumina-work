@@ -4,21 +4,21 @@ import { createServerClient } from "@supabase/ssr";
 
 const publicRoutes = [
   "/",
-  "/login",
-  "/register",
+  "/c/login",
+  "/c/register",
   "/diagnosis",
   "/privacy",
   "/terms",
   "/tokushoho",
-  "/store/login",
-  "/store/register",
-  "/store/forgot-password",
-  "/store/reset-password",
+  "/s/login",
+  "/s/register",
+  "/s/forgot-password",
+  "/s/reset-password",
   "/games",
 ];
 // キャストの Supabase マジックリンク完了用（hash でセッションが渡るため認証前にアクセスする）
 const isLoginCallback = (pathname: string) =>
-  pathname === "/login/callback";
+  pathname === "/c/login/callback";
 
 function isPublicRoute(pathname: string): boolean {
   if (pathname.startsWith("/api/")) return true;
@@ -63,10 +63,10 @@ export async function middleware(req: NextRequest) {
   }
 
   // 店舗ルート: Supabase Auth cookieを確認
-  if (pathname.startsWith("/store")) {
+  if (pathname.startsWith("/s")) {
     const hasSession = await hasSupabaseSession(req);
     if (!hasSession) {
-      const url = new URL("/store/login", req.nextUrl.origin);
+      const url = new URL("/s/login", req.nextUrl.origin);
       url.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(url);
     }
@@ -82,7 +82,7 @@ export async function middleware(req: NextRequest) {
   if (!hasNextAuth) {
     const hasSupabase = await hasSupabaseSession(req);
     if (!hasSupabase) {
-      const url = new URL("/login", req.nextUrl.origin);
+      const url = new URL("/c/login", req.nextUrl.origin);
       url.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(url);
     }

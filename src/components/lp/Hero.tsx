@@ -27,7 +27,7 @@ export function Hero() {
           <div className="flex items-center gap-3">
             {session ? (
               <Link
-                href={session.user.role === "STORE" ? "/store/dashboard" : "/dashboard"}
+                href={session.user.role === "STORE" ? "/s/dashboard" : "/c/dashboard"}
                 className="text-sm font-medium px-4 py-2 rounded-lg transition-colors bg-pink-500 text-white hover:bg-pink-600"
               >
                 {session.user.role === "STORE" ? "管理画面へ" : "マイページへ"}
@@ -35,13 +35,13 @@ export function Hero() {
             ) : (
               <>
                 <Link
-                  href="/login"
+                  href="/c/login"
                   className="text-sm font-medium px-4 py-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-100"
                 >
                   ログイン
                 </Link>
                 <Link
-                  href="/store/login"
+                  href="/s/login"
                   className="text-sm font-medium px-4 py-2 rounded-lg transition-colors text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                 >
                   店舗の方

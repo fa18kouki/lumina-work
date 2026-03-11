@@ -53,7 +53,7 @@ export function CTA() {
 
         {/* CTA Button */}
         <Link
-          href="/login"
+          href="/c/login"
           className="inline-flex items-center gap-3 bg-white text-pink-600 px-8 py-5 rounded-full text-xl font-bold shadow-2xl hover:shadow-3xl hover:scale-105 transition-all duration-200"
         >
           <span>無料で適性診断をはじめる</span>

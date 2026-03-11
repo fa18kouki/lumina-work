@@ -30,10 +30,10 @@ export function StoreLayoutWrapper({
 }) {
   const pathname = usePathname();
   const isAuthPage =
-    pathname === "/store/login" ||
-    pathname === "/store/register" ||
-    pathname === "/store/forgot-password" ||
-    pathname === "/store/reset-password";
+    pathname === "/s/login" ||
+    pathname === "/s/register" ||
+    pathname === "/s/forgot-password" ||
+    pathname === "/s/reset-password";
 
   if (isAuthPage) {
     return <>{children}</>;
@@ -54,19 +54,19 @@ export function StoreLayoutWrapper({
       {/* モバイル用: 下部ナビ */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around py-2 z-[999]">
         <Link
-          href="/store/dashboard"
+          href="/s/dashboard"
           className="flex flex-col items-center gap-0.5 text-xs text-[var(--text-sub)] hover:text-slate-700"
         >
           ダッシュボード
         </Link>
         <Link
-          href="/store/casts"
+          href="/s/casts"
           className="flex flex-col items-center gap-0.5 text-xs text-[var(--text-sub)] hover:text-slate-700"
         >
           応募者
         </Link>
         <Link
-          href="/store/profile"
+          href="/s/profile"
           className="flex flex-col items-center gap-0.5 text-xs text-[var(--text-sub)] hover:text-slate-700"
         >
           店舗

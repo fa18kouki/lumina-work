@@ -55,7 +55,7 @@ describe("sendEmailNotification", () => {
     expect(callArgs.subject).toContain("LUMINA");
     expect(callArgs.html).toContain("Club Elegant");
     expect(callArgs.html).toContain("六本木");
-    expect(callArgs.html).toContain("https://lumina.app/offers");
+    expect(callArgs.html).toContain("https://lumina.app/c/offers");
   });
 
   it("castEmail が null の場合はスキップする", async () => {

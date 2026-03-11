@@ -25,7 +25,7 @@ function VerticalStoreCard({
 }: Omit<StoreCardProps, "variant" | "tags">) {
   return (
     <Link
-      href={`/stores/${id}`}
+      href={`/c/stores/${id}`}
       className="min-w-[260px] bg-white rounded-[var(--radius-card)] overflow-hidden shadow-[var(--shadow-card)] flex-shrink-0"
     >
       <div className="relative h-[140px] w-full">
@@ -62,7 +62,7 @@ function HorizontalStoreCard({
 
   return (
     <div className="bg-white rounded-2xl p-3 flex gap-3 shadow-[var(--shadow-card)] relative">
-      <Link href={`/stores/${id}`} className="flex gap-3 flex-1">
+      <Link href={`/c/stores/${id}`} className="flex gap-3 flex-1">
         <div className="relative w-[100px] h-[100px] rounded-xl overflow-hidden flex-shrink-0">
           <Image
             src={imageUrl}

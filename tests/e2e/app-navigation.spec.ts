@@ -2,32 +2,32 @@ import { test, expect } from "@playwright/test";
 
 test.describe("キャスト側フロー", () => {
   test("ログイン → ダッシュボード表示", async ({ page }) => {
-    await page.goto("/login");
+    await page.goto("/c/login");
     await expect(page.locator("text=キャストログイン")).toBeVisible();
 
     // デモモード（LINEログインボタン）でログイン
     await page.click("text=LINEで");
-    await expect(page).toHaveURL("/dashboard");
+    await expect(page).toHaveURL("/c/dashboard");
     await expect(page.locator("text=こんにちは")).toBeVisible();
   });
 
   test("ダッシュボード → 店舗検索ページ遷移", async ({ page }) => {
-    await page.goto("/login");
+    await page.goto("/c/login");
     await page.click("text=LINEで");
-    await expect(page).toHaveURL("/dashboard");
+    await expect(page).toHaveURL("/c/dashboard");
 
     await page.click("text=店舗検索");
-    await expect(page).toHaveURL("/stores");
+    await expect(page).toHaveURL("/c/stores");
     await expect(page.locator("input[placeholder*='エリア']")).toBeVisible();
   });
 
   test("ダッシュボード → オファーページ遷移", async ({ page }) => {
-    await page.goto("/login");
+    await page.goto("/c/login");
     await page.click("text=LINEで");
-    await expect(page).toHaveURL("/dashboard");
+    await expect(page).toHaveURL("/c/dashboard");
 
     // ナビゲーションバーからオファーページへ
-    await page.goto("/offers");
+    await page.goto("/c/offers");
     await expect(page.locator("text=オファー").first()).toBeVisible();
     // タブフィルターが存在すること
     await expect(page.locator("text=すべて").first()).toBeVisible();
@@ -35,60 +35,60 @@ test.describe("キャスト側フロー", () => {
   });
 
   test("ダッシュボード → マッチングページ遷移", async ({ page }) => {
-    await page.goto("/login");
+    await page.goto("/c/login");
     await page.click("text=LINEで");
-    await expect(page).toHaveURL("/dashboard");
+    await expect(page).toHaveURL("/c/dashboard");
 
     await page.click("text=メッセージ");
-    await expect(page).toHaveURL("/matches");
+    await expect(page).toHaveURL("/c/matches");
     await expect(page.locator("h1:text('マッチング')")).toBeVisible();
   });
 
   test("ダッシュボード → プロフィールページ遷移", async ({ page }) => {
-    await page.goto("/login");
+    await page.goto("/c/login");
     await page.click("text=LINEで");
-    await expect(page).toHaveURL("/dashboard");
+    await expect(page).toHaveURL("/c/dashboard");
 
     await page.click("text=マイページ");
-    await expect(page).toHaveURL("/profile");
+    await expect(page).toHaveURL("/c/profile/edit");
   });
 
   test("ダッシュボード → AI診断ページ遷移", async ({ page }) => {
-    await page.goto("/login");
+    await page.goto("/c/login");
     await page.click("text=LINEで");
-    await expect(page).toHaveURL("/dashboard");
+    await expect(page).toHaveURL("/c/dashboard");
 
     await page.click("text=AI診断");
-    await expect(page).toHaveURL("/ai-diagnosis");
+    await expect(page).toHaveURL("/c/ai-diagnosis");
   });
 });
 
 test.describe("店舗側フロー", () => {
   test("店舗ログイン → ダッシュボード表示", async ({ page }) => {
-    await page.goto("/store/login");
+    await page.goto("/s/login");
     await expect(page.locator("text=店舗ログイン")).toBeVisible();
 
     await page.click("text=LINEで");
-    await expect(page).toHaveURL("/store/dashboard");
+    await expect(page).toHaveURL("/s/dashboard");
     // 統計カードの存在確認
     await expect(page.locator("text=新規応募")).toBeVisible();
     await expect(page.locator("text=面接予定").first()).toBeVisible();
   });
 
   test("ダッシュボード → キャスト検索ページ遷移", async ({ page }) => {
-    await page.goto("/store/login");
+    await page.goto("/s/login");
     await page.click("text=LINEで");
-    await expect(page).toHaveURL("/store/dashboard");
+    await expect(page).toHaveURL("/s/dashboard");
 
     await page.click("text=応募者を検索");
-    await expect(page).toHaveURL("/store/casts");
+    await expect(page).toHaveURL("/s/casts");
     await expect(page.locator("text=キャスト検索")).toBeVisible();
   });
 
   test("店舗キャスト検索 → フィルター操作", async ({ page }) => {
-    await page.goto("/store/login");
+    await page.goto("/s/login");
     await page.click("text=LINEで");
-    await page.goto("/store/casts");
+    await page.goto("/s/casts");
 
     // エリアフィルター操作
     const areaSelect = page.locator("select").first();
@@ -99,9 +99,9 @@ test.describe("店舗側フロー", () => {
   });
 
   test("ダッシュボード → オファー管理ページ遷移", async ({ page }) => {
-    await page.goto("/store/login");
+    await page.goto("/s/login");
     await page.click("text=LINEで");
-    await page.goto("/store/offers");
+    await page.goto("/s/offers");
 
     await expect(page.locator("text=オファー管理")).toBeVisible();
     // タブの存在確認
@@ -110,9 +110,9 @@ test.describe("店舗側フロー", () => {
   });
 
   test("ダッシュボード → マッチングページ遷移", async ({ page }) => {
-    await page.goto("/store/login");
+    await page.goto("/s/login");
     await page.click("text=LINEで");
-    await page.goto("/store/matches");
+    await page.goto("/s/matches");
 
     await expect(page.locator("h1:text('マッチング')")).toBeVisible();
     // タブの存在確認
@@ -121,9 +121,9 @@ test.describe("店舗側フロー", () => {
   });
 
   test("ダッシュボード → 店舗プロフィールページ遷移", async ({ page }) => {
-    await page.goto("/store/login");
+    await page.goto("/s/login");
     await page.click("text=LINEで");
-    await page.goto("/store/profile");
+    await page.goto("/s/profile");
 
     await expect(page.locator("text=店舗情報")).toBeVisible();
     await expect(page.locator("text=基本情報")).toBeVisible();
