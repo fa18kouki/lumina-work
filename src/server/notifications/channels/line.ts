@@ -31,6 +31,17 @@ function formatDateTime(iso: string): string {
 
 type FlexBubble = messagingApi.FlexBubble;
 
+/** ブランドカラー定数 */
+const COLORS = {
+  primary: "#FF69B4",
+  dark: "#1a1a2e",
+  danger: "#dc3545",
+  success: "#28a745",
+  info: "#17a2b8",
+  textSub: "#999999",
+  textDanger: "#dc3545",
+} as const;
+
 function buildFlexBubble(opts: {
   headerText: string;
   headerBgColor: string;
@@ -43,6 +54,7 @@ function buildFlexBubble(opts: {
       type: "box",
       layout: "vertical",
       backgroundColor: opts.headerBgColor,
+      paddingAll: "lg",
       contents: [
         {
           type: "text",
@@ -57,6 +69,7 @@ function buildFlexBubble(opts: {
       type: "box",
       layout: "vertical",
       spacing: "md",
+      paddingAll: "lg",
       contents: opts.bodyContents,
     },
   };
@@ -65,6 +78,7 @@ function buildFlexBubble(opts: {
     bubble.footer = {
       type: "box",
       layout: "vertical",
+      paddingAll: "md",
       contents: [
         {
           type: "button",
@@ -74,13 +88,44 @@ function buildFlexBubble(opts: {
             uri: opts.footerButton.uri,
           },
           style: "primary",
-          color: "#1a1a2e",
+          color: COLORS.primary,
         },
       ],
     };
   }
 
   return bubble;
+}
+
+/** セパレーター */
+function separator(): messagingApi.FlexComponent {
+  return { type: "separator", margin: "md" };
+}
+
+/** ラベル+値の行 */
+function infoRow(label: string, value: string): messagingApi.FlexComponent {
+  return {
+    type: "box",
+    layout: "horizontal",
+    margin: "sm",
+    contents: [
+      {
+        type: "text",
+        text: label,
+        size: "sm",
+        color: COLORS.textSub,
+        flex: 0,
+      },
+      {
+        type: "text",
+        text: value,
+        size: "sm",
+        weight: "bold",
+        align: "end",
+        flex: 1,
+      },
+    ],
+  };
 }
 
 async function pushFlexMessage(
@@ -113,14 +158,25 @@ export async function sendLineNotification(
     case "OFFER_RECEIVED": {
       const { castLineUserId, storeName, storeArea, offerMessage } =
         event.payload;
-      if (!castLineUserId) return;
+      if (!castLineUserId) {
+        console.warn(
+          `[LINE] lineUserId is null for event ${event.type} (cast: ${event.payload.castUserId}), skipping push`
+        );
+        return;
+      }
 
       const bubble = buildFlexBubble({
-        headerText: "新しいオファー",
-        headerBgColor: "#1a1a2e",
+        headerText: "✨ 新しいオファー",
+        headerBgColor: COLORS.primary,
         bodyContents: [
           { type: "text", text: storeName, weight: "bold", size: "xl" },
-          { type: "text", text: storeArea, size: "sm", color: "#999999" },
+          {
+            type: "text",
+            text: `📍 ${storeArea}`,
+            size: "sm",
+            color: COLORS.textSub,
+          },
+          separator(),
           {
             type: "text",
             text: offerMessage.slice(0, 100),
@@ -146,21 +202,29 @@ export async function sendLineNotification(
     case "INTERVIEW_SCHEDULED_CAST": {
       const { castLineUserId, storeName, storeAddress, scheduledAt } =
         event.payload;
-      if (!castLineUserId) return;
+      if (!castLineUserId) {
+        console.warn(
+          `[LINE] lineUserId is null for event ${event.type} (interview: ${event.payload.interviewId}), skipping push`
+        );
+        return;
+      }
 
       const dateStr = formatDateTime(scheduledAt);
       const bubble = buildFlexBubble({
-        headerText: "面接日程確定",
-        headerBgColor: "#1a1a2e",
+        headerText: "📅 面接日程確定",
+        headerBgColor: COLORS.info,
         bodyContents: [
           { type: "text", text: storeName, weight: "bold", size: "xl" },
-          { type: "text", text: storeAddress, size: "sm", color: "#999999" },
+          separator(),
+          infoRow("日時", dateStr),
+          infoRow("場所", storeAddress),
           {
             type: "text",
-            text: `日時: ${dateStr}`,
+            text: "遅刻・欠席の場合は事前にご連絡ください。",
             wrap: true,
-            size: "sm",
-            margin: "md",
+            size: "xs",
+            color: COLORS.textSub,
+            margin: "lg",
           },
         ],
         footerButton: {
@@ -179,27 +243,40 @@ export async function sendLineNotification(
 
     case "INTERVIEW_CANCELLED_CAST": {
       const { castLineUserId, storeName, scheduledAt } = event.payload;
-      if (!castLineUserId) return;
+      if (!castLineUserId) {
+        console.warn(
+          `[LINE] lineUserId is null for event ${event.type} (interview: ${event.payload.interviewId}), skipping push`
+        );
+        return;
+      }
 
       const dateStr = formatDateTime(scheduledAt);
       const bubble = buildFlexBubble({
-        headerText: "面接キャンセル",
-        headerBgColor: "#dc3545",
+        headerText: "❌ 面接キャンセル",
+        headerBgColor: COLORS.danger,
         bodyContents: [
           {
             type: "text",
             text: `${storeName}との面接がキャンセルされました`,
             wrap: true,
             size: "sm",
+            weight: "bold",
           },
+          separator(),
+          infoRow("元の日時", dateStr),
           {
             type: "text",
-            text: `元の日時: ${dateStr}`,
-            size: "sm",
-            color: "#999999",
-            margin: "md",
+            text: "他のオファーをチェックして、新しい面接を探しましょう。",
+            wrap: true,
+            size: "xs",
+            color: COLORS.textSub,
+            margin: "lg",
           },
         ],
+        footerButton: {
+          label: "オファー一覧を見る",
+          uri: `${getAppUrl()}/offers`,
+        },
       });
 
       await pushFlexMessage(
@@ -213,24 +290,30 @@ export async function sendLineNotification(
     case "MESSAGE_RECEIVED_CAST": {
       const { castLineUserId, senderName, messagePreview, matchId } =
         event.payload;
-      if (!castLineUserId) return;
+      if (!castLineUserId) {
+        console.warn(
+          `[LINE] lineUserId is null for event ${event.type} (match: ${matchId}), skipping push`
+        );
+        return;
+      }
 
       const bubble = buildFlexBubble({
-        headerText: "新しいメッセージ",
-        headerBgColor: "#1a1a2e",
+        headerText: "💬 新しいメッセージ",
+        headerBgColor: COLORS.dark,
         bodyContents: [
           {
             type: "text",
-            text: `${senderName}からメッセージが届きました`,
-            wrap: true,
-            size: "sm",
+            text: senderName,
+            weight: "bold",
+            size: "md",
           },
+          separator(),
           {
             type: "text",
-            text: messagePreview.slice(0, 50),
+            text: messagePreview.slice(0, 80),
             wrap: true,
             size: "sm",
-            color: "#999999",
+            color: COLORS.textSub,
             margin: "md",
           },
         ],
@@ -250,7 +333,12 @@ export async function sendLineNotification(
 
     case "NO_SHOW_REPORTED": {
       const { castLineUserId, storeName, penaltyCount } = event.payload;
-      if (!castLineUserId) return;
+      if (!castLineUserId) {
+        console.warn(
+          `[LINE] lineUserId is null for event ${event.type} (interview: ${event.payload.interviewId}), skipping push`
+        );
+        return;
+      }
 
       const bodyContents: messagingApi.FlexComponent[] = [
         {
@@ -259,30 +347,34 @@ export async function sendLineNotification(
           wrap: true,
           size: "sm",
         },
-        {
-          type: "text",
-          text: `ペナルティ: ${penaltyCount}回目/3回`,
-          size: "sm",
-          color: "#dc3545",
-          margin: "md",
-        },
+        separator(),
+        infoRow("ペナルティ", `${penaltyCount}回目 / 3回`),
       ];
 
-      if (penaltyCount === 2) {
+      if (penaltyCount >= 2) {
         bodyContents.push({
           type: "text",
-          text: "次回の無断欠席でアカウントが停止されます。",
+          text: "⚠️ 次回の無断欠席でアカウントが停止されます。面接には必ず出席するか、事前にキャンセルしてください。",
           wrap: true,
           size: "sm",
-          color: "#dc3545",
+          color: COLORS.textDanger,
           weight: "bold",
-          margin: "md",
+          margin: "lg",
+        });
+      } else {
+        bodyContents.push({
+          type: "text",
+          text: "面接に出席できない場合は、事前にキャンセルをお願いします。",
+          wrap: true,
+          size: "xs",
+          color: COLORS.textSub,
+          margin: "lg",
         });
       }
 
       const bubble = buildFlexBubble({
-        headerText: "無断欠席の報告",
-        headerBgColor: "#dc3545",
+        headerText: "⚠️ 無断欠席の報告",
+        headerBgColor: COLORS.danger,
         bodyContents,
       });
 
@@ -296,19 +388,44 @@ export async function sendLineNotification(
 
     case "INTERVIEW_COMPLETED": {
       const { castLineUserId, storeName } = event.payload;
-      if (!castLineUserId) return;
+      if (!castLineUserId) {
+        console.warn(
+          `[LINE] lineUserId is null for event ${event.type} (interview: ${event.payload.interviewId}), skipping push`
+        );
+        return;
+      }
 
       const bubble = buildFlexBubble({
-        headerText: "面接完了",
-        headerBgColor: "#28a745",
+        headerText: "🎉 面接完了",
+        headerBgColor: COLORS.success,
         bodyContents: [
           {
             type: "text",
-            text: `${storeName}との面接が完了しました。お疲れ様でした！`,
+            text: `${storeName}との面接が完了しました。`,
             wrap: true,
             size: "sm",
           },
+          {
+            type: "text",
+            text: "お疲れ様でした！結果をお待ちください。",
+            wrap: true,
+            size: "sm",
+            margin: "md",
+          },
+          separator(),
+          {
+            type: "text",
+            text: "他のオファーもチェックして、あなたに合ったお店を見つけましょう。",
+            wrap: true,
+            size: "xs",
+            color: COLORS.textSub,
+            margin: "lg",
+          },
         ],
+        footerButton: {
+          label: "オファー一覧を見る",
+          uri: `${getAppUrl()}/offers`,
+        },
       });
 
       await pushFlexMessage(

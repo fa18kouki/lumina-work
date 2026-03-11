@@ -15,7 +15,8 @@
     "db:seed": "prisma db seed",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "line:richmenu": "node scripts/set-line-rich-menu.mjs"
   },
   "prisma": {
     "seed": "bun run prisma/seed.ts"

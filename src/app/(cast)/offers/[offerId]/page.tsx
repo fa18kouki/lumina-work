@@ -19,6 +19,9 @@ import {
   CheckCircle2,
   XCircle,
   CalendarDays,
+  Phone,
+  Mail,
+  ExternalLink,
 } from "lucide-react";
 
 export default function OfferDetailPage() {
@@ -30,7 +33,7 @@ export default function OfferDetailPage() {
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
-    else if (session && session.user.role !== "CAST") router.push("/store/dashboard");
+    else if (session && session.user.role !== "CAST") router.push("/login");
   }, [session, status, router]);
 
   const { data: offer, isLoading, error } = trpc.cast.getOfferDetail.useQuery(
@@ -118,7 +121,7 @@ export default function OfferDetailPage() {
 
       {offer.store.photos && offer.store.photos.length > 0 && (
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-          {offer.store.photos.map((photo, index) => (
+          {offer.store.photos.map((photo: string, index: number) => (
             <div
               key={index}
               className="w-64 h-40 bg-gray-200 rounded-xl flex-shrink-0 overflow-hidden"
@@ -190,6 +193,52 @@ export default function OfferDetailPage() {
         </CardContent>
       </Card>
 
+      {offer.status === "ACCEPTED" && (offer.store.contactPhone || offer.store.contactEmail || offer.store.lineUrl) && (
+        <Card>
+          <CardContent className="py-5 space-y-4">
+            <h2 className="text-base font-bold text-(--text-main) pl-2.5 border-l-4 border-(--primary)">
+              店舗連絡先
+            </h2>
+            {offer.store.preferredContactMethod && (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-(--primary-bg) text-(--primary)">
+                推奨: {offer.store.preferredContactMethod === "PHONE" ? "電話" : offer.store.preferredContactMethod === "LINE" ? "LINE" : "メール"}
+              </span>
+            )}
+            <div className="space-y-3">
+              {offer.store.contactPhone && (
+                <a
+                  href={`tel:${offer.store.contactPhone}`}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <Phone className="w-4 h-4 text-(--primary) flex-shrink-0" />
+                  <span className="text-sm text-(--text-main)">{offer.store.contactPhone}</span>
+                </a>
+              )}
+              {offer.store.contactEmail && (
+                <a
+                  href={`mailto:${offer.store.contactEmail}`}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <Mail className="w-4 h-4 text-(--primary) flex-shrink-0" />
+                  <span className="text-sm text-(--text-main)">{offer.store.contactEmail}</span>
+                </a>
+              )}
+              {offer.store.lineUrl && (
+                <a
+                  href={offer.store.lineUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4 text-(--primary) flex-shrink-0" />
+                  <span className="text-sm text-(--text-main)">LINE公式アカウント</span>
+                </a>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="space-y-5">
         {offer.store.description && (
           <section>
@@ -229,7 +278,7 @@ export default function OfferDetailPage() {
               待遇・福利厚生
             </h2>
             <ul className="space-y-2">
-              {offer.store.benefits.map((benefit, index) => (
+              {offer.store.benefits.map((benefit: string, index: number) => (
                 <li
                   key={index}
                   className="flex items-center gap-2 text-sm text-(--text-main)"
@@ -267,7 +316,7 @@ export default function OfferDetailPage() {
         <div className="fixed bottom-20 md:bottom-0 left-0 right-0 bg-green-50 px-4 py-4 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-40">
           <div className="flex items-center justify-center gap-2 text-green-700 font-medium">
             <CheckCircle2 className="w-5 h-5" />
-            <span>このオファーを承諾しました</span>
+            <span>承諾済み — 上記の連絡先から店舗にご連絡ください</span>
           </div>
         </div>
       )}

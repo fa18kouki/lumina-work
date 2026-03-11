@@ -18,7 +18,7 @@ export default function MatchesPage() {
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
-    else if (session && session.user.role !== "CAST") router.push("/store/dashboard");
+    else if (session && session.user.role !== "CAST") router.push("/login");
   }, [session, status, router]);
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =

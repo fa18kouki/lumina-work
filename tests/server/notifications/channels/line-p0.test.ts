@@ -47,9 +47,9 @@ describe("sendLineNotification - P0イベント", () => {
       expect(callArgs.to).toBe("U1234567890");
       expect(callArgs.messages[0].type).toBe("flex");
       expect(callArgs.messages[0].altText).toContain("面接日程");
-      // ヘッダー背景色は通常色 #1a1a2e
+      // ヘッダー背景色はinfo色 #17a2b8
       const header = callArgs.messages[0].contents.header;
-      expect(header.backgroundColor).toBe("#1a1a2e");
+      expect(header.backgroundColor).toBe("#17a2b8");
     });
   });
 
@@ -102,6 +102,9 @@ describe("sendLineNotification - P0イベント", () => {
           offerId: "offer-1",
           storeEmail: "store@example.com",
           castNickname: "みさき",
+          castLineId: null,
+          castPhone: null,
+          castEmail: null,
         },
       };
 

@@ -16,12 +16,16 @@ const publicRoutes = [
   "/store/reset-password",
   "/games",
 ];
+// キャストの Supabase マジックリンク完了用（hash でセッションが渡るため認証前にアクセスする）
+const isLoginCallback = (pathname: string) =>
+  pathname === "/login/callback";
 
 function isPublicRoute(pathname: string): boolean {
   if (pathname.startsWith("/api/")) return true;
   if (pathname.startsWith("/_next/")) return true;
   if (pathname.match(/\.(ico|png|jpg|jpeg|svg|css|js|woff2?)$/)) return true;
 
+  if (isLoginCallback(pathname)) return true;
   return publicRoutes.some(
     (route) => pathname === route || pathname.startsWith(route + "/")
   );
@@ -69,15 +73,19 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // キャスト・その他ルート: NextAuth cookieを確認
+  // キャスト・その他ルート: NextAuth または Supabase セッションを確認
   const token =
     req.cookies.get("authjs.session-token") ??
     req.cookies.get("__Secure-authjs.session-token");
+  const hasNextAuth = !!token;
 
-  if (!token) {
-    const url = new URL("/login", req.nextUrl.origin);
-    url.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(url);
+  if (!hasNextAuth) {
+    const hasSupabase = await hasSupabaseSession(req);
+    if (!hasSupabase) {
+      const url = new URL("/login", req.nextUrl.origin);
+      url.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(url);
+    }
   }
 
   return NextResponse.next();

@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { TabFilter } from "@/components/ui/tab-filter";
 import { Thumbnail } from "@/components/ui/thumbnail";
 import { trpc } from "@/lib/trpc";
-import { Mail } from "lucide-react";
+import { Mail, Phone, ExternalLink } from "lucide-react";
 
 const STATUS_TABS = [
   { value: "ALL", label: "すべて" },
@@ -88,6 +88,38 @@ export default function StoreOffersPage() {
                   <div className="mt-3 p-3 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-700 line-clamp-2">{offer.message}</p>
                   </div>
+
+                  {offer.status === "ACCEPTED" && offer.cast && (offer.cast.user?.phone || offer.cast.user?.email || offer.cast.lineId) && (
+                    <div className="mt-3 p-3 bg-green-50 border border-green-100 rounded-lg">
+                      <p className="text-xs font-medium text-green-700 mb-2">キャスト連絡先</p>
+                      <div className="flex flex-wrap gap-3">
+                        {offer.cast.user?.phone && (
+                          <a
+                            href={`tel:${offer.cast.user.phone}`}
+                            className="inline-flex items-center gap-1.5 text-xs text-(--text-main) hover:text-(--primary)"
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                            {offer.cast.user.phone}
+                          </a>
+                        )}
+                        {offer.cast.user?.email && (
+                          <a
+                            href={`mailto:${offer.cast.user.email}`}
+                            className="inline-flex items-center gap-1.5 text-xs text-(--text-main) hover:text-(--primary)"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                            {offer.cast.user.email}
+                          </a>
+                        )}
+                        {offer.cast.lineId && (
+                          <span className="inline-flex items-center gap-1.5 text-xs text-(--text-main)">
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            LINE: {offer.cast.lineId}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="mt-3 flex items-center justify-between">
                     <p className="text-xs text-gray-400">

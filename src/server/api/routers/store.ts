@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 import {
   createTRPCRouter,
   protectedProcedure,
@@ -103,7 +104,13 @@ export const storeRouter = createTRPCRouter({
   getSettings: storeProcedure.query(async ({ ctx }) => {
     const store = await ctx.prisma.store.findUnique({
       where: { userId: ctx.session.user.id },
-      select: { notificationSettings: true },
+      select: {
+        notificationSettings: true,
+        contactPhone: true,
+        contactEmail: true,
+        lineUrl: true,
+        preferredContactMethod: true,
+      },
     });
 
     const user = await ctx.prisma.user.findUnique({
@@ -123,6 +130,12 @@ export const storeRouter = createTRPCRouter({
 
     return {
       notifications: { ...defaultNotifications, ...notifications },
+      contactInfo: {
+        contactPhone: store?.contactPhone ?? "",
+        contactEmail: store?.contactEmail ?? "",
+        lineUrl: store?.lineUrl ?? "",
+        preferredContactMethod: store?.preferredContactMethod ?? null,
+      },
       account: {
         email: user?.email ?? "",
         phone: user?.phone ?? "",
@@ -151,6 +164,38 @@ export const storeRouter = createTRPCRouter({
       });
 
       return store.notificationSettings as Record<string, boolean>;
+    }),
+
+  /**
+   * 連絡先情報更新
+   */
+  updateContactInfo: storeProcedure
+    .input(
+      z.object({
+        contactPhone: z.string().regex(/^[0-9\-+()]{7,20}$/).optional().or(z.literal("")),
+        contactEmail: z.string().email().optional().or(z.literal("")),
+        lineUrl: z.string().url().max(200).optional().or(z.literal("")),
+        preferredContactMethod: z.enum(["PHONE", "LINE", "EMAIL"]).nullable().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const store = await ctx.prisma.store.update({
+        where: { userId: ctx.session.user.id },
+        data: {
+          contactPhone: input.contactPhone || null,
+          contactEmail: input.contactEmail || null,
+          lineUrl: input.lineUrl || null,
+          preferredContactMethod: input.preferredContactMethod ?? null,
+        },
+        select: {
+          contactPhone: true,
+          contactEmail: true,
+          lineUrl: true,
+          preferredContactMethod: true,
+        },
+      });
+
+      return store;
     }),
 
   /**
@@ -222,7 +267,10 @@ export const storeRouter = createTRPCRouter({
       });
 
       if (!store) {
-        throw new Error("店舗プロフィールが見つかりません");
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "店舗プロフィールが見つかりません",
+        });
       }
 
       // 既存のオファーがないか確認
@@ -235,7 +283,10 @@ export const storeRouter = createTRPCRouter({
       });
 
       if (existingOffer) {
-        throw new Error("このキャストには既にオファーを送信済みです");
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "このキャストには既にオファーを送信済みです",
+        });
       }
 
       // キャスト情報を取得（通知に必要）
@@ -250,7 +301,10 @@ export const storeRouter = createTRPCRouter({
       });
 
       if (!cast) {
-        throw new Error("キャストが見つかりません");
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "キャストが見つかりません",
+        });
       }
 
       const expiresAt = new Date();
@@ -266,7 +320,7 @@ export const storeRouter = createTRPCRouter({
       });
 
       // 通知送信（fire-and-forget: 失敗してもオファー作成に影響しない）
-      await dispatchNotification({
+      dispatchNotification({
         type: "OFFER_RECEIVED",
         payload: {
           recipientUserId: cast.userId,
@@ -278,6 +332,8 @@ export const storeRouter = createTRPCRouter({
           storeArea: store.area,
           offerMessage: input.message,
         },
+      }).catch((err) => {
+        console.error("[notification] Failed to dispatch OFFER_RECEIVED:", err);
       });
 
       return offer;
@@ -317,6 +373,8 @@ export const storeRouter = createTRPCRouter({
               age: true,
               photos: true,
               rank: true,
+              lineId: true,
+              user: { select: { email: true, phone: true } },
             },
           },
         },
@@ -331,8 +389,27 @@ export const storeRouter = createTRPCRouter({
         nextCursor = nextItem?.id;
       }
 
+      // ACCEPTED以外のオファーではキャスト連絡先をマスク
+      const maskedOffers = offers.map((offer) => {
+        if (offer.status !== "ACCEPTED" || !offer.cast) {
+          return {
+            ...offer,
+            cast: offer.cast ? {
+              id: offer.cast.id,
+              nickname: offer.cast.nickname,
+              age: offer.cast.age,
+              photos: offer.cast.photos,
+              rank: offer.cast.rank,
+              lineId: null as string | null,
+              user: null as { email: string | null; phone: string | null } | null,
+            } : null,
+          };
+        }
+        return offer;
+      });
+
       return {
-        offers,
+        offers: maskedOffers,
         nextCursor,
       };
     }),

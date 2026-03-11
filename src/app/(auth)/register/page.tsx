@@ -1,100 +1,10 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useState } from "react";
-import { User, Building2 } from "lucide-react";
-import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
-
+/**
+ * 新規登録のアカウント選択画面は廃止。
+ * キャストは診断（AIチャット）後にログイン画面で登録。
+ * 店舗は /store/register から登録する。
+ */
 export default function RegisterPage() {
-  const [userType, setUserType] = useState<"cast" | "store" | null>(null);
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-(--text-main)">新規登録</h1>
-          <p className="mt-2 text-(--text-sub)">
-            アカウントタイプを選択してください
-          </p>
-        </div>
-
-        {!userType ? (
-          <div className="mt-8 space-y-4">
-            <button
-              onClick={() => setUserType("cast")}
-              className="w-full p-6 border-2 border-gray-200 rounded-xl hover:border-pink-500 hover:bg-pink-50 transition-all"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center">
-                  <User className="w-6 h-6 text-pink-600" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold text-(--text-main)">
-                    キャストとして登録
-                  </h3>
-                  <p className="text-sm text-(--text-sub)">お仕事を探している方</p>
-                </div>
-              </div>
-            </button>
-
-            <button
-              onClick={() => setUserType("store")}
-              className="w-full p-6 border-2 border-gray-200 rounded-xl hover:border-pink-500 hover:bg-pink-50 transition-all"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-pink-600" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold text-(--text-main)">店舗として登録</h3>
-                  <p className="text-sm text-(--text-sub)">
-                    キャストを募集している方
-                  </p>
-                </div>
-              </div>
-            </button>
-          </div>
-        ) : (
-          <div className="mt-8">
-            <div className="text-center mb-6">
-              <span
-                className={`inline-block px-4 py-2 rounded-full text-sm font-medium ${
-                  userType === "cast"
-                    ? "bg-pink-100 text-pink-700"
-                    : "bg-pink-100 text-pink-700"
-                }`}
-              >
-                {userType === "cast" ? "キャスト" : "店舗"}として登録
-              </span>
-            </div>
-
-            <div className="space-y-4">
-              <p className="text-center text-(--text-sub)">
-                SNSアカウントで簡単登録
-              </p>
-
-              <SocialLoginButtons
-                callbackUrl={
-                  userType === "cast" ? "/cast/profile" : "/store/profile"
-                }
-              />
-
-              <button
-                onClick={() => setUserType(null)}
-                className="w-full text-sm text-(--text-sub) hover:text-(--text-main) mt-4"
-              >
-                ← 戻る
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="text-center text-sm">
-          <span className="text-(--text-sub)">すでにアカウントをお持ちですか？</span>{" "}
-          <a href="/login" className="text-pink-600 hover:text-pink-700">
-            ログイン
-          </a>
-        </div>
-      </div>
-    </div>
-  );
+  redirect("/");
 }

@@ -4,12 +4,25 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useDiagnosis } from "@/lib/diagnosis-provider";
+import { createBrowserClient } from "@/lib/supabase-auth";
+
+const useSupabaseAuth = () =>
+  Boolean(
+    typeof window !== "undefined" &&
+      process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
 
 function LoginContent() {
   const searchParams = useSearchParams();
   const { session: diagnosisSession } = useDiagnosis();
+  const [email, setEmail] = useState("");
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const useSupabase = useSupabaseAuth();
 
   // 診断経由かどうか
   const diagnosisId = searchParams.get("diagnosisId");
@@ -20,6 +33,41 @@ function LoginContent() {
 
   const handleLogin = () => {
     signIn("line", { callbackUrl });
+  };
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    setEmailError("");
+    setIsEmailLoading(true);
+    try {
+      if (useSupabase) {
+        const supabase = createBrowserClient();
+        const next = encodeURIComponent(callbackUrl);
+        const redirectTo = `${window.location.origin}/login/callback?next=${next}`;
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: { emailRedirectTo: redirectTo },
+        });
+        if (error) {
+          setEmailError(error.message);
+          return;
+        }
+        setEmailSent(true);
+      } else {
+        await signIn("nodemailer", {
+          email,
+          callbackUrl,
+          redirect: false,
+        });
+        setEmailSent(true);
+      }
+    } catch {
+      console.error("Email sign in failed");
+      setEmailError("送信に失敗しました。しばらく経ってからお試しください。");
+    } finally {
+      setIsEmailLoading(false);
+    }
   };
 
   return (
@@ -37,14 +85,14 @@ function LoginContent() {
                 店舗情報を確認するには
               </h1>
               <p className="mt-2 text-gray-500">
-                LINE登録で、希望条件を満たす店舗の詳細を確認できます
+                LINEまたはメールで登録すると、希望条件を満たす店舗の詳細を確認できます
               </p>
             </>
           ) : (
             <>
               <h1 className="text-2xl font-bold text-gray-900">キャストログイン</h1>
               <p className="mt-2 text-gray-500">
-                LINEアカウントでログインしてご利用ください
+                LINEまたはメールでログインしてご利用ください
               </p>
             </>
           )}
@@ -70,7 +118,7 @@ function LoginContent() {
           </div>
         )}
 
-        {/* LINEログインボタン */}
+        {/* ログイン方法 */}
         <div className="space-y-4">
           <button
             type="button"
@@ -82,6 +130,80 @@ function LoginContent() {
             </svg>
             LINEで{fromDiagnosis ? "登録して続ける" : "ログイン"}
           </button>
+
+          {/* メール登録・ログイン（キャスト・診断経由の両方） */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-white px-2 text-gray-400">または</span>
+            </div>
+          </div>
+
+          {emailSent ? (
+            <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-center">
+              <p className="text-green-800 font-medium">メールを送信しました</p>
+              <p className="text-green-600 text-sm mt-1">
+                {email} に送信されたリンクをクリックして{fromDiagnosis ? "登録" : "ログイン"}してください
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleEmailSubmit} className="space-y-3">
+              {emailError && (
+                <p className="text-sm text-red-600">{emailError}</p>
+              )}
+              <div>
+                <label
+                  htmlFor="cast-login-email"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  メールアドレス
+                </label>
+                <input
+                  id="cast-login-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="example@email.com"
+                  required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none transition-colors"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isEmailLoading || !email}
+                className="w-full px-4 py-3 rounded-xl bg-pink-500 hover:bg-pink-600 disabled:bg-pink-300 text-white font-medium transition-colors"
+              >
+                {isEmailLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg
+                      className="animate-spin h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    送信中...
+                  </span>
+                ) : (
+                  fromDiagnosis ? "メールで登録して続ける" : "メールでログイン"
+                )}
+              </button>
+            </form>
+          )}
 
           {/* 注意事項 */}
           <p className="text-center text-xs text-gray-400">

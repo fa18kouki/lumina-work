@@ -13,6 +13,10 @@ function createAuthAdapter() {
   const base = PrismaAdapter(prisma);
   return {
     ...base,
+    async createUser({ id: _id, name: _name, ...data }: AdapterUser) {
+      const user = await prisma.user.create({ data });
+      return { ...user, name: null } as AdapterUser;
+    },
     async getUserByAccount(provider_providerAccountId: {
       provider: string;
       providerAccountId: string;
@@ -81,6 +85,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
+    signIn: async ({ user, account }) => {
+      // LINEログイン時、providerAccountId を Cast.lineUserId に同期
+      if (account?.provider === "line" && user.id) {
+        try {
+          await prisma.cast.updateMany({
+            where: { userId: user.id, lineUserId: null },
+            data: { lineUserId: account.providerAccountId },
+          });
+        } catch (e) {
+          // Cast未作成の場合はスキップ（プロフィール作成時に再同期）
+          console.warn("[AUTH] Failed to sync lineUserId on signIn:", e);
+        }
+      }
+      return true;
+    },
     session: ({ session, user }) => ({
       ...session,
       user: {

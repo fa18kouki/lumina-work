@@ -66,12 +66,6 @@ export function StoreLayoutWrapper({
           応募者
         </Link>
         <Link
-          href="/store/matches"
-          className="flex flex-col items-center gap-0.5 text-xs text-[var(--text-sub)] hover:text-slate-700"
-        >
-          メッセージ
-        </Link>
-        <Link
           href="/store/profile"
           className="flex flex-col items-center gap-0.5 text-xs text-[var(--text-sub)] hover:text-slate-700"
         >

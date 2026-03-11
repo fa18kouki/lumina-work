@@ -39,7 +39,7 @@ export default function StoresPage() {
   useEffect(() => {
     if (status === "unauthenticated" || (session && session.user.role !== "CAST")) {
       if (status === "unauthenticated") router.push("/login");
-      else if (session?.user.role !== "CAST") router.push("/store/dashboard");
+      else if (session?.user.role !== "CAST") router.push("/login");
     }
   }, [session, status, router]);
 

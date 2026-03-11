@@ -106,6 +106,31 @@ enum AlcoholTolerance {
   WEAK     // 弱い
   MODERATE // 普通
   STRONG   // 強い
+  NG       // 完全NG
+}
+
+enum EmploymentStatus {
+  INTERVIEW_ONLY // 面接のみ
+  TRIAL          // 体験（1体）
+  EMPLOYED       // 在籍
+  RESIGNED       // 退職
+}
+
+enum LivingArrangement {
+  WITH_FAMILY // 実家
+  ALONE       // 独り暮らし
+  OTHER
+}
+
+enum Transportation {
+  CAR   // 車
+  TRAIN // 電車
+  OTHER
+}
+
+enum DressAvailability {
+  OWNED  // 有
+  RENTAL // レンタル
 }
 
 enum BusinessType {
@@ -158,6 +183,67 @@ model Cast {
   vipClientDescription String?  @db.Text @map("vip_client_description") // 太客の詳細（任意記述）
   socialFollowers      Int?     @map("social_followers")    // SNSフォロワー数
 
+  // ==================== カテゴリ1: 基本情報・連絡先（追加分） ====================
+  fullName          String?           @map("full_name")
+  furigana          String?
+  gender            String?
+  currentArea       String?           @map("current_area")
+  permanentAddress  String?           @map("permanent_address")
+  phoneNumber       String?           @map("phone_number")
+  bloodType         String?           @map("blood_type")
+  zodiacSign        String?           @map("zodiac_sign")
+  email             String?           @map("cast_email")
+  pcEmail           String?           @map("pc_email")
+  facebookId        String?           @map("facebook_id")
+  twitterId         String?           @map("twitter_id")
+  tiktokId          String?           @map("tiktok_id")
+  hobbies           String?           @db.Text
+  specialSkills     String?           @map("special_skills") @db.Text
+  medicalConditions String?           @map("medical_conditions") @db.Text
+  debt              String?           @db.Text
+  qualifications    String?           @db.Text
+  interviewDate     DateTime?         @map("interview_date")
+  trialDate         DateTime?         @map("trial_date")
+  employmentStatus  EmploymentStatus? @map("employment_status")
+  emergencyContact  Json?             @map("emergency_contact") // {relation, name, address}
+
+  // ==================== カテゴリ2: 属性・ライフスタイル ====================
+  livingArrangement  LivingArrangement? @map("living_arrangement")
+  transportation     Transportation?
+  needsPickup        Boolean?           @map("needs_pickup")
+  hasTattoo          Boolean?           @map("has_tattoo")
+  dressAvailability  DressAvailability? @map("dress_availability")
+  hasBoyfriend       Boolean?           @map("has_boyfriend")
+  hasHusband         Boolean?           @map("has_husband")
+  hasChildren        Boolean?           @map("has_children")
+
+  // ==================== カテゴリ3: キャリア・身体情報 ====================
+  currentOccupation String? @map("current_occupation")
+  height            Int?
+  weight            Int?
+  bust              Int?
+  waist             Int?
+  hip               Int?
+  cupSize           String? @map("cup_size")
+  languageSkills    Json?   @map("language_skills") // {english, chinese, other}
+  cosmeticSurgery   String? @map("cosmetic_surgery") @db.Text
+
+  // ==================== カテゴリ4: 業務アンケート ====================
+  birthdayEventWillingness Boolean? @map("birthday_event_willingness")
+  photoPublicationConsent  Boolean? @map("photo_publication_consent")
+  familyApproval           Boolean? @map("family_approval")
+
+  // ==================== カテゴリ5: 希望条件（追加分） ====================
+  shiftPreferences          Json?   @map("shift_preferences") // {days, dayOfWeek, workingHours}
+  motivation                String? @db.Text
+  storePreferences          String? @map("store_preferences") @db.Text
+  customerCount             Int?    @map("customer_count")
+  salesTarget               Int?    @map("sales_target")
+  previousStorePerformance  String? @map("previous_store_performance") @db.Text
+  guaranteedHourlyRate      Int?    @map("guaranteed_hourly_rate")
+  guaranteePeriod           String? @map("guarantee_period")
+  specialConditions         String? @map("special_conditions") @db.Text
+
   // MUST/WANT条件
   mustConditions Json? @map("must_conditions")
   wantConditions Json? @map("want_conditions")
@@ -182,6 +268,7 @@ model Cast {
   offers           Offer[]
   interviews       Interview[]
   experiences      CastExperience[]
+  workHistories    CastWorkHistory[]
   lineLinkTokens   LineLinkToken[]
   diagnosisSession DiagnosisSession?
 
@@ -205,6 +292,25 @@ model DiagnosisSession {
   @@map("diagnosis_sessions")
 }
 
+// ==================== キャスト職歴（カテゴリ6） ====================
+
+model CastWorkHistory {
+  id             String   @id @default(cuid())
+  castId         String   @map("cast_id")
+  storeName      String   @map("store_name")
+  hourlyRate     Int?     @map("hourly_rate")
+  monthlySales   Int?     @map("monthly_sales")
+  durationMonths Int?     @map("duration_months")
+  exitDate       String?  @map("exit_date")
+  exitReason     String?  @map("exit_reason")
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  cast Cast @relation(fields: [castId], references: [id], onDelete: Cascade)
+
+  @@map("cast_work_histories")
+}
+
 // ==================== キャスト経験 ====================
 
 model CastExperience {
@@ -220,6 +326,12 @@ model CastExperience {
   cast Cast @relation(fields: [castId], references: [id], onDelete: Cascade)
 
   @@map("cast_experiences")
+}
+
+enum PreferredContactMethod {
+  PHONE
+  LINE
+  EMAIL
 }
 
 // ==================== 店舗 ====================
@@ -241,6 +353,12 @@ model Store {
   // 求める条件
   mustConditions Json? @map("must_conditions")
   wantConditions Json? @map("want_conditions")
+
+  // 連絡先情報（オファー承諾時にキャストに表示）
+  contactPhone           String?                 @map("contact_phone")
+  contactEmail           String?                 @map("contact_email")
+  lineUrl                String?                 @map("line_url")
+  preferredContactMethod PreferredContactMethod? @map("preferred_contact_method")
 
   // 流入元（オンボーディングで収集）
   referralSource String? @map("referral_source")

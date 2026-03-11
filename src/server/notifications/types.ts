@@ -74,6 +74,9 @@ type OfferAcceptedPayload = BasePayload & {
   offerId: string;
   storeEmail: string | null;
   castNickname: string;
+  castLineId: string | null;
+  castPhone: string | null;
+  castEmail: string | null;
 };
 
 /** #3 オファー辞退 */

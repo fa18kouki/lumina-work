@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAppSession } from "@/lib/auth-helpers";
-import { Bot, Store, MessageSquare, UserCircle, Heart } from "lucide-react";
+import { Store, Bell, UserCircle } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { trpc } from "@/lib/trpc";
 import { QuickActionCard } from "@/components/cast/QuickActionCard";
@@ -29,7 +29,7 @@ export default function CastDashboard() {
   useEffect(() => {
     if (status === "unauthenticated" || (session && session.user.role !== "CAST")) {
       if (status === "unauthenticated") router.push("/login");
-      else if (session?.user.role !== "CAST") router.push("/store/dashboard");
+      else if (session?.user.role !== "CAST") router.push("/login");
     }
   }, [session, status, router]);
 
@@ -71,19 +71,7 @@ export default function CastDashboard() {
       </div>
 
       {/* クイックアクション */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <QuickActionCard
-          href="/ai-diagnosis"
-          label="AI診断"
-          icon={Bot}
-          variant="purple"
-        />
-        <QuickActionCard
-          href="/compatibility"
-          label="相性占い"
-          icon={Heart}
-          variant="pink"
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <QuickActionCard
           href="/stores"
           label="店舗検索"
@@ -91,13 +79,13 @@ export default function CastDashboard() {
           variant="blue"
         />
         <QuickActionCard
-          href="/matches"
-          label="メッセージ"
-          icon={MessageSquare}
-          variant="green"
+          href="/offers"
+          label="オファー"
+          icon={Bell}
+          variant="pink"
         />
         <QuickActionCard
-          href="/profile"
+          href="/profile/edit"
           label="マイページ"
           icon={UserCircle}
           variant="purple"

@@ -113,8 +113,20 @@ export async function sendEmailNotification(
     }
 
     case "OFFER_ACCEPTED": {
-      const { storeEmail, castNickname } = event.payload;
+      const { storeEmail, castNickname, castLineId, castPhone, castEmail } = event.payload;
       if (!storeEmail) return;
+
+      const contactLines: string[] = [];
+      if (castPhone) contactLines.push(`<p style="margin: 4px 0;">電話: <a href="tel:${castPhone}" style="color: #1a1a2e;">${castPhone}</a></p>`);
+      if (castEmail) contactLines.push(`<p style="margin: 4px 0;">メール: <a href="mailto:${castEmail}" style="color: #1a1a2e;">${castEmail}</a></p>`);
+      if (castLineId) contactLines.push(`<p style="margin: 4px 0;">LINE ID: ${castLineId}</p>`);
+
+      const contactSection = contactLines.length > 0
+        ? `<div style="background: #f0fdf4; border-radius: 8px; padding: 16px; margin: 16px 0; border-left: 4px solid #22c55e;">
+            <p style="margin: 0 0 8px; font-weight: bold; color: #166534;">キャスト連絡先</p>
+            ${contactLines.join("")}
+          </div>`
+        : "";
 
       await sendMail(
         storeEmail,
@@ -123,11 +135,12 @@ export async function sendEmailNotification(
           heading: "オファーが承諾されました",
           bodyHtml: `
             <p style="color: #333; line-height: 1.6;">
-              <strong>${castNickname}</strong>さんがオファーを承諾しました。やりとりを開始できます。
+              <strong>${castNickname}</strong>さんがオファーを承諾しました。下記の連絡先から直接ご連絡ください。
             </p>
+            ${contactSection}
           `,
-          ctaLabel: "やりとりを確認する",
-          ctaUrl: `${getAppUrl()}/store/matches`,
+          ctaLabel: "オファーを確認する",
+          ctaUrl: `${getAppUrl()}/store/offers`,
         })
       );
       return;

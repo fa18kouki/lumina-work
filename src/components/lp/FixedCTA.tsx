@@ -18,7 +18,7 @@ export function FixedCTA() {
     : "AI時給診断をスタートする";
 
   const sublabel = isLoggedIn
-    ? `${session?.user?.name ?? "ユーザー"}としてログイン中`
+    ? `${session?.user?.name ?? (isStore ? "店舗" : "キャスト")}としてログイン中`
     : "自分の市場価値を知る";
 
   return (

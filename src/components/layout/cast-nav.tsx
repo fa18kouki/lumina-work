@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { appSignOut } from "@/lib/auth-helpers";
 import { trpc } from "@/lib/trpc";
-import { Home, Search, Bot, Bell, MessageCircle, User, LogOut } from "lucide-react";
+import { Home, Search, Bell, User, LogOut } from "lucide-react";
 
 const navItems = [
   {
@@ -18,23 +18,13 @@ const navItems = [
     icon: Search,
   },
   {
-    href: "/ai-diagnosis",
-    label: "AI診断",
-    icon: Bot,
-  },
-  {
     href: "/offers",
     label: "オファー",
     icon: Bell,
     showBadge: true,
   },
   {
-    href: "/matches",
-    label: "トーク",
-    icon: MessageCircle,
-  },
-  {
-    href: "/profile",
+    href: "/profile/edit",
     label: "マイページ",
     icon: User,
   },
@@ -68,7 +58,6 @@ export function CastNav() {
         {navItems.map((item) => {
           const isActive =
             pathname === item.href ||
-            (item.href === "/matches" && pathname.startsWith("/chat")) ||
             (item.href === "/offers" && pathname.startsWith("/offers"));
           const Icon = item.icon;
           return (

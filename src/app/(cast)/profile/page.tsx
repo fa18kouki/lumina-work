@@ -15,8 +15,15 @@ export default function CastProfilePage() {
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
-    else if (session && session.user.role !== "CAST") router.push("/store/dashboard");
+    else if (session && session.user.role !== "CAST") router.push("/login");
   }, [session, status, router]);
+
+  // プロフィール登録済みの場合は詳細編集ページへリダイレクト
+  useEffect(() => {
+    if (profile) {
+      router.replace("/profile/edit");
+    }
+  }, [profile, router]);
 
   const upsertProfile = trpc.cast.upsertProfile.useMutation({
     onSuccess: () => {

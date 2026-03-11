@@ -34,24 +34,15 @@ async function getSupabaseSession(): Promise<Session | null> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
-    let prismaUser = await prisma.user.findUnique({
+    const prismaUser = await prisma.user.findUnique({
       where: { supabaseAuthId: user.id },
       select: { id: true, email: true, image: true, role: true },
     });
 
-    // Prisma ユーザーが存在しない場合（callback を経由せずログインした場合など）自動作成
+    // Prisma ユーザーが存在しない場合は null を返す。
+    // ユーザー作成は正規フロー（/api/auth/callback または /api/auth/sync-cast-user）に任せる。
     if (!prismaUser) {
-      prismaUser = await prisma.user.create({
-        data: {
-          email: user.email,
-          emailVerified: user.email_confirmed_at
-            ? new Date(user.email_confirmed_at)
-            : null,
-          role: "STORE",
-          supabaseAuthId: user.id,
-        },
-        select: { id: true, email: true, image: true, role: true },
-      });
+      return null;
     }
 
     return {

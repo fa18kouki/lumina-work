@@ -62,3 +62,83 @@ export const SUBSCRIPTION_PLANS = [
 ] as const;
 
 export type SubscriptionPlanId = (typeof SUBSCRIPTION_PLANS)[number]["id"];
+
+/** 血液型 */
+export const BLOOD_TYPES = [
+  { value: "A", label: "A型" },
+  { value: "B", label: "B型" },
+  { value: "O", label: "O型" },
+  { value: "AB", label: "AB型" },
+] as const;
+
+/** 干支 */
+export const ZODIAC_SIGNS = [
+  { value: "rat", label: "子（ねずみ）" },
+  { value: "ox", label: "丑（うし）" },
+  { value: "tiger", label: "寅（とら）" },
+  { value: "rabbit", label: "卯（うさぎ）" },
+  { value: "dragon", label: "辰（たつ）" },
+  { value: "snake", label: "巳（へび）" },
+  { value: "horse", label: "午（うま）" },
+  { value: "sheep", label: "未（ひつじ）" },
+  { value: "monkey", label: "申（さる）" },
+  { value: "rooster", label: "酉（とり）" },
+  { value: "dog", label: "戌（いぬ）" },
+  { value: "boar", label: "亥（いのしし）" },
+] as const;
+
+/** カップサイズ */
+export const CUP_SIZES = [
+  { value: "A", label: "A" },
+  { value: "B", label: "B" },
+  { value: "C", label: "C" },
+  { value: "D", label: "D" },
+  { value: "E", label: "E" },
+  { value: "F", label: "F" },
+  { value: "G", label: "G" },
+  { value: "H", label: "H以上" },
+] as const;
+
+/** 性別 */
+export const GENDER_OPTIONS = [
+  { value: "female", label: "女性" },
+  { value: "male", label: "男性" },
+  { value: "other", label: "その他" },
+] as const;
+
+/** 居住形態 */
+export const LIVING_OPTIONS = [
+  { value: "WITH_FAMILY", label: "実家" },
+  { value: "ALONE", label: "独り暮らし" },
+  { value: "OTHER", label: "その他" },
+] as const;
+
+/** 交通手段 */
+export const TRANSPORT_OPTIONS = [
+  { value: "CAR", label: "車" },
+  { value: "TRAIN", label: "電車" },
+  { value: "OTHER", label: "その他" },
+] as const;
+
+/** ドレス */
+export const DRESS_OPTIONS = [
+  { value: "OWNED", label: "有（自前）" },
+  { value: "RENTAL", label: "レンタル希望" },
+] as const;
+
+/** 在籍状況 */
+export const EMPLOYMENT_STATUS_OPTIONS = [
+  { value: "INTERVIEW_ONLY", label: "面接のみ" },
+  { value: "TRIAL", label: "体験（1体）" },
+  { value: "EMPLOYED", label: "在籍" },
+  { value: "RESIGNED", label: "退職" },
+] as const;
+
+/** お酒の強さ */
+export const ALCOHOL_OPTIONS = [
+  { value: "NONE", label: "飲めない" },
+  { value: "WEAK", label: "弱い" },
+  { value: "MODERATE", label: "普通" },
+  { value: "STRONG", label: "強い" },
+  { value: "NG", label: "完全NG" },
+] as const;

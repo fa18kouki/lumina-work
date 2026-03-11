@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   Users,
   CalendarCheck,
-  MessageSquare,
   Store,
   CreditCard,
   Settings,
@@ -18,7 +17,6 @@ const navItems = [
   { href: "/store/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
   { href: "/store/casts", label: "応募者管理", icon: Users },
   { href: "/store/interviews", label: "面接管理", icon: CalendarCheck },
-  { href: "/store/matches", label: "メッセージ", icon: MessageSquare },
   { href: "/store/profile", label: "店舗情報", icon: Store },
   { href: "/store/subscription", label: "プラン", icon: CreditCard },
 ];

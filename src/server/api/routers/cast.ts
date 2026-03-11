@@ -17,6 +17,7 @@ export const castRouter = createTRPCRouter({
       where: { userId: ctx.session.user.id },
       include: {
         experiences: true,
+        workHistories: true,
       },
     });
 
@@ -63,8 +64,80 @@ export const castRouter = createTRPCRouter({
         monthlySales: z.number().min(0).optional(),
         monthlyNominations: z.number().min(0).optional(),
         alcoholTolerance: z
-          .enum(["NONE", "WEAK", "MODERATE", "STRONG"])
+          .enum(["NONE", "WEAK", "MODERATE", "STRONG", "NG"])
           .optional(),
+
+        // カテゴリ1: 基本情報・連絡先（追加分）
+        fullName: z.string().max(100).optional(),
+        furigana: z.string().max(100).optional(),
+        gender: z.string().optional(),
+        currentArea: z.string().optional(),
+        permanentAddress: z.string().max(200).optional(),
+        phoneNumber: z.string().max(20).optional(),
+        bloodType: z.string().optional(),
+        zodiacSign: z.string().optional(),
+        email: z.string().email().optional().or(z.literal("")),
+        pcEmail: z.string().email().optional().or(z.literal("")),
+        facebookId: z.string().max(50).optional(),
+        twitterId: z.string().max(50).optional(),
+        tiktokId: z.string().max(50).optional(),
+        hobbies: z.string().max(500).optional(),
+        specialSkills: z.string().max(500).optional(),
+        medicalConditions: z.string().max(500).optional(),
+        debt: z.string().max(500).optional(),
+        qualifications: z.string().max(500).optional(),
+        interviewDate: z.string().optional(),
+        trialDate: z.string().optional(),
+        employmentStatus: z.enum(["INTERVIEW_ONLY", "TRIAL", "EMPLOYED", "RESIGNED"]).optional(),
+        emergencyContact: z.record(z.string(), z.unknown()).optional(),
+
+        // カテゴリ2: 属性・ライフスタイル
+        livingArrangement: z.enum(["WITH_FAMILY", "ALONE", "OTHER"]).optional(),
+        transportation: z.enum(["CAR", "TRAIN", "OTHER"]).optional(),
+        needsPickup: z.boolean().optional(),
+        hasTattoo: z.boolean().optional(),
+        dressAvailability: z.enum(["OWNED", "RENTAL"]).optional(),
+        hasBoyfriend: z.boolean().optional(),
+        hasHusband: z.boolean().optional(),
+        hasChildren: z.boolean().optional(),
+
+        // カテゴリ3: キャリア・身体情報
+        currentOccupation: z.string().max(100).optional(),
+        height: z.number().min(100).max(250).optional(),
+        weight: z.number().min(30).max(200).optional(),
+        bust: z.number().min(50).max(150).optional(),
+        waist: z.number().min(40).max(120).optional(),
+        hip: z.number().min(50).max(150).optional(),
+        cupSize: z.string().optional(),
+        languageSkills: z.record(z.string(), z.unknown()).optional(),
+        cosmeticSurgery: z.string().max(500).optional(),
+
+        // カテゴリ4: 業務アンケート
+        birthdayEventWillingness: z.boolean().optional(),
+        photoPublicationConsent: z.boolean().optional(),
+        familyApproval: z.boolean().optional(),
+
+        // カテゴリ5: 希望条件（追加分）
+        shiftPreferences: z.record(z.string(), z.unknown()).optional(),
+        motivation: z.string().max(1000).optional(),
+        storePreferences: z.string().max(500).optional(),
+        customerCount: z.number().min(0).optional(),
+        salesTarget: z.number().min(0).optional(),
+        previousStorePerformance: z.string().max(500).optional(),
+        guaranteedHourlyRate: z.number().min(0).optional(),
+        guaranteePeriod: z.string().max(100).optional(),
+        specialConditions: z.string().max(500).optional(),
+
+        // カテゴリ6: 職歴
+        workHistories: z.array(z.object({
+          storeName: z.string().min(1),
+          hourlyRate: z.number().min(0).optional(),
+          monthlySales: z.number().min(0).optional(),
+          durationMonths: z.number().min(0).optional(),
+          exitDate: z.string().optional(),
+          exitReason: z.string().max(500).optional(),
+          notes: z.string().max(1000).optional(),
+        })).optional(),
 
         // 希望条件
         desiredAreas: z.array(z.string()).optional(),
@@ -106,6 +179,24 @@ export const castRouter = createTRPCRouter({
         ? new Date(input.downtimeUntil)
         : undefined;
 
+      // 日付のパース（追加分）
+      const interviewDate = input.interviewDate
+        ? new Date(input.interviewDate)
+        : undefined;
+      const trialDate = input.trialDate
+        ? new Date(input.trialDate)
+        : undefined;
+
+      const emergencyContact = input.emergencyContact as
+        | Prisma.InputJsonValue
+        | undefined;
+      const languageSkills = input.languageSkills as
+        | Prisma.InputJsonValue
+        | undefined;
+      const shiftPreferences = input.shiftPreferences as
+        | Prisma.InputJsonValue
+        | undefined;
+
       const profileData = {
         nickname: input.nickname,
         age: input.age,
@@ -141,6 +232,62 @@ export const castRouter = createTRPCRouter({
         // MUST/WANT
         mustConditions,
         wantConditions,
+        // カテゴリ1: 追加フィールド
+        fullName: input.fullName,
+        furigana: input.furigana,
+        gender: input.gender,
+        currentArea: input.currentArea,
+        permanentAddress: input.permanentAddress,
+        phoneNumber: input.phoneNumber,
+        bloodType: input.bloodType,
+        zodiacSign: input.zodiacSign,
+        email: input.email || null,
+        pcEmail: input.pcEmail || null,
+        facebookId: input.facebookId,
+        twitterId: input.twitterId,
+        tiktokId: input.tiktokId,
+        hobbies: input.hobbies,
+        specialSkills: input.specialSkills,
+        medicalConditions: input.medicalConditions,
+        debt: input.debt,
+        qualifications: input.qualifications,
+        interviewDate,
+        trialDate,
+        employmentStatus: input.employmentStatus,
+        emergencyContact,
+        // カテゴリ2: 属性
+        livingArrangement: input.livingArrangement,
+        transportation: input.transportation,
+        needsPickup: input.needsPickup,
+        hasTattoo: input.hasTattoo,
+        dressAvailability: input.dressAvailability,
+        hasBoyfriend: input.hasBoyfriend,
+        hasHusband: input.hasHusband,
+        hasChildren: input.hasChildren,
+        // カテゴリ3: キャリア・身体情報
+        currentOccupation: input.currentOccupation,
+        height: input.height,
+        weight: input.weight,
+        bust: input.bust,
+        waist: input.waist,
+        hip: input.hip,
+        cupSize: input.cupSize,
+        languageSkills,
+        cosmeticSurgery: input.cosmeticSurgery,
+        // カテゴリ4: 業務アンケート
+        birthdayEventWillingness: input.birthdayEventWillingness,
+        photoPublicationConsent: input.photoPublicationConsent,
+        familyApproval: input.familyApproval,
+        // カテゴリ5: 追加フィールド
+        shiftPreferences,
+        motivation: input.motivation,
+        storePreferences: input.storePreferences,
+        customerCount: input.customerCount,
+        salesTarget: input.salesTarget,
+        previousStorePerformance: input.previousStorePerformance,
+        guaranteedHourlyRate: input.guaranteedHourlyRate,
+        guaranteePeriod: input.guaranteePeriod,
+        specialConditions: input.specialConditions,
       };
 
       const cast = await ctx.prisma.cast.upsert({
@@ -152,20 +299,61 @@ export const castRouter = createTRPCRouter({
         },
       });
 
-      // 経験データの更新（存在する場合は全削除して再作成）
-      if (input.experiences && input.experiences.length > 0) {
-        await ctx.prisma.castExperience.deleteMany({
-          where: { castId: cast.id },
-        });
+      // 経験・職歴データの更新（トランザクションで一括処理）
+      await ctx.prisma.$transaction(async (tx) => {
+        // 経験データ: undefined=変更なし, []=全削除, [...]= 全削除して再作成
+        if (input.experiences !== undefined) {
+          await tx.castExperience.deleteMany({
+            where: { castId: cast.id },
+          });
 
-        await ctx.prisma.castExperience.createMany({
-          data: input.experiences.map((exp) => ({
-            castId: cast.id,
-            area: exp.area,
-            businessType: exp.businessType,
-            durationMonths: exp.durationMonths,
-          })),
+          if (input.experiences.length > 0) {
+            await tx.castExperience.createMany({
+              data: input.experiences.map((exp) => ({
+                castId: cast.id,
+                area: exp.area,
+                businessType: exp.businessType,
+                durationMonths: exp.durationMonths,
+              })),
+            });
+          }
+        }
+
+        // 職歴データ: undefined=変更なし, []=全削除, [...]= 全削除して再作成
+        if (input.workHistories !== undefined) {
+          await tx.castWorkHistory.deleteMany({
+            where: { castId: cast.id },
+          });
+
+          if (input.workHistories.length > 0) {
+            await tx.castWorkHistory.createMany({
+              data: input.workHistories.map((wh) => ({
+                castId: cast.id,
+                storeName: wh.storeName,
+                hourlyRate: wh.hourlyRate,
+                monthlySales: wh.monthlySales,
+                durationMonths: wh.durationMonths,
+                exitDate: wh.exitDate,
+                exitReason: wh.exitReason,
+                notes: wh.notes,
+              })),
+            });
+          }
+        }
+      });
+
+      // LINEアカウントからlineUserIdを同期（未設定の場合のみ）
+      if (!cast.lineUserId) {
+        const lineAccount = await ctx.prisma.account.findFirst({
+          where: { userId: ctx.session.user.id, provider: "line" },
+          select: { providerAccountId: true },
         });
+        if (lineAccount) {
+          await ctx.prisma.cast.update({
+            where: { id: cast.id },
+            data: { lineUserId: lineAccount.providerAccountId },
+          });
+        }
       }
 
       // ユーザーロールをCASTに設定
@@ -305,6 +493,10 @@ export const castRouter = createTRPCRouter({
               salarySystem: true,
               benefits: true,
               isVerified: true,
+              contactPhone: true,
+              contactEmail: true,
+              lineUrl: true,
+              preferredContactMethod: true,
             },
           },
         },
@@ -317,7 +509,16 @@ export const castRouter = createTRPCRouter({
         });
       }
 
-      return offer;
+      // ACCEPTED以外のオファーでは店舗連絡先をマスク
+      const store = {
+        ...offer.store,
+        contactPhone: offer.status === "ACCEPTED" ? offer.store.contactPhone : null,
+        contactEmail: offer.status === "ACCEPTED" ? offer.store.contactEmail : null,
+        lineUrl: offer.status === "ACCEPTED" ? offer.store.lineUrl : null,
+        preferredContactMethod: offer.status === "ACCEPTED" ? offer.store.preferredContactMethod : null,
+      };
+
+      return { ...offer, store };
     }),
 
   /**
@@ -333,11 +534,19 @@ export const castRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const cast = await ctx.prisma.cast.findUnique({
         where: { userId: ctx.session.user.id },
-        select: { id: true, nickname: true },
+        select: {
+          id: true,
+          nickname: true,
+          lineId: true,
+          user: { select: { email: true, phone: true } },
+        },
       });
 
       if (!cast) {
-        throw new Error("キャストプロフィールが見つかりません");
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "キャストプロフィールが見つかりません",
+        });
       }
 
       const offer = await ctx.prisma.offer.update({
@@ -382,6 +591,9 @@ export const castRouter = createTRPCRouter({
             offerId: offer.id,
             storeEmail,
             castNickname,
+            castLineId: cast.lineId ?? null,
+            castPhone: cast.user?.phone ?? null,
+            castEmail: cast.user?.email ?? null,
           },
         });
       } else {
