@@ -22,7 +22,7 @@ interface AreaSelectorProps {
  * valueにはエリアのlabel（表示名）配列を使用
  */
 export function AreaSelector({ value, onChange, className = "" }: AreaSelectorProps) {
-  const [activeRegion, setActiveRegion] = useState(REGION_DATA[0].name);
+  const [activeRegion, setActiveRegion] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -172,21 +172,27 @@ export function AreaSelector({ value, onChange, className = "" }: AreaSelectorPr
 
           {/* 右パネル: 都道府県→都市→エリア */}
           <div className="flex-1 overflow-y-auto p-3">
-            {currentRegion?.prefectures.map((pref) => (
-              <PrefectureSection
-                key={pref.name}
-                pref={pref}
-                prefLabels={getPrefLabels(pref)}
-                checkState={getCheckState(getPrefLabels(pref))}
-                getCityLabels={getCityLabels}
-                getCityCheckState={(city) =>
-                  getCheckState(getCityLabels(city))
-                }
-                isSelected={isSelected}
-                toggleArea={toggleArea}
-                toggleMultiple={toggleMultiple}
-              />
-            ))}
+            {currentRegion ? (
+              currentRegion.prefectures.map((pref) => (
+                <PrefectureSection
+                  key={pref.name}
+                  pref={pref}
+                  prefLabels={getPrefLabels(pref)}
+                  checkState={getCheckState(getPrefLabels(pref))}
+                  getCityLabels={getCityLabels}
+                  getCityCheckState={(city) =>
+                    getCheckState(getCityLabels(city))
+                  }
+                  isSelected={isSelected}
+                  toggleArea={toggleArea}
+                  toggleMultiple={toggleMultiple}
+                />
+              ))
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-gray-400">
+                左の地域を選択してください
+              </div>
+            )}
           </div>
         </div>
       )}
