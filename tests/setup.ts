@@ -1,4 +1,7 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+import { getEnvFileOrder } from "../src/lib/env-files";
+
+dotenv.config({ path: getEnvFileOrder(process.env.NODE_ENV) });
 
 // グローバルタイムアウト設定
 import { vi } from "vitest";
