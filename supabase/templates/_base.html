@@ -7,5 +7,8 @@
   - {{ .ConfirmationURL }} : 確認・リセットURL
   - {{ .Token }}           : OTPコード（6桁）
   - {{ .TokenHash }}       : トークンハッシュ
-  - {{ .SiteURL }}         : サイトURL
+  - {{ .SiteURL }}         : サイトURL（ロゴ等の静的アセットは {{ .SiteURL }}/Apple_Touch_Icon_180x180.png のように指定）
+
+  フォント:
+  - メールクライアントのデフォルトは明朝になりがちなため、各テンプレートで OS の UI に近いサンセリフの font-family をインライン指定している。
 -->
