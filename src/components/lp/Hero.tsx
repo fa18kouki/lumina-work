@@ -12,6 +12,40 @@ export function Hero() {
 
   return (
     <section className="relative">
+      <header className="relative z-20 border-b border-rose-100 bg-white">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+          <Link href="/" className="flex items-center gap-2">
+            <Image src="/Image.png" alt="LUMINA" width={140} height={42} priority />
+          </Link>
+
+          <nav className="flex items-center gap-2 sm:gap-3" aria-label="メイン">
+            {session ? (
+              <Link
+                href={session.user.role === "STORE" ? "/s/dashboard" : "/c/dashboard"}
+                className="rounded-full bg-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-600"
+              >
+                {session.user.role === "STORE" ? "管理画面" : "マイページ"}
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/c/login"
+                  className="rounded-full px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-rose-50 sm:px-4"
+                >
+                  ログイン
+                </Link>
+                <Link
+                  href="/s/login"
+                  className="rounded-full border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-stone-600 transition hover:border-rose-200 hover:text-rose-600"
+                >
+                  店舗の方
+                </Link>
+              </>
+            )}
+          </nav>
+        </div>
+      </header>
+
       <div className="relative min-h-[min(88vh,760px)] w-full overflow-hidden bg-stone-900 lg:min-h-[640px]">
         <Image
           src={lpLuminaAssets.heroBanner}
@@ -21,50 +55,12 @@ export function Hero() {
           className="object-cover object-[80%_center] sm:object-[70%_center] lg:object-[60%_center]"
           sizes="100vw"
         />
-        {/* モバイル: 下寄せで文字可読 / デスクトップ: 左に読みやすい帯 */}
         <div
           className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/45 to-black/30 lg:bg-gradient-to-r lg:from-black/75 lg:via-black/45 lg:to-black/10"
           aria-hidden
         />
 
-        <header className="absolute inset-x-0 top-0 z-30 border-b border-white/[0.12] bg-white/[0.07] backdrop-blur-2xl backdrop-saturate-150">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2.5 sm:px-6">
-            <Link
-              href="/"
-              className="inline-flex items-center rounded-xl bg-white/90 px-2 py-1 shadow-[0_6px_20px_-6px_rgba(0,0,0,0.3)] ring-1 ring-white/60 backdrop-blur-md transition hover:bg-white hover:ring-white/90"
-            >
-              <Image src="/Image.png" alt="LUMINA" width={90} height={27} priority />
-            </Link>
-
-            <nav className="flex items-center gap-2 sm:gap-3" aria-label="メイン">
-              {session ? (
-                <Link
-                  href={session.user.role === "STORE" ? "/s/dashboard" : "/c/dashboard"}
-                  className="rounded-full bg-rose-500 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_6px_20px_-4px_rgba(225,29,72,0.55)] ring-1 ring-white/25 transition hover:bg-rose-600"
-                >
-                  {session.user.role === "STORE" ? "管理画面" : "マイページ"}
-                </Link>
-              ) : (
-                <>
-                  <Link
-                    href="/c/login"
-                    className="rounded-full bg-white/90 px-4 py-2.5 text-sm font-semibold text-stone-800 shadow-[0_8px_28px_-8px_rgba(0,0,0,0.4)] ring-1 ring-white/60 backdrop-blur-md transition hover:bg-white sm:px-5"
-                  >
-                    ログイン
-                  </Link>
-                  <Link
-                    href="/s/login"
-                    className="rounded-full bg-white/88 px-4 py-2.5 text-sm font-semibold text-rose-700 shadow-[0_8px_28px_-8px_rgba(0,0,0,0.35)] ring-1 ring-rose-200/70 backdrop-blur-md transition hover:bg-white hover:ring-rose-300/80 sm:px-5"
-                  >
-                    店舗の方
-                  </Link>
-                </>
-              )}
-            </nav>
-          </div>
-        </header>
-
-        <div className="relative z-10 mx-auto flex min-h-[min(88vh,760px)] max-w-6xl flex-col justify-end px-4 pb-16 pt-24 sm:justify-center sm:pb-20 sm:pt-28 lg:min-h-[640px] lg:justify-center lg:pb-24 lg:pt-32">
+        <div className="relative z-10 mx-auto flex min-h-[min(88vh,760px)] max-w-6xl flex-col justify-end px-4 pb-16 pt-16 sm:justify-center sm:pb-20 sm:pt-20 lg:min-h-[640px] lg:justify-center lg:pb-24 lg:pt-24">
           <div className="max-w-xl">
             <p className="text-sm font-medium tracking-wide text-rose-200">
               ナイトワークの求人を、スマホひとつで
