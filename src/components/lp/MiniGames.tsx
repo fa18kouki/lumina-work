@@ -84,17 +84,15 @@ const games: GameCardProps[] = [
 
 export function MiniGames() {
   return (
-    <section className="py-16 md:py-24 bg-white">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="text-center mb-10">
-          <span className="text-sm tracking-widest uppercase text-gray-400">
-            MINI GAMES
-          </span>
-          <h2 className="text-2xl md:text-3xl font-bold mt-2 text-gray-900">
-            ミニゲーム
+    <section className="border-t border-stone-100 bg-rose-50/30 py-16 md:py-24">
+      <div className="mx-auto max-w-4xl px-4">
+        <div className="mb-10 text-center">
+          <p className="text-sm font-semibold text-rose-500">Column / 遊び心</p>
+          <h2 className="mt-2 text-2xl font-bold text-gray-900 md:text-3xl">
+            ちょっとした診断・ゲーム
           </h2>
-          <p className="text-sm mt-2 text-gray-500">
-            お客さんと一緒に楽しめるミニゲームで盛り上がろう
+          <p className="text-sm mt-2 text-gray-600">
+            休憩がてら遊べるコンテンツです。本診断とは結果が異なる場合があります。
           </p>
         </div>
 

@@ -40,15 +40,13 @@ export function UserVoices() {
     <section className="py-16 md:py-24 bg-white">
       <div className="max-w-4xl mx-auto px-4">
         {/* ヘッダー */}
-        <div className="text-center mb-10">
-          <span className="text-sm tracking-widest uppercase text-gray-400">
-            VOICES
-          </span>
-          <h2 className="text-2xl md:text-3xl font-bold mt-2 text-gray-900">
-            利用者の声
+        <div className="mb-10 text-center">
+          <p className="text-sm font-semibold text-rose-500">Recruit voice</p>
+          <h2 className="mt-2 text-2xl font-bold text-gray-900 md:text-3xl">
+            サービスをご利用の方の声（イメージ）
           </h2>
-          <p className="text-sm mt-2 text-gray-500">
-            実際にご利用いただいた方々のリアルな声
+          <p className="mt-2 text-sm text-gray-500">
+            掲載はフィクションのサンプルです。実際の体験談ページは順次拡充予定です。
           </p>
         </div>
 

@@ -1,8 +1,11 @@
 export { SectionHeader } from "./SectionHeader";
 export { GradientButton } from "./GradientButton";
 export { Hero } from "./Hero";
+export { LpNoticeBar } from "./LpNoticeBar";
 export { HowItWorks } from "./HowItWorks";
 export { ServiceSteps } from "./ServiceSteps";
+export { TrustAndSafety } from "./TrustAndSafety";
+export { LifestyleTags } from "./LifestyleTags";
 export { AppFeatures } from "./AppFeatures";
 export { PickupStores } from "./PickupStores";
 export { StoreShowcase } from "./StoreShowcase";

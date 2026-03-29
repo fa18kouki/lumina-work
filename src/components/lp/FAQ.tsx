@@ -24,17 +24,17 @@ const faqs = [
   {
     question: "Q. 本当に無料ですか？",
     answer:
-      "A. はい、完全無料でご利用いただけます。診断から店舗とのやりとりまで、一切費用はかかりません。",
+      "A. キャスト向けの診断・店舗検索・オファー確認など、基本的な機能は無料でご利用いただけます。料金が発生する場合は、該当画面で明示します。",
   },
   {
     question: "Q. 個人情報は安全ですか？",
     answer:
-      "A. 個人情報の取り扱いには細心の注意を払っており、暗号化通信を使用しています。また、匿名でのやりとりが可能なため、面接を決定するまで個人情報を開示する必要はありません。",
+      "A. 通信の暗号化やアクセス管理など、安全管理に取り組んでいます。取り扱いの詳細はプライバシーポリシーをご確認ください。",
   },
   {
     question: "Q. 無理な勧誘はありませんか？",
     answer:
-      "A. いいえ、一切ありません。あなたのペースで、気になるお店とやりとりしていただけます。断る場合も、アプリ上で簡単にお断りできます。",
+      "A. オファーの承諾・辞退はご自身で選択いただけます。気に入らない店舗は「みちゃだめ」でブロックすることもできます。",
   },
   {
     question: "Q. 未経験でも大丈夫ですか？",
@@ -56,19 +56,12 @@ export function FAQ() {
   };
 
   return (
-    <section className="py-16 md:py-24 bg-gray-50">
-      <div className="max-w-2xl mx-auto px-4">
-        {/* ヘッダー */}
-        <div className="text-center mb-10">
-          <span className="text-sm tracking-widest uppercase text-gray-400">
-            FAQ
-          </span>
-          <h2 className="text-2xl md:text-3xl font-bold mt-2 text-gray-900">
-            よくある質問
-          </h2>
-          <p className="text-sm mt-2 text-gray-500">
-            皆さまからよく寄せられる質問にお答えします
-          </p>
+    <section className="border-t border-stone-100 bg-white py-16 md:py-24">
+      <div className="mx-auto max-w-2xl px-4">
+        <div className="mb-10 text-center">
+          <p className="text-sm font-semibold text-rose-500">Q&amp;A</p>
+          <h2 className="mt-2 text-2xl font-bold text-stone-900 md:text-3xl">よくあるご質問</h2>
+          <p className="mt-2 text-sm text-stone-600">はじめての方からよくいただく内容をまとめました</p>
         </div>
 
         {/* FAQ Items */}
@@ -76,31 +69,26 @@ export function FAQ() {
           {faqs.map((faq, index) => (
             <div
               key={index}
-              className="rounded-xl overflow-hidden border bg-white border-gray-200"
+              className="overflow-hidden rounded-2xl border border-stone-200 bg-stone-50/50"
             >
-              {/* Question button */}
               <button
+                type="button"
                 onClick={() => toggleFAQ(index)}
-                className="w-full flex items-center justify-between p-5 text-left transition-colors hover:bg-gray-50"
+                className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-white/80"
               >
-                <span className="text-sm font-medium text-gray-900">
-                  {faq.question}
-                </span>
+                <span className="text-sm font-semibold text-stone-900">{faq.question}</span>
                 <ChevronDownIcon
-                  className={`w-5 h-5 transition-transform duration-200 shrink-0 ml-4 text-gray-500 ${openIndex === index ? "rotate-180" : ""}`}
+                  className={`ml-4 h-5 w-5 shrink-0 text-stone-500 transition-transform duration-200 ${openIndex === index ? "rotate-180" : ""}`}
                 />
               </button>
 
-              {/* Answer */}
               <div
                 className={`overflow-hidden transition-all duration-200 ${
                   openIndex === index ? "max-h-96" : "max-h-0"
                 }`}
               >
-                <div className="px-5 pb-5 pt-0 border-t border-gray-100">
-                  <p className="text-sm leading-relaxed pt-4 text-gray-600">
-                    {faq.answer}
-                  </p>
+                <div className="border-t border-stone-200 px-5 pb-5 pt-0">
+                  <p className="pt-4 text-sm leading-relaxed text-stone-600">{faq.answer}</p>
                 </div>
               </div>
             </div>
