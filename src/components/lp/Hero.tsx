@@ -12,7 +12,7 @@ export function Hero() {
 
   return (
     <section className="relative">
-      <header className="relative z-30 border-b border-white/20 bg-white/90 backdrop-blur-md lg:absolute lg:inset-x-0 lg:top-0 lg:border-white/10 lg:bg-white/80">
+      <header className="relative z-20 border-b border-rose-100/70 bg-white/70 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <Link href="/" className="flex items-center gap-2">
             <Image src="/Image.png" alt="LUMINA" width={132} height={40} priority />
@@ -30,13 +30,13 @@ export function Hero() {
               <>
                 <Link
                   href="/c/login"
-                  className="rounded-full px-3 py-2 text-sm font-medium text-stone-800 transition hover:bg-white sm:px-4"
+                  className="rounded-full px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-white/90 sm:px-4"
                 >
                   ログイン
                 </Link>
                 <Link
                   href="/s/login"
-                  className="rounded-full border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-stone-600 transition hover:border-rose-300 hover:text-rose-600"
+                  className="rounded-full border border-stone-200/80 bg-white/60 px-3 py-2 text-sm font-medium text-stone-600 transition hover:border-rose-200 hover:text-rose-600"
                 >
                   店舗の方
                 </Link>
@@ -61,7 +61,7 @@ export function Hero() {
           aria-hidden
         />
 
-        <div className="relative z-10 mx-auto flex min-h-[min(88vh,760px)] max-w-6xl flex-col justify-end px-4 pb-16 pt-24 sm:justify-center sm:pb-20 sm:pt-28 lg:min-h-[640px] lg:justify-center lg:pb-24 lg:pt-32">
+        <div className="relative z-10 mx-auto flex min-h-[min(88vh,760px)] max-w-6xl flex-col justify-end px-4 pb-16 pt-16 sm:justify-center sm:pb-20 sm:pt-20 lg:min-h-[640px] lg:justify-center lg:pb-24 lg:pt-24">
           <div className="max-w-xl">
             <p className="text-sm font-medium tracking-wide text-rose-200">
               ナイトワークの求人を、スマホひとつで
