@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { prisma } from "@/server/db";
 import type { NotificationEvent } from "../types";
 
 let transporter: nodemailer.Transporter | null = null;
@@ -85,9 +86,36 @@ async function sendMail(to: string, subject: string, html: string): Promise<void
   });
 }
 
+/** 店舗のnotificationSettingsを取得し、指定キーがfalseなら送信をスキップ */
+async function isStoreNotificationEnabled(
+  recipientUserId: string,
+  settingKey: string
+): Promise<boolean> {
+  const store = await prisma.store.findUnique({
+    where: { userId: recipientUserId },
+    select: { notificationSettings: true },
+  });
+  if (!store?.notificationSettings) return true; // 設定未保存ならデフォルトON
+  const settings = store.notificationSettings as Record<string, boolean>;
+  return settings[settingKey] !== false;
+}
+
 export async function sendEmailNotification(
   event: NotificationEvent
 ): Promise<void> {
+  // 店舗向けオファー関連通知の設定チェック
+  const offerResponseEvents = ["OFFER_ACCEPTED", "OFFER_REJECTED", "OFFER_EXPIRED"] as const;
+  if ((offerResponseEvents as readonly string[]).includes(event.type)) {
+    const enabled = await isStoreNotificationEnabled(
+      event.payload.recipientUserId,
+      "offerResponse"
+    );
+    if (!enabled) {
+      console.log(`[Email] Skipped ${event.type}: offerResponse notification disabled`);
+      return;
+    }
+  }
+
   switch (event.type) {
     case "OFFER_RECEIVED": {
       const { castEmail, storeName, storeArea, offerMessage } = event.payload;
