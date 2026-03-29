@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { LucideIcon } from "lucide-react";
 
-type ColorVariant = "pink" | "blue" | "green" | "purple";
+type ColorVariant = "pink" | "blue" | "green" | "purple" | "gray";
 
 interface QuickActionCardProps {
   href: string;
@@ -28,6 +28,10 @@ const variantStyles: Record<ColorVariant, { bg: string; text: string }> = {
   purple: {
     bg: "bg-(--secondary-purple)",
     text: "text-(--secondary-purple-text)",
+  },
+  gray: {
+    bg: "bg-gray-100",
+    text: "text-gray-600",
   },
 };
 

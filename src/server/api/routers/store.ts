@@ -215,10 +215,25 @@ export const storeRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
+      const store = await ctx.prisma.store.findUnique({
+        where: { userId: ctx.session.user.id },
+        select: { id: true },
+      });
+
+      if (!store) {
+        return { casts: [], nextCursor: undefined };
+      }
+
       const casts = await ctx.prisma.cast.findMany({
         where: {
           idVerified: true,
           isSuspended: false,
+          // みちゃだめ: この店舗をブロックしているキャストを除外
+          NOT: {
+            storeBlocks: {
+              some: { storeId: store.id },
+            },
+          },
           ...(input.area && {
             desiredAreas: { has: input.area },
           }),
@@ -263,7 +278,7 @@ export const storeRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const store = await ctx.prisma.store.findUnique({
         where: { userId: ctx.session.user.id },
-        select: { id: true, name: true, area: true },
+        select: { id: true, name: true, area: true, subscription: true },
       });
 
       if (!store) {
@@ -271,6 +286,29 @@ export const storeRouter = createTRPCRouter({
           code: "NOT_FOUND",
           message: "店舗プロフィールが見つかりません",
         });
+      }
+
+      // オファー上限チェック
+      const subscription = store.subscription;
+      const now = new Date();
+      const isInTrial = subscription?.trialEndsAt && subscription.trialEndsAt > now;
+      const offerLimit = subscription?.offerLimit ?? 10; // デフォルト: カジュアル相当
+
+      if (!isInTrial && offerLimit !== null) {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthlyOfferCount = await ctx.prisma.offer.count({
+          where: {
+            storeId: store.id,
+            createdAt: { gte: startOfMonth },
+          },
+        });
+
+        if (monthlyOfferCount >= offerLimit) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: `今月のオファー送信上限（${offerLimit}件）に達しました。プランをアップグレードしてください。`,
+          });
+        }
       }
 
       // 既存のオファーがないか確認
@@ -301,6 +339,19 @@ export const storeRouter = createTRPCRouter({
       });
 
       if (!cast) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "キャストが見つかりません",
+        });
+      }
+
+      // みちゃだめ: ブロックされている場合は汎用エラーを返す
+      const isBlocked = await ctx.prisma.castStoreBlock.findUnique({
+        where: {
+          castId_storeId: { castId: input.castId, storeId: store.id },
+        },
+      });
+      if (isBlocked) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "キャストが見つかりません",

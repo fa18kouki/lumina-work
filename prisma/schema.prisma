@@ -271,6 +271,7 @@ model Cast {
   workHistories    CastWorkHistory[]
   lineLinkTokens   LineLinkToken[]
   diagnosisSession DiagnosisSession?
+  storeBlocks      CastStoreBlock[]
 
   @@map("casts")
 }
@@ -328,6 +329,22 @@ model CastExperience {
   @@map("cast_experiences")
 }
 
+// ==================== みちゃだめ（キャスト→店舗ブロック） ====================
+
+model CastStoreBlock {
+  id        String   @id @default(cuid())
+  castId    String   @map("cast_id")
+  storeId   String   @map("store_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  cast  Cast  @relation(fields: [castId], references: [id], onDelete: Cascade)
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([castId, storeId])
+  @@index([storeId])
+  @@map("cast_store_blocks")
+}
+
 enum PreferredContactMethod {
   PHONE
   LINE
@@ -378,6 +395,7 @@ model Store {
   offers       Offer[]
   interviews   Interview[]
   subscription Subscription?
+  castBlocks   CastStoreBlock[]
 
   @@map("stores")
 }
@@ -385,9 +403,10 @@ model Store {
 // ==================== サブスクリプション ====================
 
 enum SubscriptionPlan {
-  FREE
-  BASIC
-  PREMIUM
+  CASUAL
+  PRO_TRIAL
+  PRO_BUSINESS
+  PRO_ENTERPRISE
 }
 
 enum SubscriptionStatus {
@@ -402,8 +421,10 @@ model Subscription {
   storeId              String             @unique @map("store_id")
   stripeCustomerId     String?            @unique @map("stripe_customer_id")
   stripeSubscriptionId String?            @unique @map("stripe_subscription_id")
-  plan                 SubscriptionPlan   @default(FREE)
+  plan                 SubscriptionPlan   @default(CASUAL)
   status               SubscriptionStatus @default(ACTIVE)
+  offerLimit           Int?               @map("offer_limit")
+  trialEndsAt          DateTime?          @map("trial_ends_at")
   currentPeriodStart   DateTime?          @map("current_period_start")
   currentPeriodEnd     DateTime?          @map("current_period_end")
 

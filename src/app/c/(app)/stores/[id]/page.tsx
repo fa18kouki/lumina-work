@@ -8,10 +8,11 @@ import { useAppSession } from "@/lib/auth-helpers";
 import {
   ChevronLeft,
   Heart,
+  EyeOff,
+  Eye,
   MapPin,
   Clock,
   Smile,
-  MessageCircle,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { trpc } from "@/lib/trpc";
@@ -46,6 +47,31 @@ export default function StoreDetailPage() {
 
   const storeId = params.id as string;
   const { data: store, isLoading: storeLoading } = trpc.cast.getStoreDetail.useQuery({ storeId });
+  const { data: blockStatus } = trpc.cast.isStoreBlocked.useQuery({ storeId });
+  const utils = trpc.useUtils();
+
+  const blockMutation = trpc.cast.blockStore.useMutation({
+    onSuccess: () => {
+      utils.cast.isStoreBlocked.invalidate({ storeId });
+    },
+  });
+  const unblockMutation = trpc.cast.unblockStore.useMutation({
+    onSuccess: () => {
+      utils.cast.isStoreBlocked.invalidate({ storeId });
+    },
+  });
+
+  const isBlocked = blockStatus?.blocked ?? false;
+
+  const handleToggleBlock = () => {
+    if (isBlocked) {
+      unblockMutation.mutate({ storeId });
+    } else {
+      if (window.confirm("この店舗をブロックしますか？\nブロックすると、この店舗にあなたが表示されなくなります。")) {
+        blockMutation.mutate({ storeId });
+      }
+    }
+  };
 
   if (status === "loading" || storeLoading || !session || session.user.role !== "CAST") {
     return (
@@ -84,14 +110,32 @@ export default function StoreDetailPage() {
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
-          <button
-            onClick={() => setLiked(!liked)}
-            className="w-10 h-10 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
-          >
-            <Heart
-              className={`w-5 h-5 ${liked ? "fill-white" : ""}`}
-            />
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleToggleBlock}
+              disabled={blockMutation.isPending || unblockMutation.isPending}
+              className={`w-10 h-10 backdrop-blur-sm rounded-full flex items-center justify-center ${
+                isBlocked
+                  ? "bg-red-500/70 text-white"
+                  : "bg-white/30 text-white"
+              }`}
+              title={isBlocked ? "ブロック解除" : "みちゃだめ"}
+            >
+              {isBlocked ? (
+                <Eye className="w-5 h-5" />
+              ) : (
+                <EyeOff className="w-5 h-5" />
+              )}
+            </button>
+            <button
+              onClick={() => setLiked(!liked)}
+              className="w-10 h-10 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
+            >
+              <Heart
+                className={`w-5 h-5 ${liked ? "fill-white" : ""}`}
+              />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -191,13 +235,6 @@ export default function StoreDetailPage() {
 
       {/* 固定CTAフッター */}
       <div className="fixed bottom-0 left-0 right-0 bg-white px-4 sm:px-6 py-3 sm:py-4 pb-6 sm:pb-8 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex gap-3 z-50">
-        <Link
-          href="/c/matches"
-          className="flex-1 h-12 sm:h-[54px] border-2 border-(--primary) text-(--primary) rounded-full flex items-center justify-center font-bold text-sm sm:text-base"
-        >
-          <MessageCircle className="w-5 h-5 mr-1.5" />
-          相談
-        </Link>
         <button className="flex-1 h-12 sm:h-[54px] bg-gradient-to-r from-[#FF69B4] to-[#FF8DA1] text-white rounded-full flex items-center justify-center font-bold text-sm sm:text-base shadow-[0_4px_12px_rgba(255,105,180,0.3)]">
           応募する
         </button>

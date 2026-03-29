@@ -630,4 +630,111 @@ export const castRouter = createTRPCRouter({
 
       return store;
     }),
+
+  /**
+   * 店舗ブロック状態確認
+   */
+  isStoreBlocked: castProcedure
+    .input(z.object({ storeId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const cast = await ctx.prisma.cast.findUnique({
+        where: { userId: ctx.session.user.id },
+        select: { id: true },
+      });
+      if (!cast) return { blocked: false };
+
+      const block = await ctx.prisma.castStoreBlock.findUnique({
+        where: { castId_storeId: { castId: cast.id, storeId: input.storeId } },
+      });
+
+      return { blocked: !!block };
+    }),
+
+  /**
+   * 店舗をブロック（みちゃだめ）
+   */
+  blockStore: castProcedure
+    .input(z.object({ storeId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const cast = await ctx.prisma.cast.findUnique({
+        where: { userId: ctx.session.user.id },
+        select: { id: true },
+      });
+      if (!cast) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "キャストプロフィールが見つかりません",
+        });
+      }
+
+      await ctx.prisma.castStoreBlock.upsert({
+        where: { castId_storeId: { castId: cast.id, storeId: input.storeId } },
+        update: {},
+        create: { castId: cast.id, storeId: input.storeId },
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * 店舗ブロック解除
+   */
+  unblockStore: castProcedure
+    .input(z.object({ storeId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const cast = await ctx.prisma.cast.findUnique({
+        where: { userId: ctx.session.user.id },
+        select: { id: true },
+      });
+      if (!cast) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "キャストプロフィールが見つかりません",
+        });
+      }
+
+      await ctx.prisma.castStoreBlock.deleteMany({
+        where: { castId: cast.id, storeId: input.storeId },
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * ブロック済み店舗一覧
+   */
+  getBlockedStores: castProcedure
+    .input(
+      z.object({
+        cursor: z.string().optional(),
+        limit: z.number().min(1).max(50).default(20),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const cast = await ctx.prisma.cast.findUnique({
+        where: { userId: ctx.session.user.id },
+        select: { id: true },
+      });
+      if (!cast) return { blocks: [], nextCursor: undefined };
+
+      const blocks = await ctx.prisma.castStoreBlock.findMany({
+        where: { castId: cast.id },
+        include: {
+          store: {
+            select: { id: true, name: true, area: true, photos: true },
+          },
+        },
+        take: input.limit + 1,
+        cursor: input.cursor ? { id: input.cursor } : undefined,
+        orderBy: { createdAt: "desc" },
+      });
+
+      let nextCursor: string | undefined;
+      if (blocks.length > input.limit) {
+        const nextItem = blocks.pop();
+        nextCursor = nextItem?.id;
+      }
+
+      return { blocks, nextCursor };
+    }),
 });
