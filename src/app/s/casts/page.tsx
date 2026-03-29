@@ -327,25 +327,18 @@ export default function CastsSearchPage() {
       {/* 詳細モーダル */}
       {detailCast && detailIndex !== null && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          {/* 左矢印 */}
-          {detailIndex > 0 && (
-            <button
-              onClick={goPrev}
-              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/40 rounded-full flex items-center justify-center text-white hover:bg-black/60 transition-colors z-10"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-          )}
-
-          {/* 右矢印 */}
-          {detailIndex < casts.length - 1 && (
-            <button
-              onClick={goNext}
-              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/40 rounded-full flex items-center justify-center text-white hover:bg-black/60 transition-colors z-10"
-            >
-              <ChevronRight className="w-6 h-6" />
-            </button>
-          )}
+          <div className="relative flex items-center gap-3">
+            {/* 左矢印 */}
+            {detailIndex > 0 ? (
+              <button
+                onClick={goPrev}
+                className="shrink-0 w-12 h-12 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-gray-700 shadow-lg hover:bg-white hover:scale-105 transition-all z-10"
+              >
+                <ChevronLeft className="w-7 h-7" />
+              </button>
+            ) : (
+              <div className="shrink-0 w-12 h-12" />
+            )}
 
           <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
             {/* ヘッダー画像 */}
@@ -478,6 +471,19 @@ export default function CastsSearchPage() {
               </div>
             </div>
           </Card>
+
+            {/* 右矢印 */}
+            {detailIndex < casts.length - 1 ? (
+              <button
+                onClick={goNext}
+                className="shrink-0 w-12 h-12 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-gray-700 shadow-lg hover:bg-white hover:scale-105 transition-all z-10"
+              >
+                <ChevronRight className="w-7 h-7" />
+              </button>
+            ) : (
+              <div className="shrink-0 w-12 h-12" />
+            )}
+          </div>
         </div>
       )}
 
