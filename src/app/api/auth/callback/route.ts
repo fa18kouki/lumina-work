@@ -7,7 +7,6 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/s/dashboard";
-  const roleParam = searchParams.get("role");
 
   if (!code) {
     return NextResponse.redirect(new URL("/s/login?error=missing_code", origin));
@@ -34,26 +33,24 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data.user) {
-    const loginPath = roleParam === "cast" ? "/c/login" : "/s/login";
     return NextResponse.redirect(
-      new URL(`${loginPath}?error=auth_failed`, origin)
+      new URL("/s/login?error=auth_failed", origin)
     );
   }
 
-  // Prisma User が存在しなければ作成（role=cast のときは CAST、それ以外は STORE）
+  // Prisma User が存在しなければ STORE として作成
   const existingUser = await prisma.user.findUnique({
     where: { supabaseAuthId: data.user.id },
   });
 
   if (!existingUser) {
-    const role = roleParam === "cast" ? "CAST" : "STORE";
     await prisma.user.create({
       data: {
         email: data.user.email,
         emailVerified: data.user.email_confirmed_at
           ? new Date(data.user.email_confirmed_at)
           : null,
-        role,
+        role: "STORE",
         supabaseAuthId: data.user.id,
       },
     });
