@@ -15,7 +15,7 @@ import type { UserRole } from "@prisma/client";
 export function useAppSession() {
   const { data: nextAuthData, status: nextAuthStatus } = useNextAuthSession();
   const [fallbackData, setFallbackData] = useState<{
-    user: { id: string; role: UserRole; email?: string | null };
+    user: { id: string; role: UserRole; email?: string | null; name?: string | null; image?: string | null };
   } | null>(null);
   const [supabaseChecked, setSupabaseChecked] = useState(false);
 
