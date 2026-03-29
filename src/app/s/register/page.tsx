@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { createBrowserClient } from "@/lib/supabase-auth";
+import { useToast } from "@/lib/toast-provider";
 
 export default function StoreRegisterPage() {
   const [email, setEmail] = useState("");
@@ -14,6 +15,7 @@ export default function StoreRegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState("");
+  const { addToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +33,7 @@ export default function StoreRegisterPage() {
     setIsLoading(true);
     try {
       const supabase = createBrowserClient();
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -40,17 +42,20 @@ export default function StoreRegisterPage() {
       });
 
       if (signUpError) {
-        if (signUpError.message.includes("already registered")) {
-          setError("このメールアドレスは既に登録されています");
-        } else {
-          setError("登録に失敗しました。もう一度お試しください");
-        }
+        addToast("error", signUpError.message);
+        return;
+      }
+
+      // Supabaseはメール確認有効時、重複メールでもエラーを返さない仕様。
+      // identities が空配列 = 既存メールアドレスを示す。
+      if (data.user?.identities?.length === 0) {
+        setError("このメールアドレスは既に登録されています");
         return;
       }
 
       setEmailSent(true);
     } catch {
-      setError("登録に失敗しました。もう一度お試しください");
+      addToast("error", "登録に失敗しました。もう一度お試しください");
     } finally {
       setIsLoading(false);
     }

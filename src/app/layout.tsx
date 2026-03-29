@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { DiagnosisProvider } from "@/lib/diagnosis-provider";
 import { ThemeProvider } from "@/lib/theme-provider";
+import { ToastProvider } from "@/lib/toast-provider";
 import { TRPCProvider } from "@/lib/trpc-provider";
 import { SessionProvider } from "@/components/auth/SessionProvider";
 
@@ -51,13 +52,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <TRPCProvider>
-          <SessionProvider>
-            <DiagnosisProvider>
-              <ThemeProvider>{children}</ThemeProvider>
-            </DiagnosisProvider>
-          </SessionProvider>
-        </TRPCProvider>
+        <ToastProvider>
+          <TRPCProvider>
+            <SessionProvider>
+              <DiagnosisProvider>
+                <ThemeProvider>{children}</ThemeProvider>
+              </DiagnosisProvider>
+            </SessionProvider>
+          </TRPCProvider>
+        </ToastProvider>
       </body>
     </html>
   );
