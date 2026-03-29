@@ -22,10 +22,10 @@ const items = [
 
 export function TrustAndSafety() {
   return (
-    <section className="border-t border-rose-100 bg-rose-50/40 py-16 md:py-24">
+    <section className="border-t border-pink-100 bg-pink-50/40 py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold text-rose-500">安心・安全への取り組み</p>
+          <p className="text-sm font-semibold text-pink-500">安心・安全への取り組み</p>
           <h2 className="mt-2 text-2xl font-bold tracking-tight text-stone-900 md:text-4xl">
             はじめての方も、安心してお店探しから
           </h2>
@@ -40,7 +40,7 @@ export function TrustAndSafety() {
               key={item.title}
               className="flex gap-4 rounded-2xl border border-white bg-white/90 p-5 shadow-sm md:p-6"
             >
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-500 text-white">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-pink-500 text-white">
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                 </svg>

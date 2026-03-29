@@ -26,7 +26,7 @@ export function FixedCTA() {
       <div className="pointer-events-auto mx-auto max-w-2xl px-4">
         <Link
           href={href}
-          className="flex w-full items-center justify-between gap-3 rounded-2xl bg-rose-500 px-5 py-3.5 font-bold text-white shadow-[0_12px_40px_-8px_rgba(244,63,94,0.55)] transition hover:bg-rose-600 active:scale-[0.99] md:px-6 md:py-4"
+          className="flex w-full items-center justify-between gap-3 rounded-2xl bg-pink-500 px-5 py-3.5 font-bold text-white shadow-[0_12px_40px_-8px_rgba(236,72,153,0.45)] transition hover:bg-pink-600 active:scale-[0.99] md:px-6 md:py-4"
         >
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20">
@@ -46,7 +46,7 @@ export function FixedCTA() {
               )}
             </span>
             <div className="min-w-0 text-left">
-              <p className="truncate text-xs font-medium text-rose-100">{sublabel}</p>
+              <p className="truncate text-xs font-medium text-pink-100">{sublabel}</p>
               <p className="truncate text-sm md:text-base">{label}</p>
             </div>
           </div>

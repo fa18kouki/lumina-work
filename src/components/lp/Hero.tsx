@@ -12,7 +12,7 @@ export function Hero() {
 
   return (
     <section className="relative">
-      <header className="relative z-20 border-b border-rose-100 bg-white">
+      <header className="relative z-20 border-b border-pink-100 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <Link href="/" className="flex items-center gap-2">
             <Image src="/Image.png" alt="LUMINA" width={140} height={42} priority />
@@ -22,7 +22,7 @@ export function Hero() {
             {session ? (
               <Link
                 href={session.user.role === "STORE" ? "/s/dashboard" : "/c/dashboard"}
-                className="rounded-full bg-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-600"
+                className="rounded-full bg-pink-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-pink-600"
               >
                 {session.user.role === "STORE" ? "管理画面" : "マイページ"}
               </Link>
@@ -30,13 +30,13 @@ export function Hero() {
               <>
                 <Link
                   href="/c/login"
-                  className="rounded-full px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-rose-50 sm:px-4"
+                  className="rounded-full px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-pink-50 sm:px-4"
                 >
                   ログイン
                 </Link>
                 <Link
                   href="/s/login"
-                  className="rounded-full border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-stone-600 transition hover:border-rose-200 hover:text-rose-600"
+                  className="rounded-full border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-stone-600 transition hover:border-pink-200 hover:text-pink-600"
                 >
                   店舗の方
                 </Link>
@@ -56,17 +56,17 @@ export function Hero() {
           sizes="100vw"
         />
         <div
-          className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/45 to-black/30 lg:bg-gradient-to-r lg:from-black/75 lg:via-black/45 lg:to-black/10"
+          className="absolute inset-0 bg-gradient-to-t from-pink-950/80 via-pink-950/35 to-black/25 lg:bg-gradient-to-r lg:from-pink-950/55 lg:via-black/40 lg:to-black/5"
           aria-hidden
         />
 
         <div className="relative z-10 mx-auto flex min-h-[min(88vh,760px)] max-w-6xl flex-col justify-end px-4 pb-16 pt-16 sm:justify-center sm:pb-20 sm:pt-20 lg:min-h-[640px] lg:justify-center lg:pb-24 lg:pt-24">
           <div className="max-w-xl">
-            <p className="text-sm font-medium tracking-wide text-rose-200">
+            <p className="text-sm font-medium tracking-wide text-pink-200">
               ナイトワークの求人を、スマホひとつで
             </p>
             <h1 className="mt-3 text-balance text-3xl font-extrabold leading-[1.2] tracking-tight text-white sm:text-4xl lg:text-[2.65rem] lg:leading-tight">
-              <span className="text-rose-300">夜職・ナイトワークの求人、</span>
+              <span className="text-pink-300">夜職・ナイトワークの求人、</span>
               <br />
               はじめるなら LUMINA
             </h1>
@@ -88,7 +88,7 @@ export function Hero() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <Link
                 href="/diagnosis"
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-500 px-8 py-4 text-center text-base font-bold text-white shadow-lg shadow-rose-900/40 transition hover:bg-rose-400"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-pink-500 px-8 py-4 text-center text-base font-bold text-white shadow-lg shadow-pink-600/30 transition hover:bg-pink-600"
               >
                 今すぐ無料で診断をはじめる
                 <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -111,7 +111,7 @@ export function Hero() {
 
             <p className="mt-6 border-t border-white/15 pt-6 text-sm text-white/80">
               店舗掲載をご希望の方は{" "}
-              <Link href="/s/register" className="font-semibold text-rose-200 underline-offset-2 hover:underline">
+              <Link href="/s/register" className="font-semibold text-pink-200 underline-offset-2 hover:underline">
                 求人掲載のお申し込み
               </Link>
               へ

@@ -38,10 +38,10 @@ const STEPS = [
 
 export function HowItWorks() {
   return (
-    <section className="border-t border-rose-100 bg-gradient-to-b from-rose-50/50 to-white py-16 md:py-24">
+    <section className="border-t border-pink-100 bg-gradient-to-b from-pink-50/50 to-white py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold text-rose-500">How to use</p>
+          <p className="text-sm font-semibold text-pink-500">How to use</p>
           <h2 className="mt-2 text-2xl font-bold tracking-tight text-stone-900 md:text-4xl">
             LUMINA サービスの使い方
           </h2>
@@ -50,8 +50,8 @@ export function HowItWorks() {
           </p>
         </div>
 
-        <div className="mx-auto mt-10 max-w-xl rounded-2xl border border-rose-100 bg-white/90 p-4 shadow-sm md:mt-12">
-          <p className="text-sm font-semibold text-rose-600">ご利用条件</p>
+        <div className="mx-auto mt-10 max-w-xl rounded-2xl border border-pink-100 bg-white/90 p-4 shadow-sm md:mt-12">
+          <p className="text-sm font-semibold text-pink-600">ご利用条件</p>
           <ul className="mt-2 space-y-1 text-sm text-stone-700">
             <li>・18歳以上（高校生不可）</li>
             <li>・個人情報の取り扱いへの同意</li>
@@ -72,7 +72,7 @@ export function HowItWorks() {
                   className="object-contain object-bottom p-4"
                   sizes="(max-width: 1024px) 100vw, 50vw"
                 />
-                <span className="absolute left-3 top-3 rounded-md bg-rose-500 px-2.5 py-1 text-xs font-bold text-white">
+                <span className="absolute left-3 top-3 rounded-md bg-pink-500 px-2.5 py-1 text-xs font-bold text-white">
                   {item.step}
                 </span>
               </div>
@@ -87,7 +87,7 @@ export function HowItWorks() {
         <div className="mx-auto mt-12 max-w-xl text-center">
           <Link
             href="/diagnosis"
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-500 px-8 py-4 text-base font-bold text-white shadow-lg shadow-rose-500/30 transition hover:bg-rose-600"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-pink-500 px-8 py-4 text-base font-bold text-white shadow-lg shadow-pink-500/30 transition hover:bg-pink-600"
           >
             今すぐ無料で診断をはじめる
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>

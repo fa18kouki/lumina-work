@@ -16,7 +16,7 @@ export function LifestyleTags() {
     <section className="border-t border-stone-100 bg-white py-12 md:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="text-center">
-          <p className="text-sm font-semibold text-rose-500">Work &amp; Lifestyle</p>
+          <p className="text-sm font-semibold text-pink-500">Work &amp; Lifestyle</p>
           <h2 className="mt-2 text-xl font-bold text-stone-900 md:text-2xl">
             ライフスタイルに合わせた働き方のヒント
           </h2>
@@ -28,7 +28,7 @@ export function LifestyleTags() {
           {tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-full border border-rose-100 bg-rose-50/80 px-4 py-2 text-sm font-medium text-rose-800"
+              className="rounded-full border border-pink-100 bg-pink-50/80 px-4 py-2 text-sm font-medium text-pink-800"
             >
               #{tag}
             </span>

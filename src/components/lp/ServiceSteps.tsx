@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
  */
 function IconCircle({ children }: { children: ReactNode }) {
   return (
-    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-rose-500 text-white shadow-md shadow-rose-500/25">
+    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-pink-500 text-white shadow-md shadow-pink-500/25">
       {children}
     </div>
   );
@@ -73,7 +73,7 @@ export function ServiceSteps() {
     <section className="bg-white py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold text-rose-500">Service</p>
+          <p className="text-sm font-semibold text-pink-500">Service</p>
           <h2 className="mt-2 text-2xl font-bold tracking-tight text-stone-900 md:text-4xl">
             サービスについて
           </h2>

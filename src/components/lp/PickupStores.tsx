@@ -72,7 +72,7 @@ export function PickupStores() {
     <section className="border-t border-stone-100 bg-stone-50 py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold text-rose-500">掲載店舗</p>
+          <p className="text-sm font-semibold text-pink-500">掲載店舗</p>
           <h2 className="mt-2 text-2xl font-bold text-stone-900 md:text-4xl">
             掲載されているお店を一部紹介
           </h2>
@@ -89,8 +89,8 @@ export function PickupStores() {
               onClick={() => setTab(t)}
               className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                 tab === t
-                  ? "bg-rose-500 text-white shadow-md shadow-rose-500/25"
-                  : "border border-stone-200 bg-white text-stone-600 hover:border-rose-200"
+                  ? "bg-pink-500 text-white shadow-md shadow-pink-500/25"
+                  : "border border-stone-200 bg-white text-stone-600 hover:border-pink-200"
               }`}
             >
               {t}
@@ -127,13 +127,13 @@ export function PickupStores() {
                     <span className="text-stone-400">{store.prefecture}</span>
                   </li>
                   <li className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 shrink-0 text-rose-400" aria-hidden />
+                    <MapPin className="h-3.5 w-3.5 shrink-0 text-pink-400" aria-hidden />
                     {store.area}
                   </li>
                   <li className="text-xs text-stone-500">{store.access}</li>
                 </ul>
                 <p className="mt-4 text-xs text-stone-500">時給（目安・サンプル）</p>
-                <p className="text-xl font-bold text-rose-500">
+                <p className="text-xl font-bold text-pink-500">
                   {store.hourlyRate.toLocaleString("ja-JP")}円〜
                 </p>
                 <p className="mt-1 text-xs text-stone-500">本指名バック 最大{store.backRate}%（例）</p>
@@ -149,7 +149,7 @@ export function PickupStores() {
         <div className="mx-auto mt-12 max-w-lg">
           <Link
             href="/diagnosis"
-            className="flex w-full items-center justify-between rounded-2xl bg-rose-500 px-6 py-4 font-bold text-white shadow-lg shadow-rose-500/30 transition hover:bg-rose-600"
+            className="flex w-full items-center justify-between rounded-2xl bg-pink-500 px-6 py-4 font-bold text-white shadow-lg shadow-pink-500/30 transition hover:bg-pink-600"
           >
             <span>診断して、あなたに合う店舗を探す</span>
             <svg className="h-6 w-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>

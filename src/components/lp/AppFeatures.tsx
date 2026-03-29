@@ -64,9 +64,9 @@ const APP_FEATURE_PHONES: { src: string; alt: string; caption: string }[] = [
 
 export function AppFeatures() {
   return (
-    <section className="relative overflow-hidden border-t border-rose-100/60 bg-gradient-to-b from-violet-50/40 via-white to-rose-50/30 py-16 md:py-24">
+    <section className="relative overflow-hidden border-t border-pink-100/60 bg-gradient-to-b from-violet-50/40 via-white to-pink-50/30 py-16 md:py-24">
       <div
-        className="pointer-events-none absolute right-0 top-0 h-72 w-72 translate-x-1/3 rounded-full bg-rose-200/25 blur-3xl"
+        className="pointer-events-none absolute right-0 top-0 h-72 w-72 translate-x-1/3 rounded-full bg-pink-200/25 blur-3xl"
         aria-hidden
       />
       <div
@@ -76,7 +76,7 @@ export function AppFeatures() {
 
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold text-rose-500">アプリでできること</p>
+          <p className="text-sm font-semibold text-pink-500">アプリでできること</p>
           <h2 className="mt-2 text-2xl font-bold tracking-tight text-stone-900 md:text-4xl">
             スマホひとつで、探す・診断・オファー確認まで
           </h2>
@@ -91,7 +91,7 @@ export function AppFeatures() {
               key={feature.title}
               className="flex gap-3 rounded-2xl border border-stone-200/80 bg-white/90 p-4 shadow-sm backdrop-blur-sm"
             >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-md shadow-rose-500/25">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-pink-500 to-pink-600 text-white shadow-md shadow-pink-500/25">
                 <feature.icon />
               </div>
               <div className="min-w-0">

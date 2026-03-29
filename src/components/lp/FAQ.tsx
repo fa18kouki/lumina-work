@@ -59,7 +59,7 @@ export function FAQ() {
     <section className="border-t border-stone-100 bg-white py-16 md:py-24">
       <div className="mx-auto max-w-2xl px-4">
         <div className="mb-10 text-center">
-          <p className="text-sm font-semibold text-rose-500">Q&amp;A</p>
+          <p className="text-sm font-semibold text-pink-500">Q&amp;A</p>
           <h2 className="mt-2 text-2xl font-bold text-stone-900 md:text-3xl">よくあるご質問</h2>
           <p className="mt-2 text-sm text-stone-600">はじめての方からよくいただく内容をまとめました</p>
         </div>

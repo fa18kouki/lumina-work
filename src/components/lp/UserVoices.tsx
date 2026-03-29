@@ -41,7 +41,7 @@ export function UserVoices() {
       <div className="max-w-4xl mx-auto px-4">
         {/* ヘッダー */}
         <div className="mb-10 text-center">
-          <p className="text-sm font-semibold text-rose-500">Recruit voice</p>
+          <p className="text-sm font-semibold text-pink-500">Recruit voice</p>
           <h2 className="mt-2 text-2xl font-bold text-gray-900 md:text-3xl">
             サービスをご利用の方の声（イメージ）
           </h2>

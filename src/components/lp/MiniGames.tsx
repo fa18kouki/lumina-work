@@ -84,10 +84,10 @@ const games: GameCardProps[] = [
 
 export function MiniGames() {
   return (
-    <section className="border-t border-stone-100 bg-rose-50/30 py-16 md:py-24">
+    <section className="border-t border-stone-100 bg-pink-50/30 py-16 md:py-24">
       <div className="mx-auto max-w-4xl px-4">
         <div className="mb-10 text-center">
-          <p className="text-sm font-semibold text-rose-500">Column / 遊び心</p>
+          <p className="text-sm font-semibold text-pink-500">Column / 遊び心</p>
           <h2 className="mt-2 text-2xl font-bold text-gray-900 md:text-3xl">
             ちょっとした診断・ゲーム
           </h2>
