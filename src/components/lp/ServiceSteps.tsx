@@ -1,62 +1,31 @@
 import Image from "next/image";
-import { SectionHeader } from "./SectionHeader";
 import { lpLuminaAssets } from "@/lib/lp-assets";
-
-function SparklesIcon() {
-  return (
-    <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-    </svg>
-  );
-}
-
-function ShieldCheckIcon() {
-  return (
-    <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-    </svg>
-  );
-}
-
-function ChatBubbleIcon() {
-  return (
-    <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-    </svg>
-  );
-}
 
 const steps = [
   {
     number: "01",
-    badge: "情報登録",
-    title: "プロフィールとログイン",
+    badge: "登録・プロフィール",
+    title: "まずは無料でAI診断",
     description:
-      "基本情報や希望条件を入力し、SNSアカウントでかんたんにログインできます。",
-    icon: SparklesIcon,
-    align: "right" as const,
+      "基本情報や希望条件を入力し、LINEなどでログイン。チャット形式の質問に答えると診断結果がわかります。",
     image: lpLuminaAssets.servicePoint1,
-    imageAlt: "AI診断・登録のイメージ",
+    imageAlt: "無料AI診断のイメージ",
   },
   {
     number: "02",
-    badge: "AIチャット診断",
-    title: "チャット形式のAI診断",
+    badge: "店舗検索",
+    title: "条件でお店を探せる",
     description:
-      "テキストのチャットで質問に答えていくと、適正時給などの診断結果が表示されます。",
-    icon: ChatBubbleIcon,
-    align: "left" as const,
+      "エリアや時給などで絞り込み。気になる店舗の待遇や雰囲気を、アプリ上で比較しやすくなっています。",
     image: lpLuminaAssets.servicePoint2,
     imageAlt: "条件検索のイメージ",
   },
   {
     number: "03",
-    badge: "結果とお店探し",
-    title: "お店を探してオファーを待つ",
+    badge: "オファー",
+    title: "店舗からオファーが届く",
     description:
-      "エリアや時給などで店舗を検索し、気になる店舗から届く採用オファーをアプリで確認できます。",
-    icon: ShieldCheckIcon,
-    align: "right" as const,
+      "あなたのプロフィールに興味を持った店舗から、採用オファーが届きます。内容を確認して承諾・辞退を選べます。",
     image: lpLuminaAssets.servicePoint3,
     imageAlt: "オファー通知のイメージ",
   },
@@ -64,70 +33,46 @@ const steps = [
 
 export function ServiceSteps() {
   return (
-    <section className="relative bg-white py-20 md:py-32 overflow-hidden">
-      {/* Decorative blur */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-pink-100 rounded-full blur-3xl opacity-30" />
+    <section className="bg-white py-16 md:py-24">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-sm font-semibold text-rose-500">LUMINAの特長</p>
+          <h2 className="mt-2 text-2xl font-bold tracking-tight text-stone-900 md:text-4xl">
+            3つだけおさえておきたいポイント
+          </h2>
+          <p className="mt-3 text-sm text-stone-600 md:text-base">
+            イラストとあわせて、サービスの魅力をかんたんにご紹介します。
+          </p>
+        </div>
 
-      <div className="relative max-w-6xl mx-auto px-6">
-        <SectionHeader
-          tag="Service"
-          title="3つのポイント"
-          subtitle="あなたの不安を解消する、安心のサポート体制"
-        />
-
-        <div className="mt-16 space-y-12">
-          {steps.map((step, index) => (
-            <div
+        <div className="mt-12 grid gap-6 md:grid-cols-3 md:gap-8">
+          {steps.map((step) => (
+            <article
               key={step.number}
-              className={`flex flex-col ${step.align === "left" ? "lg:flex-row-reverse" : "lg:flex-row"} items-center gap-8`}
+              className="group flex flex-col overflow-hidden rounded-3xl border border-stone-200/90 bg-stone-50/40 shadow-[0_16px_48px_-20px_rgba(244,63,94,0.15)] transition hover:border-rose-200/80 hover:shadow-[0_20px_50px_-18px_rgba(244,63,94,0.22)]"
             >
-              {/* Number with icon */}
-              <div className="relative flex-shrink-0">
-                <span className="text-8xl md:text-9xl font-bold text-pink-100 select-none">
+              <div className="relative aspect-square bg-white">
+                <Image
+                  src={step.image}
+                  alt={step.imageAlt}
+                  fill
+                  className="object-cover object-center transition duration-300 group-hover:scale-[1.02]"
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                />
+                <span className="absolute left-3 top-3 rounded-full bg-stone-900/80 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-sm">
                   {step.number}
                 </span>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-pink-500 to-pink-400 flex items-center justify-center shadow-xl">
-                    <step.icon />
-                  </div>
-                </div>
               </div>
-
-              {/* Content card */}
-              <div className="flex-1 bg-gradient-to-br from-pink-50 to-white border border-pink-100 rounded-3xl overflow-hidden shadow-lg">
-                <div className="relative aspect-[16/9] w-full bg-white/60 md:hidden">
-                  <Image
-                    src={step.image}
-                    alt={step.imageAlt}
-                    fill
-                    className="object-contain p-4"
-                    sizes="100vw"
-                  />
-                </div>
-                <div className="p-8 md:p-10 md:flex md:gap-8 md:items-center">
-                  <div className="relative hidden md:block w-52 h-52 shrink-0 rounded-2xl overflow-hidden bg-white shadow-inner">
-                    <Image
-                      src={step.image}
-                      alt={step.imageAlt}
-                      fill
-                      className="object-cover"
-                      sizes="208px"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="inline-block bg-pink-500 text-white text-sm font-semibold px-4 py-1.5 rounded-full mb-4">
-                      {step.badge}
-                    </span>
-                    <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-                      {step.title}
-                    </h3>
-                    <p className="text-lg text-gray-600">
-                      {step.description}
-                    </p>
-                  </div>
-                </div>
+              <div className="flex flex-1 flex-col p-5 md:p-6">
+                <span className="inline-flex w-fit rounded-full bg-rose-500 px-3 py-1 text-xs font-semibold text-white">
+                  {step.badge}
+                </span>
+                <h3 className="mt-3 text-lg font-bold text-stone-900 md:text-xl">{step.title}</h3>
+                <p className="mt-2 flex-1 text-sm leading-relaxed text-stone-600 md:text-[0.9375rem]">
+                  {step.description}
+                </p>
               </div>
-            </div>
+            </article>
           ))}
         </div>
       </div>

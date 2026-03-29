@@ -5,45 +5,52 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { lpLuminaAssets } from "@/lib/lp-assets";
 
+const trustChips = ["診断は無料", "まずは匿名でOK", "所要時間の目安30秒"];
+
 export function Hero() {
   const { data: session } = useSession();
 
   return (
-    <section
-      className="relative min-h-screen overflow-hidden bg-gradient-to-br from-pink-50 via-pink-100 to-purple-100"
-    >
-      {/* 装飾 */}
-      <div className="absolute top-20 left-10 w-32 h-32 bg-pink-400 rounded-full blur-3xl opacity-50" />
-      <div className="absolute top-40 right-20 w-40 h-40 bg-pink-200 rounded-full blur-3xl opacity-30" />
-      <div className="absolute bottom-40 left-1/4 w-36 h-36 bg-purple-200 rounded-full blur-3xl opacity-40" />
-      <div className="absolute bottom-20 right-1/3 w-28 h-28 bg-pink-400 rounded-full blur-3xl opacity-50" />
+    <section className="relative min-h-[min(100dvh,920px)] overflow-hidden bg-[#fff5f7]">
+      {/* 背景グラデーション（国内LP風の柔らかい色面） */}
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_70%_at_70%_-10%,rgba(251,113,133,0.35),transparent),radial-gradient(ellipse_80%_60%_at_0%_100%,rgba(196,181,253,0.25),transparent)]"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -right-24 top-1/3 h-80 w-80 rounded-full bg-rose-200/40 blur-3xl"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -left-16 bottom-20 h-64 w-64 rounded-full bg-violet-200/35 blur-3xl"
+        aria-hidden
+      />
 
-      {/* ヘッダー */}
-      <header className="relative z-20 px-4 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Image src="/Image.png" alt="LUMINA" width={140} height={42} priority />
-          </div>
+      <header className="relative z-20 border-b border-rose-100/60 bg-white/55 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+          <Link href="/" className="flex items-center gap-2">
+            <Image src="/Image.png" alt="LUMINA" width={132} height={40} priority />
+          </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {session ? (
               <Link
                 href={session.user.role === "STORE" ? "/s/dashboard" : "/c/dashboard"}
-                className="text-sm font-medium px-4 py-2 rounded-lg transition-colors bg-pink-500 text-white hover:bg-pink-600"
+                className="rounded-full bg-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-rose-500/20 transition hover:bg-rose-600"
               >
-                {session.user.role === "STORE" ? "管理画面へ" : "マイページへ"}
+                {session.user.role === "STORE" ? "管理画面" : "マイページ"}
               </Link>
             ) : (
               <>
                 <Link
                   href="/c/login"
-                  className="text-sm font-medium px-4 py-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-100"
+                  className="rounded-full px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-white/80 sm:px-4"
                 >
                   ログイン
                 </Link>
                 <Link
                   href="/s/login"
-                  className="text-sm font-medium px-4 py-2 rounded-lg transition-colors text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                  className="rounded-full border border-stone-200/80 bg-white/60 px-3 py-2 text-sm font-medium text-stone-600 transition hover:border-rose-200 hover:text-rose-600"
                 >
                   店舗の方
                 </Link>
@@ -53,80 +60,74 @@ export function Hero() {
         </div>
       </header>
 
-      {/* メインコンテンツ */}
-      <div className="relative z-10 max-w-6xl mx-auto px-4 pt-16 pb-32 md:pt-24 md:pb-40">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-12 lg:gap-8">
-        <div className="max-w-xl shrink-0">
-          {/* バッジ */}
-          <div
-            className="inline-flex items-center gap-2 bg-pink-500 text-white px-4 py-2 rounded-full text-sm font-medium mb-6 shadow-lg"
-          >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fillRule="evenodd"
-                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <span>登録不要・30秒でAIが判定</span>
-          </div>
+      <div className="relative z-10 mx-auto grid max-w-6xl gap-10 px-4 pb-24 pt-10 sm:px-6 lg:grid-cols-[1fr_min(42%,420px)] lg:items-center lg:gap-12 lg:pb-28 lg:pt-14">
+        <div className="order-2 lg:order-1">
+          <div className="rounded-3xl border border-white/80 bg-white/75 p-6 shadow-[0_20px_60px_-15px_rgba(244,63,94,0.18)] backdrop-blur-sm sm:p-8">
+            <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-rose-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm sm:text-sm">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-white" aria-hidden />
+              キャバクラ・クラブのお仕事探し
+            </p>
 
-          {/* キャッチコピー */}
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6">
-            <span className="text-gray-900">
+            <h1 className="text-balance text-3xl font-bold leading-tight tracking-tight text-stone-900 sm:text-4xl md:text-5xl lg:text-[2.75rem] lg:leading-[1.15]">
               今の時給、
-            </span>
-            <br />
-            <span className="font-extrabold text-pink-500">
-              安すぎない？
-            </span>
-          </h1>
+              <span className="mt-1 block bg-gradient-to-r from-rose-500 to-rose-600 bg-clip-text text-transparent">
+                もっと貰えるかも。
+              </span>
+            </h1>
 
-          {/* サブテキスト */}
-          <p className="text-lg md:text-xl mb-8 leading-relaxed text-gray-600">
-            AIがあなたの市場価値を診断。
-            <br className="hidden sm:block" />
-            適正時給と希望条件に合う店舗を見つけよう。
-          </p>
+            <p className="mt-5 text-pretty text-base leading-relaxed text-stone-600 sm:text-lg">
+              AIがチャットでヒアリングし、あなたの適正時給の目安を診断。
+              希望条件に近い店舗を探して、オファーを受け取れます。
+            </p>
 
-          {/* CTA */}
-          <Link
-            href="/diagnosis"
-            className="inline-flex items-center gap-3 font-semibold py-4 px-8 rounded-xl text-lg transition-all active:scale-[0.98] shadow-lg bg-pink-500 text-white hover:bg-pink-600 shadow-pink-500/25"
-          >
-            <span>AI時給診断をスタートする</span>
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </Link>
+            <div className="mt-6 flex flex-wrap gap-2">
+              {trustChips.map((label) => (
+                <span
+                  key={label}
+                  className="rounded-lg border border-rose-100 bg-rose-50/90 px-3 py-1.5 text-xs font-medium text-rose-800 sm:text-sm"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
 
-          {/* 所要時間 */}
-          <p className="text-sm mt-4 text-gray-500">
-            たった30秒 / 完全匿名OK
-          </p>
-        </div>
-
-        <div className="relative w-full max-w-sm mx-auto lg:mx-0 lg:max-w-md shrink-0">
-          <div className="relative aspect-[4/5] w-full drop-shadow-2xl">
-            <Image
-              src={lpLuminaAssets.heroMockup}
-              alt="LUMINA アプリの利用イメージ"
-              fill
-              className="object-contain object-bottom"
-              sizes="(max-width: 1024px) 100vw, 28rem"
-            />
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Link
+                href="/diagnosis"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-rose-500 to-rose-600 px-7 py-4 text-base font-bold text-white shadow-lg shadow-rose-500/30 transition hover:from-rose-600 hover:to-rose-700 active:scale-[0.99]"
+              >
+                AI時給診断をはじめる
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+              <p className="text-center text-xs text-stone-500 sm:text-left sm:text-sm">
+                会員登録は診断後でもOKです
+              </p>
+            </div>
           </div>
         </div>
+
+        <div className="relative order-1 flex justify-center lg:order-2 lg:justify-end">
+          <div
+            className="relative w-full max-w-[320px] sm:max-w-[380px]"
+            style={{ aspectRatio: "4/5" }}
+          >
+            <div
+              className="absolute -inset-3 rounded-[2rem] bg-gradient-to-br from-white/90 to-rose-50/50 shadow-inner ring-1 ring-rose-100/80"
+              aria-hidden
+            />
+            <div className="relative h-full w-full rotate-[-1.5deg] transition duration-500 hover:rotate-0">
+              <Image
+                src={lpLuminaAssets.heroMockup}
+                alt="スマホでLUMINAの診断・求人を利用するイメージ"
+                fill
+                className="object-contain object-bottom drop-shadow-2xl"
+                sizes="(max-width: 1024px) 90vw, 380px"
+                priority
+              />
+            </div>
+          </div>
         </div>
       </div>
     </section>
