@@ -16,52 +16,88 @@ export type BusinessType = (typeof BUSINESS_TYPES)[number]["value"];
 /** サブスクリプションプラン定義 */
 export const SUBSCRIPTION_PLANS = [
   {
-    id: "FREE" as const,
-    name: "フリー",
-    price: 0,
-    priceLabel: "¥0",
-    description: "まずはお試しで始めたい店舗向け",
+    id: "CASUAL" as const,
+    name: "カジュアル",
+    tier: "casual" as const,
+    pricePerStore: 50000,
+    priceLabel: "¥50,000",
+    offerLimit: 10 as number | null,
+    description: "機能を制限して手軽に始めたい店舗向け",
     features: [
-      "月5件までオファー送信",
-      "基本的なキャスト検索",
-      "メッセージ機能",
-    ],
-  },
-  {
-    id: "BASIC" as const,
-    name: "ベーシック",
-    price: 99999,
-    priceLabel: "¥99,999",
-    description: "本格的に採用活動を行う店舗向け",
-    features: [
-      "月30件までオファー送信",
-      "詳細なキャスト検索・フィルター",
+      "月10件までオファー送信",
+      "キャスト検索",
       "メッセージ機能",
       "面接管理機能",
-      "応募者分析レポート",
     ],
   },
   {
-    id: "PREMIUM" as const,
-    name: "プレミアム",
-    price: 99999,
-    priceLabel: "¥99,999",
-    description: "大量採用・複数店舗を運営する企業向け",
+    id: "PRO_TRIAL" as const,
+    name: "プロ",
+    tier: "pro" as const,
+    pricePerStore: 90000,
+    priceLabel: "¥90,000",
+    offerLimit: null as number | null,
+    storeRange: "1〜4店舗",
+    description: "1〜4店舗を運営する企業向け",
     features: [
       "オファー送信無制限",
-      "AI 検索優先表示",
-      "詳細なキャスト検索・フィルター",
+      "全キャスト検索・フィルター",
       "メッセージ機能",
       "面接管理機能",
-      "応募者分析レポート",
       "優先サポート",
-      "複数店舗管理",
     ],
     recommended: true,
+  },
+  {
+    id: "PRO_BUSINESS" as const,
+    name: "プロ ビジネス",
+    tier: "pro" as const,
+    pricePerStore: 80000,
+    priceLabel: "¥80,000",
+    offerLimit: null as number | null,
+    storeRange: "5〜19店舗",
+    discount: "10%OFF",
+    description: "5〜19店舗のグループ向け",
+    features: [
+      "オファー送信無制限",
+      "全キャスト検索・フィルター",
+      "メッセージ機能",
+      "面接管理機能",
+      "優先サポート",
+    ],
+  },
+  {
+    id: "PRO_ENTERPRISE" as const,
+    name: "プロ エンタープライズ",
+    tier: "pro" as const,
+    pricePerStore: 65000,
+    priceLabel: "¥65,000",
+    offerLimit: null as number | null,
+    storeRange: "20店舗以上",
+    discount: "25%OFF",
+    description: "20店舗以上の大規模グループ向け",
+    features: [
+      "オファー送信無制限",
+      "全キャスト検索・フィルター",
+      "メッセージ機能",
+      "面接管理機能",
+      "優先サポート",
+    ],
   },
 ] as const;
 
 export type SubscriptionPlanId = (typeof SUBSCRIPTION_PLANS)[number]["id"];
+
+/** プランに応じたオファー上限を返す（null = 無制限） */
+export function getOfferLimitForPlan(plan: SubscriptionPlanId): number | null {
+  if (plan === "CASUAL") return 10;
+  return null;
+}
+
+/** プロ版かどうか判定 */
+export function isProPlan(plan: SubscriptionPlanId): boolean {
+  return plan !== "CASUAL";
+}
 
 /** 血液型 */
 export const BLOOD_TYPES = [

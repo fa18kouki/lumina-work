@@ -3,6 +3,9 @@ import type { NextRequest } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/server/db";
 import type Stripe from "stripe";
+import type { SubscriptionPlan } from "@prisma/client";
+
+const VALID_PLANS: SubscriptionPlan[] = ["CASUAL", "PRO_TRIAL", "PRO_BUSINESS", "PRO_ENTERPRISE"];
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -25,9 +28,14 @@ export async function POST(req: NextRequest) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
       const storeId = session.metadata?.storeId;
-      const plan = session.metadata?.plan as "BASIC" | "PREMIUM" | undefined;
+      const plan = session.metadata?.plan as SubscriptionPlan | undefined;
+      const offerLimitStr = session.metadata?.offerLimit;
+      const trialEndsAtStr = session.metadata?.trialEndsAt;
 
-      if (storeId && plan && session.subscription && session.customer) {
+      if (storeId && plan && VALID_PLANS.includes(plan) && session.subscription && session.customer) {
+        const offerLimit = offerLimitStr ? parseInt(offerLimitStr, 10) : null;
+        const trialEndsAt = trialEndsAtStr ? new Date(trialEndsAtStr) : null;
+
         await prisma.subscription.upsert({
           where: { storeId },
           create: {
@@ -36,12 +44,16 @@ export async function POST(req: NextRequest) {
             stripeSubscriptionId: session.subscription as string,
             plan,
             status: "ACTIVE",
+            offerLimit,
+            trialEndsAt,
           },
           update: {
             stripeCustomerId: session.customer as string,
             stripeSubscriptionId: session.subscription as string,
             plan,
             status: "ACTIVE",
+            offerLimit,
+            trialEndsAt,
           },
         });
       }
@@ -83,9 +95,10 @@ export async function POST(req: NextRequest) {
         await prisma.subscription.update({
           where: { id: existing.id },
           data: {
-            plan: "FREE",
+            plan: "CASUAL",
             status: "CANCELLED",
             stripeSubscriptionId: null,
+            offerLimit: 10,
           },
         });
       }

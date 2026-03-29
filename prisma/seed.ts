@@ -1238,31 +1238,32 @@ async function main() {
 
   // ==================== サブスクリプション ====================
 
-  const subscriptionData: { storeIndex: number; plan: "FREE" | "BASIC" | "PREMIUM" }[] = [
-    { storeIndex: 0, plan: "BASIC" },
-    { storeIndex: 1, plan: "FREE" },
-    { storeIndex: 2, plan: "FREE" },
-    { storeIndex: 3, plan: "PREMIUM" },
-    { storeIndex: 4, plan: "BASIC" },
-    { storeIndex: 5, plan: "FREE" },
-    { storeIndex: 6, plan: "PREMIUM" },
-    { storeIndex: 7, plan: "FREE" },
-    { storeIndex: 8, plan: "FREE" },
-    { storeIndex: 9, plan: "BASIC" },
+  const subscriptionData: { storeIndex: number; plan: "CASUAL" | "PRO_TRIAL" | "PRO_BUSINESS" | "PRO_ENTERPRISE"; offerLimit: number | null }[] = [
+    { storeIndex: 0, plan: "PRO_TRIAL", offerLimit: null },
+    { storeIndex: 1, plan: "CASUAL", offerLimit: 10 },
+    { storeIndex: 2, plan: "CASUAL", offerLimit: 10 },
+    { storeIndex: 3, plan: "PRO_ENTERPRISE", offerLimit: null },
+    { storeIndex: 4, plan: "PRO_BUSINESS", offerLimit: null },
+    { storeIndex: 5, plan: "CASUAL", offerLimit: 10 },
+    { storeIndex: 6, plan: "PRO_ENTERPRISE", offerLimit: null },
+    { storeIndex: 7, plan: "CASUAL", offerLimit: 10 },
+    { storeIndex: 8, plan: "CASUAL", offerLimit: 10 },
+    { storeIndex: 9, plan: "PRO_TRIAL", offerLimit: null },
   ];
 
   for (const sub of subscriptionData) {
     await prisma.subscription.upsert({
       where: { storeId: createdStores[sub.storeIndex].storeId },
-      update: { plan: sub.plan, status: "ACTIVE" },
+      update: { plan: sub.plan, status: "ACTIVE", offerLimit: sub.offerLimit },
       create: {
         storeId: createdStores[sub.storeIndex].storeId,
         plan: sub.plan,
         status: "ACTIVE",
+        offerLimit: sub.offerLimit,
       },
     });
   }
-  console.log(`  ✅ サブスクリプション: ${subscriptionData.length}件 (FREE: ${subscriptionData.filter(s => s.plan === "FREE").length}, BASIC: ${subscriptionData.filter(s => s.plan === "BASIC").length}, PREMIUM: ${subscriptionData.filter(s => s.plan === "PREMIUM").length})`);
+  console.log(`  ✅ サブスクリプション: ${subscriptionData.length}件 (CASUAL: ${subscriptionData.filter(s => s.plan === "CASUAL").length}, PRO: ${subscriptionData.filter(s => s.plan !== "CASUAL").length})`);
 
   console.log("\n🎉 シードデータの投入が完了しました！");
   console.log(`  店舗: ${stores.length}件`);
