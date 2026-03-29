@@ -15,7 +15,7 @@ import { useStoreSignOut } from "@/lib/auth-helpers";
 
 const navItems = [
   { href: "/s/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
-  { href: "/s/casts", label: "応募者管理", icon: Users },
+  { href: "/s/casts", label: "応募者一覧", icon: Users },
   { href: "/s/interviews", label: "面接管理", icon: CalendarCheck },
   { href: "/s/profile", label: "店舗情報", icon: Store },
   { href: "/s/subscription", label: "プラン", icon: CreditCard },
