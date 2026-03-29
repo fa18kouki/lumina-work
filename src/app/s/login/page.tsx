@@ -52,7 +52,16 @@ function StoreLoginForm() {
         return;
       }
 
-      await fetch("/api/auth/sync-store-user", { method: "POST" });
+      const syncRes = await fetch("/api/auth/sync-store-user", { method: "POST" });
+
+      if (!syncRes.ok) {
+        if (syncRes.status === 409) {
+          setError("このメールアドレスは既に別のアカウントに紐付いています。サポートにお問い合わせください");
+        } else {
+          setError("ログインに失敗しました。もう一度お試しください");
+        }
+        return;
+      }
 
       router.push(callbackUrl);
       router.refresh();
