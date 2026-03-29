@@ -102,7 +102,7 @@ export function AreaSelector({ value, onChange, className = "" }: AreaSelectorPr
   const currentRegion = REGION_DATA.find((r) => r.name === activeRegion);
 
   return (
-    <div className={`rounded-lg border border-gray-200 bg-white ${className}`}>
+    <div className={`flex flex-col rounded-lg border border-gray-200 bg-white overflow-hidden ${className}`}>
       {/* 検索バー */}
       <div className="border-b border-gray-200 p-3">
         <div className="relative">
@@ -129,7 +129,7 @@ export function AreaSelector({ value, onChange, className = "" }: AreaSelectorPr
 
       {/* 検索結果 or メインパネル */}
       {searchResults ? (
-        <div className="max-h-64 overflow-y-auto p-3">
+        <div className="flex-1 min-h-0 overflow-y-auto p-3">
           {searchResults.length === 0 ? (
             <p className="py-4 text-center text-sm text-gray-400">
               該当するエリアが見つかりません
@@ -154,7 +154,7 @@ export function AreaSelector({ value, onChange, className = "" }: AreaSelectorPr
           )}
         </div>
       ) : (
-        <div className="flex min-h-[280px]">
+        <div className="flex flex-1 min-h-0">
           {/* 左サイド: 地方タブ */}
           <div className="w-28 shrink-0 border-r border-gray-200 bg-gray-50">
             {REGION_DATA.map((region) => (
@@ -199,8 +199,20 @@ export function AreaSelector({ value, onChange, className = "" }: AreaSelectorPr
 
       {/* 選択済みタグ */}
       {value.length > 0 && (
-        <div className="border-t border-gray-200 p-3">
-          <div className="flex flex-wrap gap-1.5">
+        <div className="shrink-0 border-t border-gray-200 p-3">
+          <div className="mb-1 flex items-center justify-between">
+            <span className="text-xs font-medium text-gray-500">
+              {value.length}件選択中
+            </span>
+            <button
+              type="button"
+              onClick={() => onChange([])}
+              className="text-xs text-gray-400 hover:text-pink-500"
+            >
+              すべて解除
+            </button>
+          </div>
+          <div className="flex max-h-20 flex-wrap gap-1.5 overflow-y-auto">
             {value.map((label) => (
               <span
                 key={label}
