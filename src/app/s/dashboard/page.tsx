@@ -4,7 +4,6 @@ import Link from "next/link";
 import {
   FileEdit,
   Search,
-  Mail,
   ChevronRight,
   Clock,
   Calendar,
@@ -139,27 +138,20 @@ export default function StoreDashboardPage() {
               <span className="block w-1 h-5 bg-slate-700 rounded-sm" />
               クイックアクション
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
               <Link
                 href="/s/profile"
-                className="flex items-center justify-center gap-2.5 py-4 px-4 rounded-md text-white font-bold text-[15px] bg-slate-800 hover:bg-slate-900 hover:-translate-y-0.5 transition-all"
+                className="flex items-center justify-center gap-2.5 py-4 px-4 rounded-xl text-slate-700 font-bold text-[15px] bg-gray-100 shadow-[6px_6px_12px_#d1d5db,-6px_-6px_12px_#ffffff] hover:shadow-[2px_2px_6px_#d1d5db,-2px_-2px_6px_#ffffff] hover:text-slate-900 active:shadow-[inset_2px_2px_5px_#d1d5db,inset_-2px_-2px_5px_#ffffff] transition-all"
               >
                 <FileEdit className="w-5 h-5" aria-hidden />
                 求人情報を更新
               </Link>
               <Link
                 href="/s/casts"
-                className="flex items-center justify-center gap-2.5 py-4 px-4 rounded-md text-white font-bold text-[15px] bg-(--secondary-blue-text) hover:opacity-90 hover:-translate-y-0.5 transition-all"
+                className="flex items-center justify-center gap-2.5 py-4 px-4 rounded-xl text-slate-700 font-bold text-[15px] bg-gray-100 shadow-[6px_6px_12px_#d1d5db,-6px_-6px_12px_#ffffff] hover:shadow-[2px_2px_6px_#d1d5db,-2px_-2px_6px_#ffffff] hover:text-slate-900 active:shadow-[inset_2px_2px_5px_#d1d5db,inset_-2px_-2px_5px_#ffffff] transition-all"
               >
                 <Search className="w-5 h-5" aria-hidden />
                 応募者を検索
-              </Link>
-              <Link
-                href="/s/matches"
-                className="flex items-center justify-center gap-2.5 py-4 px-4 rounded-md font-bold text-[15px] text-(--text-main) bg-slate-50 border border-slate-300 hover:opacity-90 hover:-translate-y-0.5 transition-all"
-              >
-                <Mail className="w-5 h-5" aria-hidden />
-                メッセージを送信
               </Link>
             </div>
           </div>
@@ -208,12 +200,6 @@ export default function StoreDashboardPage() {
                   >
                     詳細
                   </button>
-                  <Link
-                    href="/s/matches"
-                    className="flex-1 py-2 text-center rounded-md text-[13px] font-medium bg-slate-800 text-white hover:bg-slate-900 transition-opacity"
-                  >
-                    メッセージ
-                  </Link>
                 </div>
               </div>
             ))}
