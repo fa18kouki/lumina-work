@@ -1,4 +1,6 @@
+import Image from "next/image";
 import { SectionHeader } from "./SectionHeader";
+import { lpLuminaAssets } from "@/lib/lp-assets";
 
 function SparklesIcon() {
   return (
@@ -28,26 +30,35 @@ const steps = [
   {
     number: "01",
     badge: "情報登録",
-    title: "面接画面で情報を登録",
-    description: "面接画面で基本情報を入力、またはSNSアカウントでかんたん登録できます。",
+    title: "プロフィールとログイン",
+    description:
+      "基本情報や希望条件を入力し、SNSアカウントでかんたんにログインできます。",
     icon: SparklesIcon,
     align: "right" as const,
+    image: lpLuminaAssets.servicePoint1,
+    imageAlt: "AI診断・登録のイメージ",
   },
   {
     number: "02",
     badge: "AIチャット診断",
-    title: "チャットボット・AIボイスであなたを診断",
-    description: "チャットボットやAIボイスがあなたに質問。回答をもとに診断結果を出します。",
+    title: "チャット形式のAI診断",
+    description:
+      "テキストのチャットで質問に答えていくと、適正時給などの診断結果が表示されます。",
     icon: ChatBubbleIcon,
     align: "left" as const,
+    image: lpLuminaAssets.servicePoint2,
+    imageAlt: "条件検索のイメージ",
   },
   {
     number: "03",
     badge: "結果とお店探し",
-    title: "診断結果をもとにお店を探す・オファーを待つ",
-    description: "診断結果に基づいて条件に合うお店を探したり、お店からのオファーを待つことができます。",
+    title: "お店を探してオファーを待つ",
+    description:
+      "エリアや時給などで店舗を検索し、気になる店舗から届く採用オファーをアプリで確認できます。",
     icon: ShieldCheckIcon,
     align: "right" as const,
+    image: lpLuminaAssets.servicePoint3,
+    imageAlt: "オファー通知のイメージ",
   },
 ];
 
@@ -83,16 +94,38 @@ export function ServiceSteps() {
               </div>
 
               {/* Content card */}
-              <div className="flex-1 bg-gradient-to-br from-pink-50 to-white border border-pink-100 rounded-3xl p-8 md:p-10 shadow-lg">
-                <span className="inline-block bg-pink-500 text-white text-sm font-semibold px-4 py-1.5 rounded-full mb-4">
-                  {step.badge}
-                </span>
-                <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-                  {step.title}
-                </h3>
-                <p className="text-lg text-gray-600">
-                  {step.description}
-                </p>
+              <div className="flex-1 bg-gradient-to-br from-pink-50 to-white border border-pink-100 rounded-3xl overflow-hidden shadow-lg">
+                <div className="relative aspect-[16/9] w-full bg-white/60 md:hidden">
+                  <Image
+                    src={step.image}
+                    alt={step.imageAlt}
+                    fill
+                    className="object-contain p-4"
+                    sizes="100vw"
+                  />
+                </div>
+                <div className="p-8 md:p-10 md:flex md:gap-8 md:items-center">
+                  <div className="relative hidden md:block w-52 h-52 shrink-0 rounded-2xl overflow-hidden bg-white shadow-inner">
+                    <Image
+                      src={step.image}
+                      alt={step.imageAlt}
+                      fill
+                      className="object-cover"
+                      sizes="208px"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="inline-block bg-pink-500 text-white text-sm font-semibold px-4 py-1.5 rounded-full mb-4">
+                      {step.badge}
+                    </span>
+                    <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+                      {step.title}
+                    </h3>
+                    <p className="text-lg text-gray-600">
+                      {step.description}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           ))}

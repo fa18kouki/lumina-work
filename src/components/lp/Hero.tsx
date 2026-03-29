@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { lpLuminaAssets } from "@/lib/lp-assets";
 
 export function Hero() {
   const { data: session } = useSession();
@@ -54,7 +55,8 @@ export function Hero() {
 
       {/* メインコンテンツ */}
       <div className="relative z-10 max-w-6xl mx-auto px-4 pt-16 pb-32 md:pt-24 md:pb-40">
-        <div className="max-w-xl">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-12 lg:gap-8">
+        <div className="max-w-xl shrink-0">
           {/* バッジ */}
           <div
             className="inline-flex items-center gap-2 bg-pink-500 text-white px-4 py-2 rounded-full text-sm font-medium mb-6 shadow-lg"
@@ -112,6 +114,19 @@ export function Hero() {
           <p className="text-sm mt-4 text-gray-500">
             たった30秒 / 完全匿名OK
           </p>
+        </div>
+
+        <div className="relative w-full max-w-sm mx-auto lg:mx-0 lg:max-w-md shrink-0">
+          <div className="relative aspect-[4/5] w-full drop-shadow-2xl">
+            <Image
+              src={lpLuminaAssets.heroMockup}
+              alt="LUMINA アプリの利用イメージ"
+              fill
+              className="object-contain object-bottom"
+              sizes="(max-width: 1024px) 100vw, 28rem"
+            />
+          </div>
+        </div>
         </div>
       </div>
     </section>

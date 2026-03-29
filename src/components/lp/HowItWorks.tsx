@@ -1,11 +1,22 @@
 "use client";
 
+import Image from "next/image";
+import { lpLuminaAssets } from "@/lib/lp-assets";
+
+const FLOW_IMAGES = [
+  { src: lpLuminaAssets.flow01Register, alt: "登録・ログイン画面のイメージ" },
+  { src: lpLuminaAssets.flow02AiChat, alt: "AIチャット診断画面のイメージ" },
+  { src: lpLuminaAssets.flow03Result, alt: "診断結果画面のイメージ" },
+  { src: lpLuminaAssets.flow04Stores, alt: "店舗検索画面のイメージ" },
+  { src: lpLuminaAssets.flow05Offers, alt: "オファー一覧画面のイメージ" },
+] as const;
+
 export function HowItWorks() {
   const steps = [
     {
       number: "01",
-      title: "面接画面・情報登録",
-      subtitle: "SNSアカウント登録",
+      title: "基本情報・ログイン",
+      subtitle: "SNSアカウントでかんたん",
       icon: (
         <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -14,8 +25,8 @@ export function HowItWorks() {
     },
     {
       number: "02",
-      title: "チャットボット・AIボイス",
-      subtitle: null,
+      title: "AIチャット診断",
+      subtitle: "テキストで質問に回答",
       icon: (
         <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -92,20 +103,31 @@ export function HowItWorks() {
                 </div>
 
                 {/* コンテンツ */}
-                <div className="flex-1 rounded-xl p-4 border bg-white border-gray-100 shadow-sm">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-bold text-pink-500">
-                      STEP {step.number}
-                    </span>
-                  </div>
-                  <p className="font-semibold text-gray-900">
-                    {step.title}
-                  </p>
-                  {step.subtitle && (
-                    <p className="text-sm mt-0.5 text-gray-500">
-                      {step.subtitle}
+                <div className="flex-1 rounded-xl overflow-hidden border bg-white border-gray-100 shadow-sm">
+                  <div className="p-4 pb-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-bold text-pink-500">
+                        STEP {step.number}
+                      </span>
+                    </div>
+                    <p className="font-semibold text-gray-900">
+                      {step.title}
                     </p>
-                  )}
+                    {step.subtitle && (
+                      <p className="text-sm mt-0.5 text-gray-500">
+                        {step.subtitle}
+                      </p>
+                    )}
+                  </div>
+                  <div className="relative mt-3 h-44 w-full bg-gray-50">
+                    <Image
+                      src={FLOW_IMAGES[index].src}
+                      alt={FLOW_IMAGES[index].alt}
+                      fill
+                      className="object-contain object-bottom p-2"
+                      sizes="(max-width: 768px) 100vw, 36rem"
+                    />
+                  </div>
                 </div>
 
                 {/* 矢印（最後以外） */}

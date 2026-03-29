@@ -1,6 +1,7 @@
 import {
   Hero,
   HowItWorks,
+  ServiceSteps,
   PickupStores,
   MiniGames,
   UserVoices,
@@ -14,6 +15,7 @@ export default function Home() {
     <main className="bg-white">
       <Hero />
       <HowItWorks />
+      <ServiceSteps />
       <PickupStores />
       <MiniGames />
       <UserVoices />

@@ -1,3 +1,6 @@
+import Image from "next/image";
+import { lpLuminaAssets } from "@/lib/lp-assets";
+
 function DevicePhoneMobileIcon() {
   return (
     <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -14,18 +17,18 @@ function AdjustmentsIcon() {
   );
 }
 
-function ChatBubbleLeftRightIcon() {
+function BellAlertIcon() {
   return (
     <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
     </svg>
   );
 }
 
-function CalendarDaysIcon() {
+function UserCircleIcon() {
   return (
     <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   );
 }
@@ -34,7 +37,7 @@ const features = [
   {
     icon: DevicePhoneMobileIcon,
     title: "アプリで完全無料",
-    description: "LINEでカンタンに登録・診断できます",
+    description: "LINEなどでカンタンに登録・診断できます",
   },
   {
     icon: AdjustmentsIcon,
@@ -42,15 +45,21 @@ const features = [
     description: "エリアや時給など詳細検索が可能",
   },
   {
-    icon: ChatBubbleLeftRightIcon,
-    title: "気軽にチャット相談",
-    description: "お店と匿名でやりとりできる",
+    icon: BellAlertIcon,
+    title: "オファーをアプリで確認",
+    description: "店舗からの採用オファーを一覧で確認し、承諾・辞退できます",
   },
   {
-    icon: CalendarDaysIcon,
-    title: "面接日程も調整",
-    description: "アプリ内で面接の予約まで完結",
+    icon: UserCircleIcon,
+    title: "プロフィールでアピール",
+    description: "写真や希望条件を登録して、マッチしやすくなります",
   },
+];
+
+const APP_FEATURE_PHONES: { src: string; alt: string }[] = [
+  { src: lpLuminaAssets.flow02AiChat, alt: "AIチャット診断の画面イメージ" },
+  { src: lpLuminaAssets.flow04Stores, alt: "店舗検索の画面イメージ" },
+  { src: lpLuminaAssets.flow05Offers, alt: "オファー一覧の画面イメージ" },
 ];
 
 export function AppFeatures() {
@@ -94,39 +103,20 @@ export function AppFeatures() {
         </div>
 
         {/* Phone mockups */}
-        <div className="flex justify-center gap-6 overflow-hidden">
-          {[1, 2, 3].map((i) => (
+        <div className="flex justify-center gap-6 overflow-x-auto pb-2">
+          {APP_FEATURE_PHONES.map((phone) => (
             <div
-              key={i}
+              key={phone.src}
               className="w-48 md:w-52 bg-white rounded-3xl shadow-2xl p-3 flex-shrink-0"
             >
-              <div className="h-80 md:h-96 rounded-2xl bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center">
-                <div className="space-y-4 w-full px-6">
-                  {i === 1 && (
-                    <>
-                      <div className="w-16 h-16 mx-auto rounded-full bg-pink-500" />
-                      <div className="w-16 h-4 mx-auto rounded bg-pink-200" />
-                      <div className="w-12 h-4 mx-auto rounded bg-pink-200" />
-                    </>
-                  )}
-                  {i === 2 && (
-                    <>
-                      <div className="w-full h-20 rounded-xl bg-pink-200" />
-                      <div className="w-full h-20 rounded-xl bg-pink-200" />
-                      <div className="w-full h-20 rounded-xl bg-pink-200" />
-                    </>
-                  )}
-                  {i === 3 && (
-                    <>
-                      <div className="w-full h-3 rounded bg-pink-200" />
-                      <div className="w-4/5 h-3 rounded bg-pink-200" />
-                      <div className="w-3/5 h-3 rounded bg-pink-200" />
-                      <div className="w-full h-16 rounded-xl bg-pink-300 mt-4" />
-                      <div className="w-full h-3 rounded bg-pink-200" />
-                      <div className="w-4/5 h-3 rounded bg-pink-200" />
-                    </>
-                  )}
-                </div>
+              <div className="relative h-80 md:h-96 rounded-2xl overflow-hidden bg-gradient-to-br from-pink-50 to-purple-50">
+                <Image
+                  src={phone.src}
+                  alt={phone.alt}
+                  fill
+                  className="object-contain object-bottom p-2"
+                  sizes="(max-width: 768px) 192px, 208px"
+                />
               </div>
             </div>
           ))}
