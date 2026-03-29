@@ -25,6 +25,7 @@ const NOTIFICATION_ITEMS: {
   key: keyof NotificationSettings;
   label: string;
   description: string;
+  comingSoon?: boolean;
 }[] = [
   {
     key: "newApplicant",
@@ -40,11 +41,13 @@ const NOTIFICATION_ITEMS: {
     key: "interviewReminder",
     label: "面接リマインダー",
     description: "面接予定の前日にリマインダーを受け取る",
+    comingSoon: true,
   },
   {
     key: "systemAnnouncement",
     label: "システムお知らせ",
     description: "サービスの更新やメンテナンス情報を受け取る",
+    comingSoon: true,
   },
 ];
 
@@ -273,11 +276,17 @@ export default function StoreSettingsPage() {
                   {item.description}
                 </p>
               </div>
-              <ToggleSwitch
-                checked={draft[item.key]}
-                onChange={() => handleToggle(item.key)}
-                label={item.label}
-              />
+              {item.comingSoon ? (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+                  準備中
+                </span>
+              ) : (
+                <ToggleSwitch
+                  checked={draft[item.key]}
+                  onChange={() => handleToggle(item.key)}
+                  label={item.label}
+                />
+              )}
             </div>
           ))}
         </div>
