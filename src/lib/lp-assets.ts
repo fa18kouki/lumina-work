@@ -5,6 +5,8 @@
 const base = "/lp/lumina";
 
 export const lpLuminaAssets = {
+  /** トップ全幅ヒーロー用（ワイド・左はグラデ用の余白） */
+  heroBanner: `${base}/lumina-hero-banner.png`,
   heroMockup: `${base}/lumina-hero-mockup.png`,
   flow01Register: `${base}/lumina-flow-01-register.png`,
   flow02AiChat: `${base}/lumina-flow-02-ai-chat.png`,
