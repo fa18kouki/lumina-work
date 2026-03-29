@@ -28,12 +28,12 @@ export function Hero() {
         />
 
         <header className="absolute inset-x-0 top-0 z-30 border-b border-white/[0.12] bg-white/[0.07] backdrop-blur-2xl backdrop-saturate-150">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2.5 sm:px-6">
             <Link
               href="/"
-              className="inline-flex rounded-2xl bg-white/90 px-3 py-1.5 shadow-[0_8px_30px_-6px_rgba(0,0,0,0.35)] ring-1 ring-white/70 backdrop-blur-md transition hover:bg-white hover:ring-white"
+              className="inline-flex items-center rounded-xl bg-white/90 px-2 py-1 shadow-[0_6px_20px_-6px_rgba(0,0,0,0.3)] ring-1 ring-white/60 backdrop-blur-md transition hover:bg-white hover:ring-white/90"
             >
-              <Image src="/Image.png" alt="LUMINA" width={132} height={40} priority />
+              <Image src="/Image.png" alt="LUMINA" width={90} height={27} priority />
             </Link>
 
             <nav className="flex items-center gap-2 sm:gap-3" aria-label="メイン">
