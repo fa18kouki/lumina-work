@@ -26,6 +26,12 @@ const ALCOHOL_LABELS: Record<string, string> = {
   NONE: "飲めない",
 };
 
+const DRESS_LABELS: Record<string, string> = {
+  OWN: "自前あり",
+  RENTAL_NEEDED: "レンタル希望",
+  PARTIAL: "一部あり",
+};
+
 const AGE_OPTIONS = [
   { value: "", label: "指定なし" },
   ...Array.from({ length: 33 }, (_, i) => ({
@@ -61,6 +67,34 @@ type CastData = {
   monthlyNominations: number | null;
   alcoholTolerance: string | null;
   description: string | null;
+  // 身体情報
+  height: number | null;
+  bust: number | null;
+  waist: number | null;
+  hip: number | null;
+  cupSize: string | null;
+  // 希望条件
+  desiredHourlyRate: number | null;
+  desiredMonthlyIncome: number | null;
+  availableDaysPerWeek: number | null;
+  isAvailableNow: boolean;
+  preferredAtmosphere: string[];
+  preferredClientele: string[];
+  // 実績
+  birthdaySales: number | null;
+  socialFollowers: number | null;
+  hasVipClients: boolean;
+  vipClientDescription: string | null;
+  // 勤務条件
+  hasTattoo: boolean | null;
+  dressAvailability: string | null;
+  needsPickup: boolean | null;
+  birthdayEventWillingness: boolean | null;
+  shiftPreferences: unknown;
+  // スキル
+  hobbies: string | null;
+  specialSkills: string | null;
+  languageSkills: unknown;
 };
 
 export default function CastsSearchPage() {
@@ -75,6 +109,7 @@ export default function CastsSearchPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCast, setSelectedCast] = useState<string | null>(null);
   const [detailIndex, setDetailIndex] = useState<number | null>(null);
+  const [photoIndex, setPhotoIndex] = useState(0);
   const [offerMessage, setOfferMessage] = useState("");
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -129,6 +164,10 @@ export default function CastsSearchPage() {
     if (detailIndex !== null && detailIndex > 0) {
       setDetailIndex(detailIndex - 1);
     }
+  }, [detailIndex]);
+
+  useEffect(() => {
+    setPhotoIndex(0);
   }, [detailIndex]);
 
   useEffect(() => {
@@ -327,7 +366,7 @@ export default function CastsSearchPage() {
       {/* 詳細モーダル */}
       {detailCast && detailIndex !== null && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="relative flex items-center gap-3">
+          <div className="relative flex items-center gap-3 max-h-[90vh]">
             {/* 左矢印 */}
             {detailIndex > 0 ? (
               <button
@@ -341,11 +380,11 @@ export default function CastsSearchPage() {
             )}
 
           <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            {/* ヘッダー画像 */}
+            {/* 写真カルーセル */}
             <div className="relative aspect-[16/9] bg-gray-200">
-              {detailCast.photos[0] ? (
+              {detailCast.photos.length > 0 ? (
                 <img
-                  src={detailCast.photos[0]}
+                  src={detailCast.photos[photoIndex] ?? detailCast.photos[0]}
                   alt={detailCast.nickname}
                   className="w-full h-full object-cover"
                 />
@@ -353,6 +392,36 @@ export default function CastsSearchPage() {
                 <div className="w-full h-full flex items-center justify-center text-gray-400">
                   No Photo
                 </div>
+              )}
+              {/* 写真ナビゲーション */}
+              {detailCast.photos.length > 1 && (
+                <>
+                  {photoIndex > 0 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPhotoIndex(photoIndex - 1); }}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 rounded-full flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                  )}
+                  {photoIndex < detailCast.photos.length - 1 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPhotoIndex(photoIndex + 1); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 rounded-full flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  )}
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    {detailCast.photos.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={(e) => { e.stopPropagation(); setPhotoIndex(i); }}
+                        className={`w-2 h-2 rounded-full transition-colors ${i === photoIndex ? "bg-white" : "bg-white/50"}`}
+                      />
+                    ))}
+                  </div>
+                </>
               )}
               {/* 位置インジケーター */}
               <div className="absolute top-3 left-3 px-2 py-1 bg-black/40 rounded text-white text-xs font-medium">
@@ -367,83 +436,265 @@ export default function CastsSearchPage() {
             </div>
 
             <div className="p-5 space-y-4">
-              {/* 名前・年齢・ランク */}
-              <div className="flex items-center gap-3">
+              {/* 名前・年齢・ランク・即日OK */}
+              <div className="flex items-center gap-3 flex-wrap">
                 <h2 className="text-xl font-bold text-(--text-main)">
                   {detailCast.nickname}
                 </h2>
                 <span className="text-(--text-sub)">{detailCast.age}歳</span>
                 <RankBadge rank={detailCast.rank} size="md" />
-              </div>
-
-              {/* 基本情報 */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-(--bg-gray) rounded-lg p-3">
-                  <p className="text-xs text-(--text-sub) mb-0.5">経験年数</p>
-                  <p className="text-sm font-medium text-(--text-main)">
-                    {detailCast.totalExperienceYears != null && detailCast.totalExperienceYears > 0
-                      ? `${detailCast.totalExperienceYears}年`
-                      : "未経験"}
-                  </p>
-                </div>
-                <div className="bg-(--bg-gray) rounded-lg p-3">
-                  <p className="text-xs text-(--text-sub) mb-0.5">前職時給</p>
-                  <p className="text-sm font-medium text-(--text-main)">
-                    {detailCast.previousHourlyRate != null
-                      ? `¥${detailCast.previousHourlyRate.toLocaleString()}`
-                      : "−"}
-                  </p>
-                </div>
-                {detailCast.monthlySales != null && (
-                  <div className="bg-(--bg-gray) rounded-lg p-3">
-                    <p className="text-xs text-(--text-sub) mb-0.5">月間売上</p>
-                    <p className="text-sm font-medium text-(--text-main)">
-                      ¥{detailCast.monthlySales.toLocaleString()}
-                    </p>
-                  </div>
-                )}
-                {detailCast.monthlyNominations != null && (
-                  <div className="bg-(--bg-gray) rounded-lg p-3">
-                    <p className="text-xs text-(--text-sub) mb-0.5">月間指名数</p>
-                    <p className="text-sm font-medium text-(--text-main)">
-                      {detailCast.monthlyNominations}本
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* お酒の強さ */}
-              {detailCast.alcoholTolerance && (
-                <div className="flex items-center gap-2">
-                  <Wine className="w-4 h-4 text-(--text-sub)" />
-                  <span className="text-sm text-(--text-sub)">お酒:</span>
-                  <span className="text-sm text-(--text-main) font-medium">
-                    {ALCOHOL_LABELS[detailCast.alcoholTolerance] ?? detailCast.alcoholTolerance}
+                {detailCast.isAvailableNow && (
+                  <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">
+                    即日稼働OK
                   </span>
+                )}
+              </div>
+
+              {/* 基本スペック */}
+              {(detailCast.height != null || detailCast.bust != null || detailCast.alcoholTolerance || detailCast.hasTattoo != null) && (
+                <div>
+                  <p className="text-xs text-(--text-sub) font-medium mb-2">基本スペック</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {detailCast.height != null && (
+                      <div className="bg-(--bg-gray) rounded-lg p-3">
+                        <p className="text-xs text-(--text-sub) mb-0.5">身長</p>
+                        <p className="text-sm font-medium text-(--text-main)">{detailCast.height}cm</p>
+                      </div>
+                    )}
+                    {(detailCast.bust != null || detailCast.waist != null || detailCast.hip != null) && (
+                      <div className="bg-(--bg-gray) rounded-lg p-3">
+                        <p className="text-xs text-(--text-sub) mb-0.5">スリーサイズ</p>
+                        <p className="text-sm font-medium text-(--text-main)">
+                          {[
+                            detailCast.bust != null ? `B${detailCast.bust}` : null,
+                            detailCast.waist != null ? `W${detailCast.waist}` : null,
+                            detailCast.hip != null ? `H${detailCast.hip}` : null,
+                          ].filter(Boolean).join(" ")}
+                          {detailCast.cupSize && ` (${detailCast.cupSize})`}
+                        </p>
+                      </div>
+                    )}
+                    {detailCast.alcoholTolerance && (
+                      <div className="bg-(--bg-gray) rounded-lg p-3">
+                        <p className="text-xs text-(--text-sub) mb-0.5">お酒</p>
+                        <p className="text-sm font-medium text-(--text-main)">
+                          {ALCOHOL_LABELS[detailCast.alcoholTolerance] ?? detailCast.alcoholTolerance}
+                        </p>
+                      </div>
+                    )}
+                    {detailCast.hasTattoo != null && (
+                      <div className="bg-(--bg-gray) rounded-lg p-3">
+                        <p className="text-xs text-(--text-sub) mb-0.5">タトゥー</p>
+                        <p className="text-sm font-medium text-(--text-main)">
+                          {detailCast.hasTattoo ? "あり" : "なし"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
-              {/* 希望エリア */}
-              {detailCast.desiredAreas.length > 0 && (
-                <div>
-                  <p className="text-xs text-(--text-sub) mb-1.5">希望エリア</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {detailCast.desiredAreas.map((area) => (
-                      <span
-                        key={area}
-                        className="px-2.5 py-1 bg-slate-50 text-slate-700 text-xs rounded font-medium"
-                      >
-                        {area}
-                      </span>
-                    ))}
+              {/* 経験・実績 */}
+              <div className="border-t border-gray-100 pt-3">
+                <p className="text-xs text-(--text-sub) font-medium mb-2">経験・実績</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-(--bg-gray) rounded-lg p-3">
+                    <p className="text-xs text-(--text-sub) mb-0.5">経験年数</p>
+                    <p className="text-sm font-medium text-(--text-main)">
+                      {detailCast.totalExperienceYears != null && detailCast.totalExperienceYears > 0
+                        ? `${detailCast.totalExperienceYears}年`
+                        : "未経験"}
+                    </p>
                   </div>
+                  <div className="bg-(--bg-gray) rounded-lg p-3">
+                    <p className="text-xs text-(--text-sub) mb-0.5">前職時給</p>
+                    <p className="text-sm font-medium text-(--text-main)">
+                      {detailCast.previousHourlyRate != null
+                        ? `¥${detailCast.previousHourlyRate.toLocaleString()}`
+                        : "−"}
+                    </p>
+                  </div>
+                  {detailCast.monthlySales != null && (
+                    <div className="bg-(--bg-gray) rounded-lg p-3">
+                      <p className="text-xs text-(--text-sub) mb-0.5">月間売上</p>
+                      <p className="text-sm font-medium text-(--text-main)">
+                        ¥{detailCast.monthlySales.toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+                  {detailCast.monthlyNominations != null && (
+                    <div className="bg-(--bg-gray) rounded-lg p-3">
+                      <p className="text-xs text-(--text-sub) mb-0.5">月間指名数</p>
+                      <p className="text-sm font-medium text-(--text-main)">
+                        {detailCast.monthlyNominations}本
+                      </p>
+                    </div>
+                  )}
+                  {detailCast.birthdaySales != null && (
+                    <div className="bg-(--bg-gray) rounded-lg p-3">
+                      <p className="text-xs text-(--text-sub) mb-0.5">生誕売上</p>
+                      <p className="text-sm font-medium text-(--text-main)">
+                        ¥{detailCast.birthdaySales.toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+                  {detailCast.socialFollowers != null && (
+                    <div className="bg-(--bg-gray) rounded-lg p-3">
+                      <p className="text-xs text-(--text-sub) mb-0.5">SNSフォロワー</p>
+                      <p className="text-sm font-medium text-(--text-main)">
+                        {detailCast.socialFollowers.toLocaleString()}人
+                      </p>
+                    </div>
+                  )}
+                </div>
+                {detailCast.hasVipClients && detailCast.vipClientDescription && (
+                  <div className="mt-3 bg-(--bg-gray) rounded-lg p-3">
+                    <p className="text-xs text-(--text-sub) mb-0.5">太客情報</p>
+                    <p className="text-sm text-(--text-main) leading-relaxed">
+                      {detailCast.vipClientDescription}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* 希望条件 */}
+              {(detailCast.desiredHourlyRate != null || detailCast.desiredMonthlyIncome != null || detailCast.availableDaysPerWeek != null || detailCast.desiredAreas.length > 0 || detailCast.preferredAtmosphere.length > 0 || detailCast.preferredClientele.length > 0) && (
+                <div className="border-t border-gray-100 pt-3">
+                  <p className="text-xs text-(--text-sub) font-medium mb-2">希望条件</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {detailCast.desiredHourlyRate != null && (
+                      <div className="bg-(--bg-gray) rounded-lg p-3">
+                        <p className="text-xs text-(--text-sub) mb-0.5">希望時給</p>
+                        <p className="text-sm font-medium text-(--text-main)">
+                          ¥{detailCast.desiredHourlyRate.toLocaleString()}
+                        </p>
+                      </div>
+                    )}
+                    {detailCast.desiredMonthlyIncome != null && (
+                      <div className="bg-(--bg-gray) rounded-lg p-3">
+                        <p className="text-xs text-(--text-sub) mb-0.5">希望月収</p>
+                        <p className="text-sm font-medium text-(--text-main)">
+                          ¥{detailCast.desiredMonthlyIncome.toLocaleString()}
+                        </p>
+                      </div>
+                    )}
+                    {detailCast.availableDaysPerWeek != null && (
+                      <div className="bg-(--bg-gray) rounded-lg p-3">
+                        <p className="text-xs text-(--text-sub) mb-0.5">出勤可能</p>
+                        <p className="text-sm font-medium text-(--text-main)">
+                          週{detailCast.availableDaysPerWeek}日
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  {detailCast.desiredAreas.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs text-(--text-sub) mb-1.5">希望エリア</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {detailCast.desiredAreas.map((area) => (
+                          <span
+                            key={area}
+                            className="px-2.5 py-1 bg-slate-50 text-slate-700 text-xs rounded font-medium"
+                          >
+                            {area}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {detailCast.preferredAtmosphere.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs text-(--text-sub) mb-1.5">希望の雰囲気</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {detailCast.preferredAtmosphere.map((v) => (
+                          <span
+                            key={v}
+                            className="px-2.5 py-1 bg-slate-50 text-slate-700 text-xs rounded font-medium"
+                          >
+                            {v}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {detailCast.preferredClientele.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs text-(--text-sub) mb-1.5">希望の客層</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {detailCast.preferredClientele.map((v) => (
+                          <span
+                            key={v}
+                            className="px-2.5 py-1 bg-slate-50 text-slate-700 text-xs rounded font-medium"
+                          >
+                            {v}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 勤務条件・スキル */}
+              {(detailCast.dressAvailability || detailCast.needsPickup != null || detailCast.birthdayEventWillingness != null || detailCast.hobbies || detailCast.specialSkills || !!detailCast.languageSkills) && (
+                <div className="border-t border-gray-100 pt-3">
+                  <p className="text-xs text-(--text-sub) font-medium mb-2">勤務条件・スキル</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {detailCast.dressAvailability && (
+                      <div className="bg-(--bg-gray) rounded-lg p-3">
+                        <p className="text-xs text-(--text-sub) mb-0.5">ドレス</p>
+                        <p className="text-sm font-medium text-(--text-main)">
+                          {DRESS_LABELS[detailCast.dressAvailability] ?? detailCast.dressAvailability}
+                        </p>
+                      </div>
+                    )}
+                    {detailCast.needsPickup != null && (
+                      <div className="bg-(--bg-gray) rounded-lg p-3">
+                        <p className="text-xs text-(--text-sub) mb-0.5">送迎</p>
+                        <p className="text-sm font-medium text-(--text-main)">
+                          {detailCast.needsPickup ? "必要" : "不要"}
+                        </p>
+                      </div>
+                    )}
+                    {detailCast.birthdayEventWillingness != null && (
+                      <div className="bg-(--bg-gray) rounded-lg p-3">
+                        <p className="text-xs text-(--text-sub) mb-0.5">生誕イベント</p>
+                        <p className="text-sm font-medium text-(--text-main)">
+                          {detailCast.birthdayEventWillingness ? "参加可能" : "参加不可"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  {detailCast.hobbies && (
+                    <div className="mt-3">
+                      <p className="text-xs text-(--text-sub) mb-1">趣味</p>
+                      <p className="text-sm text-(--text-main)">{detailCast.hobbies}</p>
+                    </div>
+                  )}
+                  {detailCast.specialSkills && (
+                    <div className="mt-3">
+                      <p className="text-xs text-(--text-sub) mb-1">特技</p>
+                      <p className="text-sm text-(--text-main)">{detailCast.specialSkills}</p>
+                    </div>
+                  )}
+                  {!!detailCast.languageSkills && typeof detailCast.languageSkills === "object" && (
+                    <div className="mt-3">
+                      <p className="text-xs text-(--text-sub) mb-1">語学</p>
+                      <p className="text-sm text-(--text-main)">
+                        {Object.entries(detailCast.languageSkills as Record<string, string>)
+                          .filter(([, v]) => v)
+                          .map(([k, v]) => `${k}: ${v}`)
+                          .join("、")}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* 自己紹介 */}
               {detailCast.description && (
-                <div>
-                  <p className="text-xs text-(--text-sub) mb-1.5">自己紹介</p>
+                <div className="border-t border-gray-100 pt-3">
+                  <p className="text-xs text-(--text-sub) font-medium mb-1.5">自己紹介</p>
                   <p className="text-sm text-(--text-main) leading-relaxed">
                     {detailCast.description}
                   </p>
