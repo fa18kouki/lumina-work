@@ -48,20 +48,20 @@ export async function POST(request: NextRequest) {
       where: { id: session.user.id },
       select: {
         cast: { select: { id: true } },
-        store: { select: { id: true } },
+        owner: { select: { stores: { select: { id: true } } } },
       },
     });
 
     const castId = user?.cast?.id;
-    const storeId = user?.store?.id;
+    const storeIds = user?.owner?.stores.map((s) => s.id) ?? [];
 
     const match = await prisma.match.findFirst({
       where: {
         id: matchId,
         status: "ACCEPTED",
         OR: [
-          { castId: castId ?? "" },
-          { storeId: storeId ?? "" },
+          ...(castId ? [{ castId }] : []),
+          ...(storeIds.length > 0 ? [{ storeId: { in: storeIds } }] : []),
         ],
       },
     });

@@ -560,8 +560,12 @@ export const castRouter = createTRPCRouter({
         include: {
           store: {
             select: {
-              userId: true,
-              user: { select: { email: true } },
+              owner: {
+                select: {
+                  userId: true,
+                  user: { select: { email: true } },
+                },
+              },
             },
           },
         },
@@ -579,8 +583,8 @@ export const castRouter = createTRPCRouter({
       }
 
       // 店舗に通知送信
-      const storeUserId = offer.store.userId;
-      const storeEmail = offer.store.user.email;
+      const storeUserId = offer.store.owner.userId;
+      const storeEmail = offer.store.owner.user.email;
       const castNickname = cast.nickname ?? "キャスト";
 
       if (input.accept) {

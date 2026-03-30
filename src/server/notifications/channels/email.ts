@@ -91,10 +91,11 @@ async function isStoreNotificationEnabled(
   recipientUserId: string,
   settingKey: string
 ): Promise<boolean> {
-  const store = await prisma.store.findUnique({
+  const owner = await prisma.owner.findUnique({
     where: { userId: recipientUserId },
-    select: { notificationSettings: true },
+    select: { stores: { select: { notificationSettings: true }, take: 1 } },
   });
+  const store = owner?.stores[0];
   if (!store?.notificationSettings) return true; // 設定未保存ならデフォルトON
   const settings = store.notificationSettings as Record<string, boolean>;
   return settings[settingKey] !== false;

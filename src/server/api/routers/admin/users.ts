@@ -32,8 +32,8 @@ export const adminUsersRouter = createTRPCRouter({
           cast: {
             select: { id: true, nickname: true, isSuspended: true },
           },
-          store: {
-            select: { id: true, name: true },
+          owner: {
+            select: { id: true, stores: { select: { id: true, name: true } } },
           },
         },
         take: input.limit + 1,
@@ -60,7 +60,7 @@ export const adminUsersRouter = createTRPCRouter({
         where: { id: input.userId },
         include: {
           cast: true,
-          store: true,
+          owner: { include: { stores: true } },
           _count: { select: { sentMessages: true } },
         },
       });
@@ -118,7 +118,7 @@ export const adminUsersRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const user = await ctx.prisma.user.findUnique({
         where: { id: input.userId },
-        include: { cast: true, store: true },
+        include: { cast: true, owner: { include: { stores: true } } },
       });
 
       if (!user) {

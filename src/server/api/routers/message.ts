@@ -24,12 +24,13 @@ export const messageRouter = createTRPCRouter({
         where: { id: ctx.session.user.id },
         select: {
           cast: { select: { id: true } },
-          store: { select: { id: true } },
+          owner: { select: { stores: { select: { id: true } } } },
         },
       });
 
       const castId = user?.cast?.id;
-      const storeId = user?.store?.id;
+      const storeIds = user?.owner?.stores.map((s) => s.id) ?? [];
+      const storeId = storeIds[0];
 
       // 自分に関連するか確認
       const match = await ctx.prisma.match.findFirst({
@@ -52,9 +53,13 @@ export const messageRouter = createTRPCRouter({
           },
           store: {
             select: {
-              userId: true,
               name: true,
-              user: { select: { email: true } },
+              owner: {
+                select: {
+                  userId: true,
+                  user: { select: { email: true } },
+                },
+              },
             },
           },
         },
@@ -98,11 +103,11 @@ export const messageRouter = createTRPCRouter({
         await dispatchNotification({
           type: "MESSAGE_RECEIVED_STORE",
           payload: {
-            recipientUserId: match.store.userId,
+            recipientUserId: match.store.owner.userId,
             matchId: input.matchId,
-            storeEmail: shouldThrottle(input.matchId, match.store.userId)
+            storeEmail: shouldThrottle(input.matchId, match.store.owner.userId)
               ? null // スロットリング中はEmailスキップ
-              : match.store.user.email,
+              : match.store.owner.user.email,
             senderName: match.cast.nickname ?? "キャスト",
             messagePreview,
           },
@@ -142,12 +147,13 @@ export const messageRouter = createTRPCRouter({
         where: { id: ctx.session.user.id },
         select: {
           cast: { select: { id: true } },
-          store: { select: { id: true } },
+          owner: { select: { stores: { select: { id: true } } } },
         },
       });
 
       const castId = user?.cast?.id;
-      const storeId = user?.store?.id;
+      const storeIds = user?.owner?.stores.map((s) => s.id) ?? [];
+      const storeId = storeIds[0];
 
       // 自分に関連するか確認
       const match = await ctx.prisma.match.findFirst({
@@ -213,14 +219,14 @@ export const messageRouter = createTRPCRouter({
       where: { id: ctx.session.user.id },
       select: {
         cast: { select: { id: true } },
-        store: { select: { id: true } },
+        owner: { select: { stores: { select: { id: true } } } },
       },
     });
 
     const castId = user?.cast?.id;
-    const storeId = user?.store?.id;
+    const storeIds = user?.owner?.stores.map((s) => s.id) ?? [];
 
-    if (!castId && !storeId) {
+    if (!castId && storeIds.length === 0) {
       return { count: 0 };
     }
 
@@ -228,8 +234,8 @@ export const messageRouter = createTRPCRouter({
     const matches = await ctx.prisma.match.findMany({
       where: {
         OR: [
-          { castId: castId ?? "" },
-          { storeId: storeId ?? "" },
+          ...(castId ? [{ castId }] : []),
+          ...(storeIds.length > 0 ? [{ storeId: { in: storeIds } }] : []),
         ],
         status: "ACCEPTED",
       },

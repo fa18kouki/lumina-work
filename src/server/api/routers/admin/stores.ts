@@ -30,8 +30,10 @@ export const adminStoresRouter = createTRPCRouter({
           }),
         },
         include: {
-          user: {
-            select: { id: true, email: true },
+          owner: {
+            select: {
+              user: { select: { id: true, email: true } },
+            },
           },
           _count: {
             select: { matches: true, offers: true, interviews: true },
@@ -60,12 +62,16 @@ export const adminStoresRouter = createTRPCRouter({
       const store = await ctx.prisma.store.findUnique({
         where: { id: input.storeId },
         include: {
-          user: {
+          owner: {
             select: {
-              id: true,
-              email: true,
-              phone: true,
-              createdAt: true,
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  phone: true,
+                  createdAt: true,
+                },
+              },
             },
           },
           _count: {

@@ -31,10 +31,14 @@ export const interviewRouter = createTRPCRouter({
           store: {
             select: {
               id: true,
-              userId: true,
               name: true,
               address: true,
-              user: { select: { email: true } },
+              owner: {
+                select: {
+                  userId: true,
+                  user: { select: { email: true } },
+                },
+              },
             },
           },
         },
@@ -58,7 +62,7 @@ export const interviewRouter = createTRPCRouter({
       // 権限確認（オファーに関連するユーザーのみ）
       const isRelated =
         offer.cast.userId === ctx.session.user.id ||
-        offer.store.userId === ctx.session.user.id;
+        offer.store.owner.userId === ctx.session.user.id;
 
       if (!isRelated) {
         throw new TRPCError({
@@ -95,9 +99,9 @@ export const interviewRouter = createTRPCRouter({
       await dispatchNotification({
         type: "INTERVIEW_SCHEDULED_STORE",
         payload: {
-          recipientUserId: offer.store.userId,
+          recipientUserId: offer.store.owner.userId,
           interviewId: interview.id,
-          storeEmail: offer.store.user.email,
+          storeEmail: offer.store.owner.user.email,
           castNickname: offer.cast.nickname ?? "キャスト",
           scheduledAt: input.scheduledAt,
         },
@@ -124,22 +128,22 @@ export const interviewRouter = createTRPCRouter({
         where: { id: ctx.session.user.id },
         select: {
           cast: { select: { id: true } },
-          store: { select: { id: true } },
+          owner: { select: { stores: { select: { id: true } } } },
         },
       });
 
       const castId = user?.cast?.id;
-      const storeId = user?.store?.id;
+      const storeIds = user?.owner?.stores.map((s) => s.id) ?? [];
 
-      if (!castId && !storeId) {
+      if (!castId && storeIds.length === 0) {
         return { interviews: [], nextCursor: undefined };
       }
 
       const interviews = await ctx.prisma.interview.findMany({
         where: {
           OR: [
-            { castId: castId ?? "" },
-            { storeId: storeId ?? "" },
+            ...(castId ? [{ castId }] : []),
+            ...(storeIds.length > 0 ? [{ storeId: { in: storeIds } }] : []),
           ],
           ...(input.status && { status: input.status }),
         },
@@ -193,12 +197,12 @@ export const interviewRouter = createTRPCRouter({
         where: { id: ctx.session.user.id },
         select: {
           cast: { select: { id: true } },
-          store: { select: { id: true } },
+          owner: { select: { stores: { select: { id: true } } } },
         },
       });
 
       const castId = user?.cast?.id;
-      const storeId = user?.store?.id;
+      const storeId = user?.owner?.stores[0]?.id;
 
       const interview = await ctx.prisma.interview.findFirst({
         where: {
@@ -220,9 +224,13 @@ export const interviewRouter = createTRPCRouter({
           },
           store: {
             select: {
-              userId: true,
               name: true,
-              user: { select: { email: true } },
+              owner: {
+                select: {
+                  userId: true,
+                  user: { select: { email: true } },
+                },
+              },
             },
           },
         },
@@ -268,9 +276,9 @@ export const interviewRouter = createTRPCRouter({
         await dispatchNotification({
           type: "INTERVIEW_CANCELLED_STORE",
           payload: {
-            recipientUserId: interview.store.userId,
+            recipientUserId: interview.store.owner.userId,
             interviewId: interview.id,
-            storeEmail: interview.store.user.email,
+            storeEmail: interview.store.owner.user.email,
             castNickname: interview.cast.nickname ?? "キャスト",
             scheduledAt,
           },
@@ -292,10 +300,10 @@ export const interviewRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const user = await ctx.prisma.user.findUnique({
         where: { id: ctx.session.user.id },
-        select: { store: { select: { id: true } } },
+        select: { owner: { select: { stores: { select: { id: true } } } } },
       });
 
-      const storeId = user?.store?.id;
+      const storeId = user?.owner?.stores[0]?.id;
 
       if (!storeId) {
         throw new TRPCError({
@@ -361,10 +369,10 @@ export const interviewRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const user = await ctx.prisma.user.findUnique({
         where: { id: ctx.session.user.id },
-        select: { store: { select: { id: true } } },
+        select: { owner: { select: { stores: { select: { id: true } } } } },
       });
 
-      const storeId = user?.store?.id;
+      const storeId = user?.owner?.stores[0]?.id;
 
       if (!storeId) {
         throw new TRPCError({

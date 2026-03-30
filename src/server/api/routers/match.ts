@@ -16,7 +16,7 @@ export const matchRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const user = await ctx.prisma.user.findUnique({
         where: { id: ctx.session.user.id },
-        select: { role: true, cast: { select: { id: true } }, store: { select: { id: true } } },
+        select: { role: true, cast: { select: { id: true } }, owner: { select: { stores: { select: { id: true } } } } },
       });
 
       if (!user) {
@@ -24,7 +24,7 @@ export const matchRouter = createTRPCRouter({
       }
 
       const isCast = user.role === "CAST";
-      const profileId = isCast ? user.cast?.id : user.store?.id;
+      const profileId = isCast ? user.cast?.id : user.owner?.stores[0]?.id;
 
       if (!profileId) {
         return { matches: [], nextCursor: undefined };
@@ -84,11 +84,11 @@ export const matchRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const user = await ctx.prisma.user.findUnique({
         where: { id: ctx.session.user.id },
-        select: { cast: { select: { id: true } }, store: { select: { id: true } } },
+        select: { cast: { select: { id: true } }, owner: { select: { stores: { select: { id: true } } } } },
       });
 
       const castId = user?.cast?.id;
-      const storeId = user?.store?.id;
+      const storeId = user?.owner?.stores[0]?.id;
 
       // 自分に関連するか確認
       const match = await ctx.prisma.match.findFirst({

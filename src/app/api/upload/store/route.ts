@@ -36,11 +36,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const store = await prisma.store.findUnique({
+    const owner = await prisma.owner.findUnique({
       where: { userId: session.user.id },
-      select: { id: true },
+      select: { stores: { select: { id: true }, take: 1 } },
     });
 
+    const store = owner?.stores[0];
     if (!store) {
       return NextResponse.json({ error: "Store not found" }, { status: 404 });
     }
@@ -83,11 +84,12 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "url is required" }, { status: 400 });
     }
 
-    const store = await prisma.store.findUnique({
+    const ownerDel = await prisma.owner.findUnique({
       where: { userId: session.user.id },
-      select: { id: true, photos: true },
+      select: { stores: { select: { id: true, photos: true }, take: 1 } },
     });
 
+    const store = ownerDel?.stores[0];
     if (!store) {
       return NextResponse.json({ error: "Store not found" }, { status: 404 });
     }
