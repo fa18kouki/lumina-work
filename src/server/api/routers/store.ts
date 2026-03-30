@@ -3,30 +3,36 @@ import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import {
   createTRPCRouter,
-  protectedProcedure,
-  storeProcedure,
+  ownerProcedure,
+  resolveOwnerStore,
   publicProcedure,
 } from "@/server/api/trpc";
 import { dispatchNotification } from "@/server/notifications";
+
+const storeIdInput = z.object({ storeId: z.string() });
 
 export const storeRouter = createTRPCRouter({
   /**
    * 店舗プロフィール取得
    */
-  getProfile: protectedProcedure.query(async ({ ctx }) => {
-    const store = await ctx.prisma.store.findUnique({
-      where: { userId: ctx.session.user.id },
-    });
-
-    return store;
-  }),
+  getProfile: ownerProcedure
+    .input(storeIdInput)
+    .query(async ({ ctx, input }) => {
+      const { store } = await resolveOwnerStore(
+        ctx.prisma,
+        ctx.session.user.id,
+        input.storeId,
+      );
+      return store;
+    }),
 
   /**
-   * 店舗プロフィール作成・更新
+   * 店舗プロフィール更新
    */
-  upsertProfile: protectedProcedure
+  updateProfile: ownerProcedure
     .input(
       z.object({
+        storeId: z.string(),
         name: z.string().min(1).max(100),
         area: z.string().min(1).max(50),
         address: z.string().min(1).max(200),
@@ -54,13 +60,19 @@ export const storeRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const { store } = await resolveOwnerStore(
+        ctx.prisma,
+        ctx.session.user.id,
+        input.storeId,
+      );
+
       const mustConditions = input.mustConditions as Prisma.InputJsonValue | undefined;
       const wantConditions = input.wantConditions as Prisma.InputJsonValue | undefined;
       const salarySystem = input.salarySystem as Prisma.InputJsonValue | undefined;
 
-      const store = await ctx.prisma.store.upsert({
-        where: { userId: ctx.session.user.id },
-        update: {
+      const updated = await ctx.prisma.store.update({
+        where: { id: store.id },
+        data: {
           name: input.name,
           area: input.area,
           address: input.address,
@@ -73,83 +85,71 @@ export const storeRouter = createTRPCRouter({
           wantConditions,
           referralSource: input.referralSource,
         },
-        create: {
-          userId: ctx.session.user.id,
-          name: input.name,
-          area: input.area,
-          address: input.address,
-          isVerified: true,
-          description: input.description,
-          photos: input.photos ?? [],
-          businessHours: input.businessHours,
-          salarySystem,
-          benefits: input.benefits ?? [],
-          mustConditions,
-          wantConditions,
-          referralSource: input.referralSource,
-        },
       });
 
-      // ユーザーロールをSTOREに設定
-      await ctx.prisma.user.update({
-        where: { id: ctx.session.user.id },
-        data: { role: "STORE" },
-      });
-
-      return store;
+      return updated;
     }),
 
   /**
    * 店舗設定取得
    */
-  getSettings: storeProcedure.query(async ({ ctx }) => {
-    const store = await ctx.prisma.store.findUnique({
-      where: { userId: ctx.session.user.id },
-      select: {
-        notificationSettings: true,
-        contactPhone: true,
-        contactEmail: true,
-        lineUrl: true,
-        preferredContactMethod: true,
-      },
-    });
+  getSettings: ownerProcedure
+    .input(storeIdInput)
+    .query(async ({ ctx, input }) => {
+      const { store } = await resolveOwnerStore(
+        ctx.prisma,
+        ctx.session.user.id,
+        input.storeId,
+      );
 
-    const user = await ctx.prisma.user.findUnique({
-      where: { id: ctx.session.user.id },
-      select: { email: true, phone: true },
-    });
+      const storeData = await ctx.prisma.store.findUnique({
+        where: { id: store.id },
+        select: {
+          notificationSettings: true,
+          contactPhone: true,
+          contactEmail: true,
+          lineUrl: true,
+          preferredContactMethod: true,
+        },
+      });
 
-    const defaultNotifications = {
-      newApplicant: true,
-      offerResponse: true,
-      interviewReminder: true,
-      messageReceived: true,
-      systemAnnouncement: true,
-    };
+      const user = await ctx.prisma.user.findUnique({
+        where: { id: ctx.session.user.id },
+        select: { email: true, phone: true },
+      });
 
-    const notifications = (store?.notificationSettings as Record<string, boolean> | null) ?? defaultNotifications;
+      const defaultNotifications = {
+        newApplicant: true,
+        offerResponse: true,
+        interviewReminder: true,
+        messageReceived: true,
+        systemAnnouncement: true,
+      };
 
-    return {
-      notifications: { ...defaultNotifications, ...notifications },
-      contactInfo: {
-        contactPhone: store?.contactPhone ?? "",
-        contactEmail: store?.contactEmail ?? "",
-        lineUrl: store?.lineUrl ?? "",
-        preferredContactMethod: store?.preferredContactMethod ?? null,
-      },
-      account: {
-        email: user?.email ?? "",
-        phone: user?.phone ?? "",
-      },
-    };
-  }),
+      const notifications = (storeData?.notificationSettings as Record<string, boolean> | null) ?? defaultNotifications;
+
+      return {
+        notifications: { ...defaultNotifications, ...notifications },
+        contactInfo: {
+          contactPhone: storeData?.contactPhone ?? "",
+          contactEmail: storeData?.contactEmail ?? "",
+          lineUrl: storeData?.lineUrl ?? "",
+          preferredContactMethod: storeData?.preferredContactMethod ?? null,
+        },
+        account: {
+          email: user?.email ?? "",
+          phone: user?.phone ?? "",
+        },
+      };
+    }),
 
   /**
    * 通知設定更新
    */
-  updateNotificationSettings: storeProcedure
+  updateNotificationSettings: ownerProcedure
     .input(
       z.object({
+        storeId: z.string(),
         newApplicant: z.boolean(),
         offerResponse: z.boolean(),
         interviewReminder: z.boolean(),
@@ -158,21 +158,36 @@ export const storeRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const store = await ctx.prisma.store.update({
-        where: { userId: ctx.session.user.id },
-        data: { notificationSettings: input },
+      const { store } = await resolveOwnerStore(
+        ctx.prisma,
+        ctx.session.user.id,
+        input.storeId,
+      );
+
+      const updated = await ctx.prisma.store.update({
+        where: { id: store.id },
+        data: {
+          notificationSettings: {
+            newApplicant: input.newApplicant,
+            offerResponse: input.offerResponse,
+            interviewReminder: input.interviewReminder,
+            messageReceived: input.messageReceived,
+            systemAnnouncement: input.systemAnnouncement,
+          },
+        },
         select: { notificationSettings: true },
       });
 
-      return store.notificationSettings as Record<string, boolean>;
+      return updated.notificationSettings as Record<string, boolean>;
     }),
 
   /**
    * 連絡先情報更新
    */
-  updateContactInfo: storeProcedure
+  updateContactInfo: ownerProcedure
     .input(
       z.object({
+        storeId: z.string(),
         contactPhone: z.string().regex(/^[0-9\-+()]{7,20}$/).optional().or(z.literal("")),
         contactEmail: z.string().email().optional().or(z.literal("")),
         lineUrl: z.string().url().max(200).optional().or(z.literal("")),
@@ -180,8 +195,14 @@ export const storeRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const store = await ctx.prisma.store.update({
-        where: { userId: ctx.session.user.id },
+      const { store } = await resolveOwnerStore(
+        ctx.prisma,
+        ctx.session.user.id,
+        input.storeId,
+      );
+
+      const updated = await ctx.prisma.store.update({
+        where: { id: store.id },
         data: {
           contactPhone: input.contactPhone || null,
           contactEmail: input.contactEmail || null,
@@ -196,15 +217,16 @@ export const storeRouter = createTRPCRouter({
         },
       });
 
-      return store;
+      return updated;
     }),
 
   /**
    * キャスト検索
    */
-  searchCasts: storeProcedure
+  searchCasts: ownerProcedure
     .input(
       z.object({
+        storeId: z.string(),
         area: z.string().optional(),
         minAge: z.number().min(18).optional(),
         maxAge: z.number().max(99).optional(),
@@ -216,20 +238,16 @@ export const storeRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const store = await ctx.prisma.store.findUnique({
-        where: { userId: ctx.session.user.id },
-        select: { id: true },
-      });
-
-      if (!store) {
-        return { casts: [], nextCursor: undefined };
-      }
+      const { store } = await resolveOwnerStore(
+        ctx.prisma,
+        ctx.session.user.id,
+        input.storeId,
+      );
 
       const casts = await ctx.prisma.cast.findMany({
         where: {
           idVerified: true,
           isSuspended: false,
-          // みちゃだめ: この店舗をブロックしているキャストを除外
           NOT: {
             storeBlocks: {
               some: { storeId: store.id },
@@ -249,7 +267,6 @@ export const storeRouter = createTRPCRouter({
           }),
         },
         select: {
-          // 基本情報
           id: true,
           nickname: true,
           age: true,
@@ -257,20 +274,17 @@ export const storeRouter = createTRPCRouter({
           photos: true,
           description: true,
           createdAt: true,
-          // 経験・実績
           totalExperienceYears: true,
           previousHourlyRate: true,
           monthlySales: true,
           monthlyNominations: true,
           birthdaySales: true,
           alcoholTolerance: true,
-          // 身体情報（weightは除外）
           height: true,
           bust: true,
           waist: true,
           hip: true,
           cupSize: true,
-          // 希望条件
           desiredAreas: true,
           desiredHourlyRate: true,
           desiredMonthlyIncome: true,
@@ -278,13 +292,11 @@ export const storeRouter = createTRPCRouter({
           preferredAtmosphere: true,
           preferredClientele: true,
           isAvailableNow: true,
-          // 勤務条件
           shiftPreferences: true,
           hasTattoo: true,
           dressAvailability: true,
           needsPickup: true,
           birthdayEventWillingness: true,
-          // スキル・特性
           hobbies: true,
           specialSkills: true,
           languageSkills: true,
@@ -312,32 +324,29 @@ export const storeRouter = createTRPCRouter({
   /**
    * オファー送信
    */
-  sendOffer: storeProcedure
+  sendOffer: ownerProcedure
     .input(
       z.object({
+        storeId: z.string(),
         castId: z.string(),
         message: z.string().min(1).max(1000),
         expiresInDays: z.number().min(1).max(30).default(7),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const store = await ctx.prisma.store.findUnique({
-        where: { userId: ctx.session.user.id },
-        select: { id: true, name: true, area: true, subscription: true },
-      });
-
-      if (!store) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "店舗プロフィールが見つかりません",
-        });
-      }
+      const { owner, store } = await resolveOwnerStore(
+        ctx.prisma,
+        ctx.session.user.id,
+        input.storeId,
+      );
 
       // オファー上限チェック
-      const subscription = store.subscription;
+      const subscription = await ctx.prisma.subscription.findUnique({
+        where: { ownerId: owner.id },
+      });
       const now = new Date();
       const isInTrial = subscription?.trialEndsAt && subscription.trialEndsAt > now;
-      const offerLimit = subscription?.offerLimit ?? 10; // デフォルト: カジュアル相当
+      const offerLimit = subscription?.offerLimit ?? 10;
 
       if (!isInTrial && offerLimit !== null) {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -356,7 +365,6 @@ export const storeRouter = createTRPCRouter({
         }
       }
 
-      // 既存のオファーがないか確認
       const existingOffer = await ctx.prisma.offer.findFirst({
         where: {
           storeId: store.id,
@@ -372,7 +380,6 @@ export const storeRouter = createTRPCRouter({
         });
       }
 
-      // キャスト情報を取得（通知に必要）
       const cast = await ctx.prisma.cast.findUnique({
         where: { id: input.castId },
         select: {
@@ -390,7 +397,6 @@ export const storeRouter = createTRPCRouter({
         });
       }
 
-      // みちゃだめ: ブロックされている場合は汎用エラーを返す
       const isBlocked = await ctx.prisma.castStoreBlock.findUnique({
         where: {
           castId_storeId: { castId: input.castId, storeId: store.id },
@@ -415,7 +421,6 @@ export const storeRouter = createTRPCRouter({
         },
       });
 
-      // 通知送信（fire-and-forget: 失敗してもオファー作成に影響しない）
       dispatchNotification({
         type: "OFFER_RECEIVED",
         payload: {
@@ -438,23 +443,21 @@ export const storeRouter = createTRPCRouter({
   /**
    * 送信オファー一覧
    */
-  getSentOffers: storeProcedure
+  getSentOffers: ownerProcedure
     .input(
       z.object({
+        storeId: z.string(),
         status: z.enum(["PENDING", "ACCEPTED", "REJECTED", "EXPIRED"]).optional(),
         cursor: z.string().optional(),
         limit: z.number().min(1).max(50).default(20),
       })
     )
     .query(async ({ ctx, input }) => {
-      const store = await ctx.prisma.store.findUnique({
-        where: { userId: ctx.session.user.id },
-        select: { id: true },
-      });
-
-      if (!store) {
-        return { offers: [], nextCursor: undefined };
-      }
+      const { store } = await resolveOwnerStore(
+        ctx.prisma,
+        ctx.session.user.id,
+        input.storeId,
+      );
 
       const offers = await ctx.prisma.offer.findMany({
         where: {
@@ -485,7 +488,6 @@ export const storeRouter = createTRPCRouter({
         nextCursor = nextItem?.id;
       }
 
-      // ACCEPTED以外のオファーではキャスト連絡先をマスク
       const maskedOffers = offers.map((offer) => {
         if (offer.status !== "ACCEPTED" || !offer.cast) {
           return {

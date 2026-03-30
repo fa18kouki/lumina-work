@@ -27,19 +27,19 @@ export async function POST(req: NextRequest) {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
-      const storeId = session.metadata?.storeId;
+      const ownerId = session.metadata?.ownerId;
       const plan = session.metadata?.plan as SubscriptionPlan | undefined;
       const offerLimitStr = session.metadata?.offerLimit;
       const trialEndsAtStr = session.metadata?.trialEndsAt;
 
-      if (storeId && plan && VALID_PLANS.includes(plan) && session.subscription && session.customer) {
+      if (ownerId && plan && VALID_PLANS.includes(plan) && session.subscription && session.customer) {
         const offerLimit = offerLimitStr ? parseInt(offerLimitStr, 10) : null;
         const trialEndsAt = trialEndsAtStr ? new Date(trialEndsAtStr) : null;
 
         await prisma.subscription.upsert({
-          where: { storeId },
+          where: { ownerId },
           create: {
-            storeId,
+            ownerId,
             stripeCustomerId: session.customer as string,
             stripeSubscriptionId: session.subscription as string,
             plan,
