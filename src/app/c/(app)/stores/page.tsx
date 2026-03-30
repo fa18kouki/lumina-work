@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAppSession } from "@/lib/auth-helpers";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
@@ -31,34 +31,67 @@ function formatSalary(salarySystem: unknown): string {
 }
 
 export default function StoresPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh]"><Spinner /></div>}>
+      <StoresContent />
+    </Suspense>
+  );
+}
+
+function StoresContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status } = useAppSession();
-  const [selectedTag, setSelectedTag] = useState("すべて");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  const [selectedTag, setSelectedTag] = useState(searchParams.get("tag") ?? "すべて");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "");
 
-  useEffect(() => {
-    if (status === "unauthenticated" || (session && session.user.role !== "CAST")) {
-      if (status === "unauthenticated") router.push("/c/login");
-      else if (session?.user.role !== "CAST") router.push("/c/login");
-    }
-  }, [session, status, router]);
-
-  const { data: storesData, isLoading } = trpc.cast.searchStores.useQuery({
-    area: debouncedQuery || undefined,
-  });
+  // 全店舗を一度だけ取得（フィルタリングはフロントで行う）
+  const { data: storesData, isLoading } = trpc.cast.searchStores.useQuery({});
   const allStores = storesData?.stores ?? [];
 
-  const filteredStores = allStores.filter((store) => {
-    if (selectedTag === "すべて") return true;
-    const benefits = (store.benefits as string[] | null) ?? [];
-    return benefits.some((b) => b.includes(selectedTag.replace("OK", "").replace("あり", "")));
-  });
+  const filteredStores = useMemo(() => {
+    return allStores.filter((store) => {
+      // キーワード検索（エリア・店舗名）
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matchArea = store.area?.toLowerCase().includes(q);
+        const matchName = store.name.toLowerCase().includes(q);
+        if (!matchArea && !matchName) return false;
+      }
+      // タグフィルター
+      if (selectedTag !== "すべて") {
+        const benefits = (store.benefits as string[] | null) ?? [];
+        if (!benefits.some((b) => b.includes(selectedTag.replace("OK", "").replace("あり", "")))) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [allStores, searchQuery, selectedTag]);
+
+  const handleSelectTag = (tag: string) => {
+    setSelectedTag(tag);
+    updateURL(searchQuery, tag);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    updateURL(value, selectedTag);
+  };
+
+  const updateURL = (query: string, tag: string) => {
+    const params = new URLSearchParams();
+    if (query) params.set("q", query);
+    if (tag !== "すべて") params.set("tag", tag);
+    const qs = params.toString();
+    router.replace(`/c/stores${qs ? `?${qs}` : ""}`, { scroll: false });
+  };
+
+  if (status === "unauthenticated" || (session && session.user.role !== "CAST")) {
+    router.push("/c/login");
+    return null;
+  }
 
   if (status === "loading" || isLoading || !session || session.user.role !== "CAST") {
     return (
@@ -77,7 +110,7 @@ export default function StoresPage() {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="エリア、キーワードで検索..."
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-(--text-sub)"
             />
@@ -90,7 +123,7 @@ export default function StoresPage() {
         <TagFilter
           tags={FILTER_TAGS}
           selectedTag={selectedTag}
-          onSelectTag={setSelectedTag}
+          onSelectTag={handleSelectTag}
         />
       </div>
 

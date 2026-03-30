@@ -21,10 +21,10 @@ export function Hero() {
           <nav className="flex items-center gap-2 sm:gap-3" aria-label="メイン">
             {session ? (
               <Link
-                href={session.user.role === "STORE" ? "/s/dashboard" : "/c/dashboard"}
+                href={session.user.role === "OWNER" ? "/o/dashboard" : "/c/dashboard"}
                 className="rounded-full bg-pink-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-pink-600"
               >
-                {session.user.role === "STORE" ? "管理画面" : "マイページ"}
+                {session.user.role === "OWNER" ? "管理画面" : "マイページ"}
               </Link>
             ) : (
               <>

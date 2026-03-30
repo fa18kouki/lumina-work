@@ -29,19 +29,19 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
   const [referralSource, setReferralSource] = useState("");
 
   const utils = trpc.useUtils();
-  const upsertProfile = trpc.store.upsertProfile.useMutation();
+  const createStore = trpc.owner.createStore.useMutation();
 
   const isStep1Valid = name.trim() !== "" && area !== "" && address.trim() !== "";
   const isStep2Valid = referralSource !== "";
 
   const handleComplete = async () => {
-    await upsertProfile.mutateAsync({
+    await createStore.mutateAsync({
       name: name.trim(),
       area,
       address: address.trim(),
       referralSource,
     });
-    await utils.store.getProfile.invalidate();
+    await utils.owner.listStores.invalidate();
     onComplete();
   };
 
@@ -147,8 +147,8 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
               <Button
                 size="lg"
                 className="flex-1"
-                disabled={!isStep2Valid || upsertProfile.isPending}
-                isLoading={upsertProfile.isPending}
+                disabled={!isStep2Valid || createStore.isPending}
+                isLoading={createStore.isPending}
                 onClick={handleComplete}
               >
                 完了

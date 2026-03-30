@@ -7,9 +7,9 @@ export function FixedCTA() {
   const { data: session } = useSession();
 
   const isLoggedIn = !!session;
-  const isStore = session?.user?.role === "STORE";
+  const isStore = session?.user?.role === "OWNER";
 
-  const href = isLoggedIn ? (isStore ? "/s/dashboard" : "/c/dashboard") : "/diagnosis";
+  const href = isLoggedIn ? (isStore ? "/o/dashboard" : "/c/dashboard") : "/diagnosis";
 
   const label = isLoggedIn
     ? isStore
