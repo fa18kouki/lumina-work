@@ -54,7 +54,7 @@ export function CastNav() {
       </div>
 
       {/* ナビゲーション項目 */}
-      <ul className="flex justify-around h-20 sm:h-[85px] items-center pb-5 md:pb-0 md:h-auto md:flex-col md:p-2 md:space-y-1 md:flex-1">
+      <ul className="flex justify-around h-20 sm:h-[85px] items-center pb-5 md:pb-0 md:h-auto md:flex-col md:justify-start md:p-3 md:pt-4 md:space-y-1">
         {navItems.map((item) => {
           const isActive =
             pathname === item.href ||
@@ -89,6 +89,9 @@ export function CastNav() {
           );
         })}
       </ul>
+
+      {/* スペーサー（デスクトップのみ） */}
+      <div className="hidden md:flex md:flex-1" />
 
       {/* ログアウトボタン（デスクトップのみ） */}
       <div className="hidden md:block p-3 border-t border-gray-100">
