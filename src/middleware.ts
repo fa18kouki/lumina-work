@@ -10,6 +10,11 @@ const publicRoutes = [
   "/privacy",
   "/terms",
   "/tokushoho",
+  "/o/login",
+  "/o/register",
+  "/o/forgot-password",
+  "/o/reset-password",
+  // 旧 /s/ 認証ルート（リダイレクト用に残す）
   "/s/login",
   "/s/register",
   "/s/forgot-password",
@@ -62,11 +67,17 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 店舗ルート: Supabase Auth cookieを確認
-  if (pathname.startsWith("/s")) {
+  // 旧 /s/ ルートは /o/ にリダイレクト
+  if (pathname.startsWith("/s/")) {
+    const newPath = pathname.replace(/^\/s\//, "/o/");
+    return NextResponse.redirect(new URL(newPath, req.nextUrl.origin));
+  }
+
+  // オーナールート: Supabase Auth cookieを確認
+  if (pathname.startsWith("/o")) {
     const hasSession = await hasSupabaseSession(req);
     if (!hasSession) {
-      const url = new URL("/s/login", req.nextUrl.origin);
+      const url = new URL("/o/login", req.nextUrl.origin);
       url.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(url);
     }

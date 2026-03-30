@@ -6,10 +6,10 @@ import { prisma } from "@/server/db";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/s/dashboard";
+  const next = searchParams.get("next") ?? "/o/dashboard";
 
   if (!code) {
-    return NextResponse.redirect(new URL("/s/login?error=missing_code", origin));
+    return NextResponse.redirect(new URL("/o/login?error=missing_code", origin));
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -34,25 +34,29 @@ export async function GET(request: NextRequest) {
 
   if (error || !data.user) {
     return NextResponse.redirect(
-      new URL("/s/login?error=auth_failed", origin)
+      new URL("/o/login?error=auth_failed", origin)
     );
   }
 
-  // Prisma User が存在しなければ STORE として作成
+  // Prisma User が存在しなければ OWNER として作成し、Owner レコードも同時作成
   const existingUser = await prisma.user.findUnique({
     where: { supabaseAuthId: data.user.id },
   });
 
   if (!existingUser) {
-    await prisma.user.create({
+    const newUser = await prisma.user.create({
       data: {
         email: data.user.email,
         emailVerified: data.user.email_confirmed_at
           ? new Date(data.user.email_confirmed_at)
           : null,
-        role: "STORE",
+        role: "OWNER",
         supabaseAuthId: data.user.id,
       },
+    });
+
+    await prisma.owner.create({
+      data: { userId: newUser.id },
     });
   }
 

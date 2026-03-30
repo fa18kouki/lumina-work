@@ -4,7 +4,7 @@ import { createContext, useContext } from "react";
 import { useSession as useNextAuthSession } from "next-auth/react";
 import type { UserRole } from "@prisma/client";
 
-export type DemoRole = "CAST" | "STORE";
+export type DemoRole = "CAST" | "OWNER";
 
 export interface DemoUser {
   id: string;
@@ -34,7 +34,7 @@ export function createDemoSession(role: DemoRole): DemoSession {
     user: {
       id: userId,
       email: `${userId}@demo.local`,
-      name: role === "CAST" ? "デモキャスト" : "デモ店舗",
+      name: role === "CAST" ? "デモキャスト" : "デモオーナー",
       role,
     },
     expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),

@@ -56,9 +56,9 @@ export function useAppSession() {
 }
 
 /**
- * 店舗向け Supabase Auth セッションフック
+ * オーナー向け Supabase Auth セッションフック
  */
-export function useStoreSession() {
+export function useOwnerSession() {
   const [user, setUser] = useState<User | null>(null);
   const [status, setStatus] = useState<"loading" | "authenticated" | "unauthenticated">("loading");
 
@@ -90,16 +90,22 @@ export async function appSignOut(redirectUrl = "/") {
   await signOut({ callbackUrl: redirectUrl });
 }
 
+/** @deprecated useOwnerSession を使用してください */
+export const useStoreSession = useOwnerSession;
+
 /**
- * 店舗ログアウト処理（Supabase Auth用）
+ * オーナーログアウト処理（Supabase Auth用）
  */
-export function useStoreSignOut() {
+export function useOwnerSignOut() {
   const router = useRouter();
 
   return useCallback(async () => {
     const supabase = createBrowserClient();
     await supabase.auth.signOut();
-    router.push("/s/login");
+    router.push("/o/login");
     router.refresh();
   }, [router]);
 }
+
+/** @deprecated useOwnerSignOut を使用してください */
+export const useStoreSignOut = useOwnerSignOut;

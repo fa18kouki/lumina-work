@@ -4,8 +4,8 @@ import { createServerClient } from "@/lib/supabase-auth";
 import { prisma } from "@/server/db";
 
 /**
- * 店舗がメール/パスワードでログインしたあと、
- * Prisma User を role=STORE で作成または既存をそのまま返す。
+ * オーナーがメール/パスワードでログインしたあと、
+ * Prisma User を role=OWNER で作成または既存をそのまま返す。
  * Cookie の Supabase セッションでユーザーを識別する。
  */
 export async function POST() {
@@ -72,11 +72,16 @@ export async function POST() {
           supabaseAuthId: supabaseUser.id,
         },
       });
+
+      // Owner レコードも同時作成
+      await prisma.owner.create({
+        data: { userId: prismaUser.id },
+      });
     }
 
     return NextResponse.json({ ok: true, userId: prismaUser.id });
   } catch (e) {
-    console.error("[sync-store-user]", e);
+    console.error("[sync-owner-user]", e);
     return NextResponse.json(
       { error: "Internal error", message: "Failed to sync user" },
       { status: 500 }
