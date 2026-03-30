@@ -139,23 +139,57 @@ export const castProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 });
 
 /**
- * 店舗専用プロシージャ
+ * オーナー専用プロシージャ
  */
-export const storeProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+export const ownerProcedure = protectedProcedure.use(async ({ ctx, next }) => {
   const user = await ctx.prisma.user.findUnique({
     where: { id: ctx.session.user.id },
     select: { role: true },
   });
 
-  if (user?.role !== "STORE") {
+  if (user?.role !== "OWNER") {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message: "店舗のみアクセス可能です",
+      message: "オーナーのみアクセス可能です",
     });
   }
 
   return next({ ctx });
 });
+
+/**
+ * オーナーが所有する店舗を解決するヘルパー
+ */
+export async function resolveOwnerStore(
+  prisma: typeof import("@/server/db").prisma,
+  userId: string,
+  storeId: string,
+) {
+  const owner = await prisma.owner.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+
+  if (!owner) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "オーナー情報が見つかりません",
+    });
+  }
+
+  const store = await prisma.store.findFirst({
+    where: { id: storeId, ownerId: owner.id },
+  });
+
+  if (!store) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "店舗が見つかりません、またはアクセス権限がありません",
+    });
+  }
+
+  return { owner, store };
+}
 
 /**
  * 管理者専用プロシージャ
