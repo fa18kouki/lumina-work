@@ -50,7 +50,7 @@ export default function CastDashboard() {
         <div>
           <p className="text-sm text-(--text-sub)">今日も頑張ろう！</p>
           <h1 className="text-2xl font-bold text-(--text-main)">
-            こんにちは、{session.user.name ?? profile?.nickname ?? "ゲスト"}さん
+            こんにちは、{session.user.name || profile?.nickname || "ゲスト"}さん
           </h1>
         </div>
         <div className="relative">

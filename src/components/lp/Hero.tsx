@@ -52,7 +52,7 @@ export function Hero() {
           alt="ナイトワーク求人サービス LUMINA のイメージ"
           fill
           priority
-          className="object-cover object-[80%_center] sm:object-[70%_center] lg:object-[60%_center]"
+          className="object-cover object-[80%_20%] sm:object-[70%_20%] lg:object-[60%_20%]"
           sizes="100vw"
         />
         <div

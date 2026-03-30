@@ -78,6 +78,7 @@ export const storeRouter = createTRPCRouter({
           name: input.name,
           area: input.area,
           address: input.address,
+          isVerified: true,
           description: input.description,
           photos: input.photos ?? [],
           businessHours: input.businessHours,

@@ -35,6 +35,12 @@ export default function StoresPage() {
   const { data: session, status } = useAppSession();
   const [selectedTag, setSelectedTag] = useState("すべて");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (status === "unauthenticated" || (session && session.user.role !== "CAST")) {
@@ -44,7 +50,7 @@ export default function StoresPage() {
   }, [session, status, router]);
 
   const { data: storesData, isLoading } = trpc.cast.searchStores.useQuery({
-    area: searchQuery || undefined,
+    area: debouncedQuery || undefined,
   });
   const allStores = storesData?.stores ?? [];
 

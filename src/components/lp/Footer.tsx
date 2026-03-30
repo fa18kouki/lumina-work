@@ -9,7 +9,7 @@ const legalLinks = [
 
 const supportInfo = [
   { label: "苦情処理窓口" },
-  { label: "メール: support@lumina.jp" },
+  { label: "メール: support@lumina-work.jp" },
 ];
 
 export function Footer() {
