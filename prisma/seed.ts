@@ -311,7 +311,7 @@ async function main() {
     },
   ];
 
-  const createdStores: { userId: string; storeId: string }[] = [];
+  const createdStores: { userId: string; storeId: string; ownerId: string }[] = [];
 
   for (const s of stores) {
     const user = await prisma.user.upsert({
@@ -319,21 +319,27 @@ async function main() {
       update: {},
       create: {
         email: s.email,
-        role: "STORE",
+        role: "OWNER",
         emailVerified: new Date(),
       },
     });
 
-    const store = await prisma.store.upsert({
+    const owner = await prisma.owner.upsert({
       where: { userId: user.id },
+      update: {},
+      create: { userId: user.id },
+    });
+
+    const store = await prisma.store.upsert({
+      where: { id: `seed-${s.email}` },
       update: s.store,
       create: {
-        userId: user.id,
+        ownerId: owner.id,
         ...s.store,
       },
     });
 
-    createdStores.push({ userId: user.id, storeId: store.id });
+    createdStores.push({ userId: user.id, storeId: store.id, ownerId: owner.id });
     console.log(`  ✅ 店舗: ${s.store.name}`);
   }
 
@@ -1252,11 +1258,12 @@ async function main() {
   ];
 
   for (const sub of subscriptionData) {
+    const ownerId = createdStores[sub.storeIndex].ownerId;
     await prisma.subscription.upsert({
-      where: { storeId: createdStores[sub.storeIndex].storeId },
+      where: { ownerId },
       update: { plan: sub.plan, status: "ACTIVE", offerLimit: sub.offerLimit },
       create: {
-        storeId: createdStores[sub.storeIndex].storeId,
+        ownerId,
         plan: sub.plan,
         status: "ACTIVE",
         offerLimit: sub.offerLimit,

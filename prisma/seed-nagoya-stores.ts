@@ -375,16 +375,22 @@ async function main() {
         update: {},
         create: {
           email: s.email,
-          role: "STORE",
+          role: "OWNER",
           emailVerified: new Date(),
         },
       });
 
-      await prisma.store.upsert({
+      const owner = await prisma.owner.upsert({
         where: { userId: user.id },
+        update: {},
+        create: { userId: user.id },
+      });
+
+      await prisma.store.upsert({
+        where: { id: `seed-${s.email}` },
         update: s.store,
         create: {
-          userId: user.id,
+          ownerId: owner.id,
           ...s.store,
         },
       });

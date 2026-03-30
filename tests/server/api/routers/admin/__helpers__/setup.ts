@@ -88,25 +88,29 @@ export const createTestCastUser = async (
 export const createTestStoreUser = async (
   overrides?: Partial<User>,
   storeOverrides?: Partial<Store>
-): Promise<User & { store: Store }> => {
+): Promise<User & { owner: { id: string; stores: Store[] } }> => {
   const userId = overrides?.id ?? `store-user-${Date.now()}`;
   return prisma.user.create({
     data: {
       id: userId,
       email: overrides?.email ?? `store-${Date.now()}@test.com`,
-      role: "STORE",
+      role: "OWNER",
       ...overrides,
-      store: {
+      owner: {
         create: {
-          name: storeOverrides?.name ?? `テスト店舗${Date.now()}`,
-          area: storeOverrides?.area ?? "六本木",
-          address: storeOverrides?.address ?? "東京都港区六本木1-1-1",
-          ...storeOverrides,
+          stores: {
+            create: {
+              name: storeOverrides?.name ?? `テスト店舗${Date.now()}`,
+              area: storeOverrides?.area ?? "六本木",
+              address: storeOverrides?.address ?? "東京都港区六本木1-1-1",
+              ...storeOverrides,
+            },
+          },
         },
       },
     },
-    include: { store: true },
-  }) as Promise<User & { store: Store }>;
+    include: { owner: { include: { stores: true } } },
+  }) as Promise<User & { owner: { id: string; stores: Store[] } }>;
 };
 
 /**

@@ -169,17 +169,17 @@ describe("admin.users", () => {
       const caller = createAdminCaller(adminUserId);
       const result = await caller.admin.users.updateRole({
         userId: testUserId,
-        role: "STORE",
+        role: "OWNER",
       });
 
       expect(result.id).toBe(testUserId);
-      expect(result.role).toBe("STORE");
+      expect(result.role).toBe("OWNER");
 
       // データベースでも確認
       const updated = await prisma.user.findUnique({
         where: { id: testUserId },
       });
-      expect(updated?.role).toBe("STORE");
+      expect(updated?.role).toBe("OWNER");
     });
 
     it("存在しないユーザーはNOT_FOUNDエラー", async () => {
