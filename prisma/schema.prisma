@@ -55,7 +55,7 @@ model VerificationToken {
 
 enum UserRole {
   CAST
-  STORE
+  OWNER
   ADMIN
 }
 
@@ -77,7 +77,7 @@ model User {
 
   // ロール別プロフィール
   cast  Cast?
-  store Store?
+  owner Owner?
 
   // メッセージ送信者として
   sentMessages Message[]
@@ -95,93 +95,93 @@ enum CastRank {
 }
 
 enum IdVerificationStatus {
-  PENDING   // 未提出
+  PENDING // 未提出
   SUBMITTED // 提出済み・確認中
-  VERIFIED  // 確認済み
-  REJECTED  // 却下（再提出必要）
+  VERIFIED // 確認済み
+  REJECTED // 却下（再提出必要）
 }
 
 enum AlcoholTolerance {
-  NONE     // 飲めない
-  WEAK     // 弱い
+  NONE // 飲めない
+  WEAK // 弱い
   MODERATE // 普通
-  STRONG   // 強い
-  NG       // 完全NG
+  STRONG // 強い
+  NG // 完全NG
 }
 
 enum EmploymentStatus {
   INTERVIEW_ONLY // 面接のみ
-  TRIAL          // 体験（1体）
-  EMPLOYED       // 在籍
-  RESIGNED       // 退職
+  TRIAL // 体験（1体）
+  EMPLOYED // 在籍
+  RESIGNED // 退職
 }
 
 enum LivingArrangement {
   WITH_FAMILY // 実家
-  ALONE       // 独り暮らし
+  ALONE // 独り暮らし
   OTHER
 }
 
 enum Transportation {
-  CAR   // 車
+  CAR // 車
   TRAIN // 電車
   OTHER
 }
 
 enum DressAvailability {
-  OWNED  // 有
+  OWNED // 有
   RENTAL // レンタル
 }
 
 enum BusinessType {
-  CABARET   // キャバクラ
-  CLUB      // クラブ
-  LOUNGE    // ラウンジ
+  CABARET // キャバクラ
+  CLUB // クラブ
+  LOUNGE // ラウンジ
   GIRLS_BAR // ガールズバー
-  SNACK     // スナック
-  OTHER     // その他
+  SNACK // スナック
+  OTHER // その他
 }
 
 model Cast {
-  id          String   @id @default(cuid())
-  userId      String   @unique @map("user_id")
+  id          String    @id @default(cuid())
+  userId      String    @unique @map("user_id")
   nickname    String
   age         Int
   birthDate   DateTime? @map("birth_date") // 生年月日（18歳未満排除・マッチング用）
-  description String?  @db.Text
+  description String?   @db.Text
   photos      String[] // S3 URLs
 
   // 連絡先（マッチング後のDM誘導用）
-  instagramId       String? @map("instagram_id")    // InstagramアカウントID
-  lineId            String? @map("line_id")         // LINE ID（友だち追加用の表示ID）
+  instagramId       String? @map("instagram_id") // InstagramアカウントID
+  lineId            String? @map("line_id") // LINE ID（友だち追加用の表示ID）
   lineUserId        String? @unique @map("line_user_id") // LINE公式アカウント 友だち追加時のuserId（プッシュ通知用）
   currentListingUrl String? @map("current_listing_url") // 現在の在籍URL（情報サイト）
 
   // 経験・スキル（ランク査定用）
-  totalExperienceYears Int? @map("total_experience_years") // 総経験年数
-  previousHourlyRate   Int? @map("previous_hourly_rate")   // 過去の最高時給（円）
-  monthlySales         Int? @map("monthly_sales")          // 月間売上実績（円）
-  monthlyNominations   Int? @map("monthly_nominations")    // 月間指名本数
+  totalExperienceYears Int?              @map("total_experience_years") // 総経験年数
+  previousHourlyRate   Int?              @map("previous_hourly_rate") // 過去の最高時給（円）
+  monthlySales         Int?              @map("monthly_sales") // 月間売上実績（円）
+  monthlyNominations   Int?              @map("monthly_nominations") // 月間指名本数
   alcoholTolerance     AlcoholTolerance? @map("alcohol_tolerance") // お酒の強さ
 
   // 希望条件
   desiredAreas         String[] @map("desired_areas")
   desiredSalary        Int?     @map("desired_salary") // 後方互換のため残す
-  desiredHourlyRate    Int?     @map("desired_hourly_rate")    // 希望時給（円）
+  desiredHourlyRate    Int?     @map("desired_hourly_rate") // 希望時給（円）
   desiredMonthlyIncome Int?     @map("desired_monthly_income") // 希望月収（円）
   availableDaysPerWeek Int?     @map("available_days_per_week") // 出勤可能日数（週）
   preferredAtmosphere  String[] @map("preferred_atmosphere") // 希望の雰囲気（落ち着いた店、ワイワイ系など）
-  preferredClientele   String[] @map("preferred_clientele")  // 希望の客層
+  preferredClientele   String[] @map("preferred_clientele") // 希望の客層
 
   // リスク回避
   downtimeUntil  DateTime? @map("downtime_until") // ダウンタイム終了予定日（整形等）
   isAvailableNow Boolean   @default(true) @map("is_available_now") // 即日稼働可能フラグ
 
   // 自己PR（Sランク認定用）
-  birthdaySales        Int?     @map("birthday_sales")      // 生誕（バースデーイベント）売上実績
-  hasVipClients        Boolean  @default(false) @map("has_vip_clients") // 太客有無（有名人・企業社長等）
-  vipClientDescription String?  @db.Text @map("vip_client_description") // 太客の詳細（任意記述）
-  socialFollowers      Int?     @map("social_followers")    // SNSフォロワー数
+  birthdaySales        Int?    @map("birthday_sales") // 生誕（バースデーイベント）売上実績
+  hasVipClients        Boolean @default(false) @map("has_vip_clients") // 太客有無（有名人・企業社長等）
+  vipClientDescription String? @map("vip_client_description") @db.Text // 太客の詳細（任意記述）
+  socialFollowers      Int?    @map("social_followers") // SNSフォロワー数
 
   // ==================== カテゴリ1: 基本情報・連絡先（追加分） ====================
   fullName          String?           @map("full_name")
@@ -208,14 +208,14 @@ model Cast {
   emergencyContact  Json?             @map("emergency_contact") // {relation, name, address}
 
   // ==================== カテゴリ2: 属性・ライフスタイル ====================
-  livingArrangement  LivingArrangement? @map("living_arrangement")
-  transportation     Transportation?
-  needsPickup        Boolean?           @map("needs_pickup")
-  hasTattoo          Boolean?           @map("has_tattoo")
-  dressAvailability  DressAvailability? @map("dress_availability")
-  hasBoyfriend       Boolean?           @map("has_boyfriend")
-  hasHusband         Boolean?           @map("has_husband")
-  hasChildren        Boolean?           @map("has_children")
+  livingArrangement LivingArrangement? @map("living_arrangement")
+  transportation    Transportation?
+  needsPickup       Boolean?           @map("needs_pickup")
+  hasTattoo         Boolean?           @map("has_tattoo")
+  dressAvailability DressAvailability? @map("dress_availability")
+  hasBoyfriend      Boolean?           @map("has_boyfriend")
+  hasHusband        Boolean?           @map("has_husband")
+  hasChildren       Boolean?           @map("has_children")
 
   // ==================== カテゴリ3: キャリア・身体情報 ====================
   currentOccupation String? @map("current_occupation")
@@ -234,15 +234,15 @@ model Cast {
   familyApproval           Boolean? @map("family_approval")
 
   // ==================== カテゴリ5: 希望条件（追加分） ====================
-  shiftPreferences          Json?   @map("shift_preferences") // {days, dayOfWeek, workingHours}
-  motivation                String? @db.Text
-  storePreferences          String? @map("store_preferences") @db.Text
-  customerCount             Int?    @map("customer_count")
-  salesTarget               Int?    @map("sales_target")
-  previousStorePerformance  String? @map("previous_store_performance") @db.Text
-  guaranteedHourlyRate      Int?    @map("guaranteed_hourly_rate")
-  guaranteePeriod           String? @map("guarantee_period")
-  specialConditions         String? @map("special_conditions") @db.Text
+  shiftPreferences         Json?   @map("shift_preferences") // {days, dayOfWeek, workingHours}
+  motivation               String? @db.Text
+  storePreferences         String? @map("store_preferences") @db.Text
+  customerCount            Int?    @map("customer_count")
+  salesTarget              Int?    @map("sales_target")
+  previousStorePerformance String? @map("previous_store_performance") @db.Text
+  guaranteedHourlyRate     Int?    @map("guaranteed_hourly_rate")
+  guaranteePeriod          String? @map("guarantee_period")
+  specialConditions        String? @map("special_conditions") @db.Text
 
   // MUST/WANT条件
   mustConditions Json? @map("must_conditions")
@@ -317,7 +317,7 @@ model CastWorkHistory {
 model CastExperience {
   id             String       @id @default(cuid())
   castId         String       @map("cast_id")
-  area           String       // 経験エリア（六本木、銀座など）
+  area           String // 経験エリア（六本木、銀座など）
   businessType   BusinessType // 業種
   durationMonths Int?         @map("duration_months") // 勤務期間（月）
 
@@ -351,11 +351,29 @@ enum PreferredContactMethod {
   EMAIL
 }
 
+// ==================== オーナー ====================
+
+model Owner {
+  id          String  @id @default(cuid())
+  userId      String  @unique @map("user_id")
+  companyName String? @map("company_name")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // リレーション
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stores       Store[]
+  subscription Subscription?
+
+  @@map("owners")
+}
+
 // ==================== 店舗 ====================
 
 model Store {
   id          String   @id @default(cuid())
-  userId      String   @unique @map("user_id")
+  ownerId     String   @map("owner_id")
   name        String
   area        String // エリア（六本木、銀座など）
   address     String
@@ -363,8 +381,8 @@ model Store {
   photos      String[]
 
   // 営業情報
-  businessHours String? @map("business_hours")
-  salarySystem  Json?   @map("salary_system")
+  businessHours String?  @map("business_hours")
+  salarySystem  Json?    @map("salary_system")
   benefits      String[]
 
   // 求める条件
@@ -390,12 +408,11 @@ model Store {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // リレーション
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  matches      Match[]
-  offers       Offer[]
-  interviews   Interview[]
-  subscription Subscription?
-  castBlocks   CastStoreBlock[]
+  owner      Owner            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  matches    Match[]
+  offers     Offer[]
+  interviews Interview[]
+  castBlocks CastStoreBlock[]
 
   @@map("stores")
 }
@@ -418,12 +435,13 @@ enum SubscriptionStatus {
 
 model Subscription {
   id                   String             @id @default(cuid())
-  storeId              String             @unique @map("store_id")
+  ownerId              String             @unique @map("owner_id")
   stripeCustomerId     String?            @unique @map("stripe_customer_id")
   stripeSubscriptionId String?            @unique @map("stripe_subscription_id")
   plan                 SubscriptionPlan   @default(CASUAL)
   status               SubscriptionStatus @default(ACTIVE)
   offerLimit           Int?               @map("offer_limit")
+  maxStores            Int?               @map("max_stores")
   trialEndsAt          DateTime?          @map("trial_ends_at")
   currentPeriodStart   DateTime?          @map("current_period_start")
   currentPeriodEnd     DateTime?          @map("current_period_end")
@@ -431,7 +449,7 @@ model Subscription {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  owner Owner @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
 }
@@ -553,9 +571,9 @@ model MessageImage {
 // ==================== LINE連携（公式アカウント） ====================
 
 model LineLinkToken {
-  id       String   @id @default(cuid())
-  castId   String   @map("cast_id")
-  token    String   @unique
+  id        String   @id @default(cuid())
+  castId    String   @map("cast_id")
+  token     String   @unique
   expiresAt DateTime @map("expires_at")
 
   createdAt DateTime @default(now()) @map("created_at")
