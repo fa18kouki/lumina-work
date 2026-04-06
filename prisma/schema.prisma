@@ -351,6 +351,12 @@ enum PreferredContactMethod {
   EMAIL
 }
 
+enum DailyPayType {
+  NONE     // 日払いなし
+  PARTIAL  // 一部日払い
+  FULL     // 全額日払い
+}
+
 // ==================== オーナー ====================
 
 model Owner {
@@ -361,10 +367,15 @@ model Owner {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  // リファーラル
+  referralCode String? @unique @map("referral_code")
+
   // リレーション
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   stores       Store[]
   subscription Subscription?
+  referrals    Referral[]    @relation("referrer")
+  referredBy   Referral?     @relation("referred")
 
   @@map("owners")
 }
@@ -379,11 +390,45 @@ model Store {
   address     String
   description String?  @db.Text
   photos      String[]
+  bannerUrl   String?  @map("banner_url")
+  logoUrl     String?  @map("logo_url")
+
+  // 業種・アクセス
+  storeType       BusinessType? @map("store_type")
+  nearestStation  String?       @map("nearest_station")
+  walkMinutes     Int?          @map("walk_minutes")
+  regularHolidays String?       @map("regular_holidays")
 
   // 営業情報
   businessHours String?  @map("business_hours")
   salarySystem  Json?    @map("salary_system")
   benefits      String[]
+
+  // 体験入店
+  trialShiftInfo Json? @map("trial_shift_info")
+
+  // 勤務条件
+  workConditions    Json?        @map("work_conditions")
+  hasTransportation Boolean      @default(false) @map("has_transportation")
+  transportationDetails String?  @map("transportation_details")
+  hasDormitory      Boolean      @default(false) @map("has_dormitory")
+  dormitoryDetails  String?      @map("dormitory_details")
+  hasDressRental    Boolean      @default(false) @map("has_dress_rental")
+  hasHairMakeup     Boolean      @default(false) @map("has_hair_makeup")
+  hasQuota          Boolean      @default(true)  @map("has_quota")
+  drinkingRequired  Boolean      @default(true)  @map("drinking_required")
+  dailyPayType      DailyPayType @default(NONE)  @map("daily_pay_type")
+  hasNursery        Boolean      @default(false) @map("has_nursery")
+  hasPartnerSalon   Boolean      @default(false) @map("has_partner_salon")
+  partnerSalonDetails String?    @map("partner_salon_details")
+
+  // 店舗の魅力
+  atmosphereTags    String[]     @map("atmosphere_tags")
+  signingBonus      Int?         @map("signing_bonus")
+  castCount         Int?         @map("cast_count")
+  clientele         String?
+  staffIntroduction String?      @db.Text @map("staff_introduction")
+  snsLinks          Json?        @map("sns_links")
 
   // 求める条件
   mustConditions Json? @map("must_conditions")
@@ -420,6 +465,7 @@ model Store {
 // ==================== サブスクリプション ====================
 
 enum SubscriptionPlan {
+  FREE
   CASUAL
   PRO_TRIAL
   PRO_BUSINESS
@@ -438,7 +484,7 @@ model Subscription {
   ownerId              String             @unique @map("owner_id")
   stripeCustomerId     String?            @unique @map("stripe_customer_id")
   stripeSubscriptionId String?            @unique @map("stripe_subscription_id")
-  plan                 SubscriptionPlan   @default(CASUAL)
+  plan                 SubscriptionPlan   @default(FREE)
   status               SubscriptionStatus @default(ACTIVE)
   offerLimit           Int?               @map("offer_limit")
   maxStores            Int?               @map("max_stores")
@@ -449,9 +495,60 @@ model Subscription {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  owner Owner @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  owner    Owner     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
 
   @@map("subscriptions")
+}
+
+model Invoice {
+  id               String   @id @default(cuid())
+  subscriptionId   String   @map("subscription_id")
+  stripeInvoiceId  String   @unique @map("stripe_invoice_id")
+  number           String?
+  amountDue        Int      @map("amount_due")
+  amountPaid       Int      @map("amount_paid")
+  currency         String   @default("jpy")
+  status           String   // paid, open, void, uncollectible
+  invoicePdfUrl    String?  @map("invoice_pdf_url")
+  hostedInvoiceUrl String?  @map("hosted_invoice_url")
+  periodStart      DateTime @map("period_start")
+  periodEnd        DateTime @map("period_end")
+  paidAt           DateTime? @map("paid_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, createdAt])
+  @@map("invoices")
+}
+
+// ==================== リファーラル ====================
+
+enum ReferralStatus {
+  PENDING
+  COMPLETED
+  EXPIRED
+}
+
+model Referral {
+  id              String         @id @default(cuid())
+  referrerOwnerId String         @map("referrer_owner_id")
+  referredOwnerId String?        @unique @map("referred_owner_id")
+  code            String         // 使用された紹介コード
+  status          ReferralStatus @default(PENDING)
+  referredCouponId String?       @map("referred_coupon_id")
+  referrerCouponId String?       @map("referrer_coupon_id")
+  completedAt     DateTime?      @map("completed_at")
+  expiresAt       DateTime       @map("expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  referrer     Owner @relation("referrer", fields: [referrerOwnerId], references: [id], onDelete: Cascade)
+  referredOwner Owner? @relation("referred", fields: [referredOwnerId], references: [id], onDelete: SetNull)
+
+  @@map("referrals")
 }
 
 // ==================== マッチング ====================
