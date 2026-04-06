@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Building2, Bell } from "lucide-react";
 import { useOwnerSession } from "@/lib/auth-helpers";
 import { trpc } from "@/lib/trpc";
+import { StoreSelector } from "./store-selector";
 
 export function OwnerTopbar() {
   const { user } = useOwnerSession();
@@ -30,12 +31,16 @@ export function OwnerTopbar() {
 
   return (
     <header className="fixed top-0 left-0 right-0 h-16 sm:h-[70px] bg-white flex items-center justify-between px-4 sm:px-6 shadow-[0_2px_10px_rgba(0,0,0,0.05)] z-[1000]">
-      <Link href="/o/dashboard" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-        <img src="/Favicon_16x16.png" alt="" className="w-6 h-6 rounded object-contain" aria-hidden />
-        <span className="text-base font-medium text-[var(--text-sub)] tracking-wide">
-          オーナー管理
-        </span>
-      </Link>
+      <div className="flex items-center gap-4">
+        <Link href="/o/dashboard" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+          <img src="/Favicon_16x16.png" alt="" className="w-6 h-6 rounded object-contain" aria-hidden />
+          <span className="text-base font-medium text-[var(--text-sub)] tracking-wide hidden sm:inline">
+            オーナー管理
+          </span>
+        </Link>
+        <div className="hidden sm:block w-px h-6 bg-gray-200" />
+        <StoreSelector />
+      </div>
 
       <div className="hidden sm:flex items-center gap-5 text-[var(--text-sub)] bg-[var(--bg-gray)] px-5 py-2 rounded-md font-medium text-base">
         <Building2 className="w-4 h-4" aria-hidden />

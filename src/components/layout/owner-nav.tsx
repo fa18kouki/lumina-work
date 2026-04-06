@@ -6,6 +6,8 @@ import {
   LayoutDashboard,
   Store,
   CreditCard,
+
+  Receipt,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -15,6 +17,8 @@ const navItems = [
   { href: "/o/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
   { href: "/o/stores", label: "店舗一覧", icon: Store },
   { href: "/o/subscription", label: "契約・プラン", icon: CreditCard },
+
+  { href: "/o/billing", label: "請求・履歴", icon: Receipt },
 ];
 
 export function OwnerNav() {
