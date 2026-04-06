@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { TabFilter } from "@/components/ui/tab-filter";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Thumbnail } from "@/components/ui/thumbnail";
+import { ScheduleInterviewDialog } from "@/components/store/schedule-interview-dialog";
 import { trpc } from "@/lib/trpc";
 import { ChevronRight, Mail } from "lucide-react";
 
@@ -26,12 +27,18 @@ export default function OffersPage() {
   const router = useRouter();
   const { data: session, status } = useAppSession();
   const [statusFilter, setStatusFilter] = useState<OfferStatus | "ALL">("ALL");
+  const [scheduleOfferId, setScheduleOfferId] = useState<string | null>(null);
+  const [scheduleStoreName, setScheduleStoreName] = useState<string>("");
   const utils = trpc.useUtils();
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/c/login");
     else if (session && session.user.role !== "CAST") router.push("/c/login");
   }, [session, status, router]);
+
+  useEffect(() => {
+    localStorage.setItem("lumina:onboarding:offersViewed", "true");
+  }, []);
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     trpc.cast.getOffers.useInfiniteQuery(
@@ -45,9 +52,15 @@ export default function OffersPage() {
     );
 
   const respondToOffer = trpc.cast.respondToOffer.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       utils.cast.getOffers.invalidate();
       utils.match.getMatches.invalidate();
+      // 承諾した場合、面接スケジュールダイアログを自動表示
+      if (variables.accept) {
+        const offer = offers.find((o) => o.id === variables.offerId);
+        setScheduleStoreName(offer?.store.name ?? "");
+        setScheduleOfferId(variables.offerId);
+      }
     },
   });
 
@@ -166,6 +179,14 @@ export default function OffersPage() {
             </div>
           )}
         </div>
+      )}
+      {scheduleOfferId && (
+        <ScheduleInterviewDialog
+          open={!!scheduleOfferId}
+          offerId={scheduleOfferId}
+          storeName={scheduleStoreName}
+          onClose={() => setScheduleOfferId(null)}
+        />
       )}
     </div>
   );

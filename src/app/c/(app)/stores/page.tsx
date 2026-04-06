@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useMemo } from "react";
+import { Suspense, useState, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAppSession } from "@/lib/auth-helpers";
 import { Search, SlidersHorizontal } from "lucide-react";
@@ -9,6 +9,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { trpc } from "@/lib/trpc";
 import { TagFilter } from "@/components/cast/TagFilter";
 import { StoreCard } from "@/components/cast/StoreCard";
+import {
+  StoreFilterPanel,
+  INITIAL_FILTER_STATE,
+  countActiveFilters,
+} from "@/components/cast/StoreFilterPanel";
+import type { StoreFilterState } from "@/components/cast/StoreFilterPanel";
 
 const FILTER_TAGS = [
   "すべて",
@@ -45,11 +51,32 @@ function StoresContent() {
 
   const [selectedTag, setSelectedTag] = useState(searchParams.get("tag") ?? "すべて");
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "");
+  const [filters, setFilters] = useState<StoreFilterState>(INITIAL_FILTER_STATE);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  // 全店舗を一度だけ取得（フィルタリングはフロントで行う）
-  const { data: storesData, isLoading } = trpc.cast.searchStores.useQuery({});
+  useEffect(() => {
+    localStorage.setItem("lumina:onboarding:storesViewed", "true");
+  }, []);
+
+  // フィルターパラメータをtRPCクエリ用に構築
+  const queryParams = useMemo(() => {
+    const params: Record<string, unknown> = {};
+    if (filters.storeType) params.storeType = filters.storeType;
+    if (filters.minSalary) params.minSalary = filters.minSalary;
+    if (filters.hasTransportation) params.hasTransportation = true;
+    if (filters.hasDressRental) params.hasDressRental = true;
+    if (filters.hasDailyPay) params.hasDailyPay = true;
+    if (filters.hasNoQuota) params.hasNoQuota = true;
+    if (filters.hasDormitory) params.hasDormitory = true;
+    if (filters.hasNursery) params.hasNursery = true;
+    return params;
+  }, [filters]);
+
+  // サーバーサイドフィルタリング（詳細フィルター）
+  const { data: storesData, isLoading } = trpc.cast.searchStores.useQuery(queryParams);
   const allStores = storesData?.stores ?? [];
 
+  // クライアントサイドフィルタリング（テキスト検索 + タグフィルター）
   const filteredStores = useMemo(() => {
     return allStores.filter((store) => {
       // キーワード検索（エリア・店舗名）
@@ -70,6 +97,8 @@ function StoresContent() {
     });
   }, [allStores, searchQuery, selectedTag]);
 
+  const activeFilterCount = countActiveFilters(filters);
+
   const handleSelectTag = (tag: string) => {
     setSelectedTag(tag);
     updateURL(searchQuery, tag);
@@ -78,6 +107,10 @@ function StoresContent() {
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     updateURL(value, selectedTag);
+  };
+
+  const handleApplyFilters = (newFilters: StoreFilterState) => {
+    setFilters(newFilters);
   };
 
   const updateURL = (query: string, tag: string) => {
@@ -115,8 +148,16 @@ function StoresContent() {
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-(--text-sub)"
             />
           </div>
-          <button className="w-12 h-12 bg-(--primary-bg) rounded-xl flex items-center justify-center">
+          <button
+            onClick={() => setIsFilterOpen(true)}
+            className="relative w-12 h-12 bg-(--primary-bg) rounded-xl flex items-center justify-center"
+          >
             <SlidersHorizontal className="w-5 h-5 text-(--primary)" />
+            {activeFilterCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-(--primary) text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {activeFilterCount}
+              </span>
+            )}
           </button>
         </div>
 
@@ -131,20 +172,43 @@ function StoresContent() {
         {filteredStores.length === 0 ? (
           <EmptyState icon={Search} title="該当する店舗が見つかりませんでした" />
         ) : (
-          filteredStores.map((store) => (
-            <StoreCard
-              key={store.id}
-              id={store.id}
-              name={store.name}
-              area={store.area ?? ""}
-              salary={formatSalary(store.salarySystem)}
-              imageUrl={(store.photos as string[] | null)?.[0] ?? "/service-scene-05.png"}
-              tags={(store.benefits as string[] | null) ?? []}
-              variant="horizontal"
-            />
-          ))
+          filteredStores.map((store) => {
+            const featureTags: string[] = [];
+            if (store.hasQuota === false) featureTags.push("ノルマなし");
+            if (store.hasTransportation) featureTags.push("送迎あり");
+            if (store.hasDormitory) featureTags.push("寮完備");
+            if (store.dailyPayType === "FULL") featureTags.push("全額日払い");
+            else if (store.dailyPayType === "PARTIAL") featureTags.push("日払いあり");
+            if (store.drinkingRequired === false) featureTags.push("飲酒不要");
+
+            return (
+              <StoreCard
+                key={store.id}
+                id={store.id}
+                name={store.name}
+                area={store.area ?? ""}
+                salary={formatSalary(store.salarySystem)}
+                imageUrl={store.bannerUrl ?? (store.photos as string[] | null)?.[0] ?? "/service-scene-05.png"}
+                logoUrl={store.logoUrl ?? undefined}
+                tags={(store.benefits as string[] | null) ?? []}
+                storeType={store.storeType}
+                nearestStation={store.nearestStation}
+                walkMinutes={store.walkMinutes}
+                featureTags={featureTags}
+                variant="horizontal"
+              />
+            );
+          })
         )}
       </div>
+
+      <StoreFilterPanel
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        filters={filters}
+        onApply={handleApplyFilters}
+        resultCount={filteredStores.length}
+      />
     </div>
   );
 }

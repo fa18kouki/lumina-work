@@ -21,6 +21,7 @@ function profileToFormData(profile: Record<string, unknown>): ProfileEditFormDat
     // カテゴリ1
     fullName: (profile.fullName as string) ?? "",
     furigana: (profile.furigana as string) ?? "",
+    age: (profile.age as number) ?? null,
     gender: (profile.gender as string) ?? "",
     currentArea: (profile.currentArea as string) ?? "",
     permanentAddress: (profile.permanentAddress as string) ?? "",
@@ -166,7 +167,7 @@ export default function CastProfileEditPage() {
     await upsertProfile.mutateAsync({
       // 既存ウィザードのフィールド（必須）
       nickname: profile?.nickname ?? "ゲスト",
-      age: profile?.age ?? 18,
+      age: data.age ?? profile?.age ?? 18,
       birthDate: profile?.birthDate?.toISOString().split("T")[0],
       description: profile?.description ?? undefined,
       photos: profile?.photos ?? [],
@@ -278,7 +279,7 @@ export default function CastProfileEditPage() {
   }
 
   const emptyFormData: ProfileEditFormData = {
-    fullName: "", furigana: "", gender: "", currentArea: "", permanentAddress: "",
+    fullName: "", furigana: "", age: null, gender: "", currentArea: "", permanentAddress: "",
     phoneNumber: "", bloodType: "", zodiacSign: "", email: "", pcEmail: "",
     instagramId: "", lineId: "", facebookId: "", twitterId: "", tiktokId: "",
     hobbies: "", specialSkills: "", medicalConditions: "", debt: "", qualifications: "",

@@ -89,7 +89,10 @@ export default function StoreDetailPage() {
     );
   }
 
-  const imageUrl = (store.photos as string[] | null)?.[0] ?? DEFAULT_IMAGE;
+  const storeData = store as typeof store & { bannerUrl?: string | null; logoUrl?: string | null };
+  const imageUrl = storeData.bannerUrl
+    ?? (store.photos as string[] | null)?.[0]
+    ?? DEFAULT_IMAGE;
 
   return (
     <div className="min-h-screen bg-(--bg-gray) -m-4 md:-m-8">
@@ -141,7 +144,12 @@ export default function StoreDetailPage() {
 
       {/* コンテンツカード */}
       <div className="relative bg-white rounded-t-[30px] -mt-10 min-h-[calc(100vh-240px)] pb-28">
-        <div className="px-6 pt-8">
+        {storeData.logoUrl && (
+          <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-10 w-16 h-16 rounded-full border-4 border-white overflow-hidden shadow-md bg-white">
+            <Image src={storeData.logoUrl} alt={`${store.name} ロゴ`} fill className="object-cover" sizes="64px" />
+          </div>
+        )}
+        <div className={`px-6 ${storeData.logoUrl ? "pt-12" : "pt-8"}`}>
           {/* ヘッダー情報 */}
           <div className="text-center mb-6">
             <h1 className="text-[22px] font-bold text-(--text-main) mb-2">
