@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Store, Users, FileText, CalendarCheck, Plus } from "lucide-react";
+import { Store, Users, FileText, CalendarCheck, Plus, TrendingUp, CheckCircle, Clock, XCircle, AlertCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 export default function OwnerDashboardPage() {
-  const { data: stores, isLoading } = trpc.owner.listStores.useQuery();
-  const { data: subscription } = trpc.subscription.getSubscription.useQuery();
+  const { data: dashboard, isLoading } = trpc.owner.getDashboard.useQuery();
+  const { data: offerStats } = trpc.owner.getOfferStats.useQuery();
 
   if (isLoading) {
     return (
@@ -15,6 +15,9 @@ export default function OwnerDashboardPage() {
       </div>
     );
   }
+
+  const stores = dashboard?.stores ?? [];
+  const subscription = dashboard?.subscription;
 
   return (
     <div className="max-w-5xl">
@@ -39,7 +42,7 @@ export default function OwnerDashboardPage() {
             <span className="text-sm text-[var(--text-sub)]">管理店舗数</span>
           </div>
           <p className="text-3xl font-bold text-[var(--text-main)]">
-            {stores?.length ?? 0}
+            {stores.length}
           </p>
         </div>
         <div className="bg-white rounded-xl p-5 border border-gray-100">
@@ -48,7 +51,7 @@ export default function OwnerDashboardPage() {
             <span className="text-sm text-[var(--text-sub)]">送信オファー合計</span>
           </div>
           <p className="text-3xl font-bold text-[var(--text-main)]">
-            {stores?.reduce((sum, s) => sum + s._count.offers, 0) ?? 0}
+            {stores.reduce((sum, s) => sum + s._count.offers, 0)}
           </p>
         </div>
         <div className="bg-white rounded-xl p-5 border border-gray-100">
@@ -57,10 +60,87 @@ export default function OwnerDashboardPage() {
             <span className="text-sm text-[var(--text-sub)]">面接合計</span>
           </div>
           <p className="text-3xl font-bold text-[var(--text-main)]">
-            {stores?.reduce((sum, s) => sum + s._count.interviews, 0) ?? 0}
+            {stores.reduce((sum, s) => sum + s._count.interviews, 0)}
           </p>
         </div>
       </div>
+
+      {/* オファー承諾状況 */}
+      {offerStats && offerStats.length > 0 && offerStats.some((s) => s.total > 0) && (
+        <>
+          <h2 className="text-lg font-bold text-[var(--text-main)] mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-slate-500" />
+            店舗別オファー状況
+          </h2>
+          <div className="space-y-3 mb-8">
+            {offerStats.map((stat) => (
+              <Link
+                key={stat.storeId}
+                href={`/o/stores/${stat.storeId}/offers`}
+                className="block bg-white rounded-xl p-5 border border-gray-100 hover:border-gray-300 transition-colors"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="font-bold text-[var(--text-main)]">{stat.storeName}</h3>
+                    <p className="text-xs text-[var(--text-sub)]">{stat.storeArea}</p>
+                  </div>
+                  {stat.total > 0 && (
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-[var(--text-main)]">{stat.acceptRate}%</p>
+                      <p className="text-xs text-[var(--text-sub)]">承諾率</p>
+                    </div>
+                  )}
+                </div>
+
+                {stat.total > 0 ? (
+                  <>
+                    {/* プログレスバー */}
+                    <div className="flex h-2 rounded-full overflow-hidden bg-gray-100 mb-3">
+                      {stat.accepted > 0 && (
+                        <div className="bg-green-500" style={{ width: `${(stat.accepted / stat.total) * 100}%` }} />
+                      )}
+                      {stat.pending > 0 && (
+                        <div className="bg-yellow-400" style={{ width: `${(stat.pending / stat.total) * 100}%` }} />
+                      )}
+                      {stat.rejected > 0 && (
+                        <div className="bg-gray-400" style={{ width: `${(stat.rejected / stat.total) * 100}%` }} />
+                      )}
+                      {stat.expired > 0 && (
+                        <div className="bg-red-300" style={{ width: `${(stat.expired / stat.total) * 100}%` }} />
+                      )}
+                    </div>
+
+                    {/* ステータス内訳 */}
+                    <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs">
+                      <span className="flex items-center gap-1 text-green-700">
+                        <CheckCircle className="w-3 h-3" />
+                        承諾 {stat.accepted}
+                      </span>
+                      <span className="flex items-center gap-1 text-yellow-600">
+                        <Clock className="w-3 h-3" />
+                        未回答 {stat.pending}
+                      </span>
+                      <span className="flex items-center gap-1 text-gray-500">
+                        <XCircle className="w-3 h-3" />
+                        辞退 {stat.rejected}
+                      </span>
+                      <span className="flex items-center gap-1 text-red-400">
+                        <AlertCircle className="w-3 h-3" />
+                        期限切れ {stat.expired}
+                      </span>
+                      <span className="flex items-center gap-1 text-[var(--text-sub)]">
+                        面接 {stat.interviews}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-[var(--text-sub)]">まだオファーを送信していません</p>
+                )}
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* プラン情報 */}
       {subscription && (
@@ -69,6 +149,7 @@ export default function OwnerDashboardPage() {
             <div>
               <p className="text-sm text-[var(--text-sub)] mb-1">現在のプラン</p>
               <p className="text-lg font-bold text-[var(--text-main)]">
+                {subscription.plan === "FREE" && "フリー"}
                 {subscription.plan === "CASUAL" && "カジュアル"}
                 {subscription.plan === "PRO_TRIAL" && "プロ"}
                 {subscription.plan === "PRO_BUSINESS" && "プロ ビジネス"}
@@ -89,7 +170,7 @@ export default function OwnerDashboardPage() {
       <h2 className="text-lg font-bold text-[var(--text-main)] mb-4">
         管理中の店舗
       </h2>
-      {!stores || stores.length === 0 ? (
+      {stores.length === 0 ? (
         <div className="bg-white rounded-xl p-8 border border-gray-100 text-center">
           <Store className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-[var(--text-sub)] mb-4">

@@ -1,16 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Mail, Lock, Eye, EyeOff, Gift } from "lucide-react";
 import { createBrowserClient } from "@/lib/supabase-auth";
 import { useToast } from "@/lib/toast-provider";
 
 export default function OwnerRegisterPage() {
+  return (
+    <Suspense>
+      <OwnerRegisterForm />
+    </Suspense>
+  );
+}
+
+function OwnerRegisterForm() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [referralCode, setReferralCode] = useState(searchParams.get("ref") ?? "");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -37,7 +48,7 @@ export default function OwnerRegisterPage() {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/o/dashboard`,
+          emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/o/dashboard${referralCode ? `&ref=${encodeURIComponent(referralCode.toUpperCase())}` : ""}`,
         },
       });
 
@@ -159,6 +170,23 @@ export default function OwnerRegisterPage() {
                     required
                     minLength={8}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-slate-500 focus:border-slate-500 outline-none transition-colors text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="referralCode" className="block text-sm font-medium text-gray-700 mb-1">
+                  紹介コード（お持ちの方）
+                </label>
+                <div className="relative">
+                  <Gift className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    id="referralCode"
+                    type="text"
+                    value={referralCode}
+                    onChange={(e) => setReferralCode(e.target.value)}
+                    placeholder="LUMINA-XXXXXX"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-slate-500 focus:border-slate-500 outline-none transition-colors text-sm uppercase"
                   />
                 </div>
               </div>

@@ -50,9 +50,9 @@ export default function OwnerForgotPasswordPage() {
         </div>
 
         {emailSent ? (
-          <div className="p-6 bg-blue-50 border border-blue-200 rounded-lg text-center">
-            <p className="text-blue-800 font-medium">リセットメールを送信しました</p>
-            <p className="text-blue-600 text-sm mt-2">
+          <div className="p-6 bg-gray-50 border border-gray-200 rounded-lg text-center">
+            <p className="text-gray-800 font-medium">リセットメールを送信しました</p>
+            <p className="text-gray-600 text-sm mt-2">
               {email} に送信されたリンクからパスワードをリセットしてください
             </p>
           </div>

@@ -101,9 +101,9 @@ export default function OwnerSubscriptionPage() {
                 ))}
               </ul>
 
-              {!isCurrent && (
+              {!isCurrent && plan.id !== "FREE" && (
                 <button
-                  onClick={() => createCheckout.mutate({ plan: plan.id })}
+                  onClick={() => createCheckout.mutate({ plan: plan.id as Exclude<typeof plan.id, "FREE"> })}
                   disabled={createCheckout.isPending}
                   className="w-full py-2.5 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-50"
                 >
