@@ -374,7 +374,7 @@ export const castRouter = createTRPCRouter({
         area: z.string().optional(),
         minSalary: z.number().optional(),
         benefit: z.string().optional(),
-        storeType: z.string().optional(),
+        storeType: z.enum(["CABARET", "CLUB", "LOUNGE", "GIRLS_BAR", "SNACK", "OTHER"]).optional(),
         hasTransportation: z.boolean().optional(),
         hasDressRental: z.boolean().optional(),
         hasDailyPay: z.boolean().optional(),
