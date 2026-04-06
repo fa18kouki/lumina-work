@@ -26,6 +26,38 @@ export const ownerRouter = createTRPCRouter({
   }),
 
   /**
+   * ダッシュボード用統合データ取得（1クエリ）
+   */
+  getDashboard: ownerProcedure.query(async ({ ctx }) => {
+    const owner = await ctx.prisma.owner.findUnique({
+      where: { userId: ctx.session.user.id },
+      include: {
+        stores: {
+          select: {
+            id: true,
+            name: true,
+            area: true,
+            address: true,
+            photos: true,
+            isVerified: true,
+            createdAt: true,
+            _count: {
+              select: {
+                offers: true,
+                interviews: true,
+              },
+            },
+          },
+          orderBy: { createdAt: "asc" as const },
+        },
+        subscription: true,
+      },
+    });
+
+    return owner;
+  }),
+
+  /**
    * オーナープロフィール更新
    */
   upsertProfile: ownerProcedure
@@ -114,8 +146,8 @@ export const ownerRouter = createTRPCRouter({
       }
 
       // プランに応じた店舗数上限チェック
-      const maxStores = owner.subscription?.maxStores;
-      if (maxStores && owner._count.stores >= maxStores) {
+      const maxStores = owner.subscription?.maxStores ?? 1;
+      if (owner._count.stores >= maxStores) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: `現在のプランでは${maxStores}店舗まで登録可能です。プランをアップグレードしてください。`,
@@ -154,7 +186,64 @@ export const ownerRouter = createTRPCRouter({
 
     return {
       current: owner._count.stores,
-      max: owner.subscription?.maxStores ?? null,
+      max: owner.subscription?.maxStores ?? 1,
     };
+  }),
+
+  /**
+   * 店舗別オファー統計取得
+   */
+  getOfferStats: ownerProcedure.query(async ({ ctx }) => {
+    const owner = await ctx.prisma.owner.findUnique({
+      where: { userId: ctx.session.user.id },
+      select: { id: true },
+    });
+
+    if (!owner) return [];
+
+    const stores = await ctx.prisma.store.findMany({
+      where: { ownerId: owner.id },
+      select: {
+        id: true,
+        name: true,
+        area: true,
+        _count: {
+          select: {
+            offers: true,
+            interviews: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    // 各店舗のオファーステータス別カウントを取得
+    const storeStats = await Promise.all(
+      stores.map(async (store) => {
+        const [pending, accepted, rejected, expired] = await Promise.all([
+          ctx.prisma.offer.count({ where: { storeId: store.id, status: "PENDING" } }),
+          ctx.prisma.offer.count({ where: { storeId: store.id, status: "ACCEPTED" } }),
+          ctx.prisma.offer.count({ where: { storeId: store.id, status: "REJECTED" } }),
+          ctx.prisma.offer.count({ where: { storeId: store.id, status: "EXPIRED" } }),
+        ]);
+
+        return {
+          storeId: store.id,
+          storeName: store.name,
+          storeArea: store.area,
+          total: store._count.offers,
+          pending,
+          accepted,
+          rejected,
+          expired,
+          interviews: store._count.interviews,
+          acceptRate: store._count.offers > 0
+            ? Math.round((accepted / store._count.offers) * 100)
+            : 0,
+        };
+      })
+    );
+
+    return storeStats;
   }),
 });

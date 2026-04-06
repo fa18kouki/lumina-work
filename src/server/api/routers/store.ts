@@ -38,6 +38,14 @@ export const storeRouter = createTRPCRouter({
         address: z.string().min(1).max(200),
         description: z.string().max(2000).optional(),
         photos: z.array(z.string().url()).max(5).optional(),
+        bannerUrl: z.string().url().nullable().optional(),
+        logoUrl: z.string().url().nullable().optional(),
+        // 業種・アクセス
+        storeType: z.enum(["CABARET", "CLUB", "LOUNGE", "GIRLS_BAR", "SNACK", "OTHER"]).nullable().optional(),
+        nearestStation: z.string().max(50).optional(),
+        walkMinutes: z.number().min(1).max(60).nullable().optional(),
+        regularHolidays: z.string().max(100).optional(),
+        // 営業情報
         businessHours: z.string().max(200).optional(),
         salarySystem: z.object({
           hourlyRateMin: z.number().min(1000).max(100000),
@@ -53,6 +61,42 @@ export const storeRouter = createTRPCRouter({
           salesBackMinPercent: z.number().min(0).max(100).optional(),
           salesBackMaxPercent: z.number().min(0).max(100).optional(),
         }).optional(),
+        // 体験入店
+        trialShiftInfo: z.object({
+          trialHourlyRate: z.number().min(0).optional(),
+          trialCount: z.number().min(1).max(10).optional(),
+          trialConditions: z.string().max(500).optional(),
+        }).nullable().optional(),
+        // 勤務条件
+        workConditions: z.object({
+          minWorkDays: z.number().min(1).max(7).optional(),
+          minWorkHours: z.number().min(1).max(12).optional(),
+          lastTrainOk: z.boolean().optional(),
+          flexibleSchedule: z.boolean().optional(),
+        }).nullable().optional(),
+        hasTransportation: z.boolean().optional(),
+        transportationDetails: z.string().max(200).optional(),
+        hasDormitory: z.boolean().optional(),
+        dormitoryDetails: z.string().max(200).optional(),
+        hasDressRental: z.boolean().optional(),
+        hasHairMakeup: z.boolean().optional(),
+        hasQuota: z.boolean().optional(),
+        drinkingRequired: z.boolean().optional(),
+        dailyPayType: z.enum(["NONE", "PARTIAL", "FULL"]).optional(),
+        hasNursery: z.boolean().optional(),
+        hasPartnerSalon: z.boolean().optional(),
+        partnerSalonDetails: z.string().max(200).optional(),
+        // 店舗の魅力
+        atmosphereTags: z.array(z.string().max(20)).max(10).optional(),
+        signingBonus: z.number().min(0).max(10000000).nullable().optional(),
+        castCount: z.number().min(0).max(1000).nullable().optional(),
+        clientele: z.string().max(500).optional(),
+        staffIntroduction: z.string().max(2000).optional(),
+        snsLinks: z.object({
+          instagram: z.string().max(200).optional().or(z.literal("")),
+          twitter: z.string().max(200).optional().or(z.literal("")),
+        }).nullable().optional(),
+        // 既存
         benefits: z.array(z.string()).optional(),
         mustConditions: z.record(z.string(), z.unknown()).optional(),
         wantConditions: z.record(z.string(), z.unknown()).optional(),
@@ -69,6 +113,9 @@ export const storeRouter = createTRPCRouter({
       const mustConditions = input.mustConditions as Prisma.InputJsonValue | undefined;
       const wantConditions = input.wantConditions as Prisma.InputJsonValue | undefined;
       const salarySystem = input.salarySystem as Prisma.InputJsonValue | undefined;
+      const trialShiftInfo = input.trialShiftInfo as Prisma.InputJsonValue | undefined;
+      const workConditions = input.workConditions as Prisma.InputJsonValue | undefined;
+      const snsLinks = input.snsLinks as Prisma.InputJsonValue | undefined;
 
       const updated = await ctx.prisma.store.update({
         where: { id: store.id },
@@ -78,8 +125,40 @@ export const storeRouter = createTRPCRouter({
           address: input.address,
           description: input.description,
           photos: input.photos ?? [],
+          bannerUrl: input.bannerUrl,
+          logoUrl: input.logoUrl,
+          // 業種・アクセス
+          storeType: input.storeType,
+          nearestStation: input.nearestStation,
+          walkMinutes: input.walkMinutes,
+          regularHolidays: input.regularHolidays,
+          // 営業情報
           businessHours: input.businessHours,
           salarySystem,
+          // 体験入店
+          trialShiftInfo,
+          // 勤務条件
+          workConditions,
+          hasTransportation: input.hasTransportation,
+          transportationDetails: input.transportationDetails,
+          hasDormitory: input.hasDormitory,
+          dormitoryDetails: input.dormitoryDetails,
+          hasDressRental: input.hasDressRental,
+          hasHairMakeup: input.hasHairMakeup,
+          hasQuota: input.hasQuota,
+          drinkingRequired: input.drinkingRequired,
+          dailyPayType: input.dailyPayType,
+          hasNursery: input.hasNursery,
+          hasPartnerSalon: input.hasPartnerSalon,
+          partnerSalonDetails: input.partnerSalonDetails,
+          // 店舗の魅力
+          atmosphereTags: input.atmosphereTags,
+          signingBonus: input.signingBonus,
+          castCount: input.castCount,
+          clientele: input.clientele,
+          staffIntroduction: input.staffIntroduction,
+          snsLinks,
+          // 既存
           benefits: input.benefits ?? [],
           mustConditions,
           wantConditions,
@@ -246,7 +325,6 @@ export const storeRouter = createTRPCRouter({
 
       const casts = await ctx.prisma.cast.findMany({
         where: {
-          idVerified: true,
           isSuspended: false,
           NOT: {
             storeBlocks: {
@@ -346,7 +424,7 @@ export const storeRouter = createTRPCRouter({
       });
       const now = new Date();
       const isInTrial = subscription?.trialEndsAt && subscription.trialEndsAt > now;
-      const offerLimit = subscription?.offerLimit ?? 10;
+      const offerLimit = subscription?.offerLimit ?? 3;
 
       if (!isInTrial && offerLimit !== null) {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -524,9 +602,26 @@ export const storeRouter = createTRPCRouter({
         area: true,
         description: true,
         photos: true,
+        bannerUrl: true,
+        logoUrl: true,
+        storeType: true,
+        nearestStation: true,
+        walkMinutes: true,
         salarySystem: true,
         benefits: true,
         businessHours: true,
+        regularHolidays: true,
+        hasTransportation: true,
+        hasDormitory: true,
+        hasDressRental: true,
+        hasHairMakeup: true,
+        hasQuota: true,
+        drinkingRequired: true,
+        dailyPayType: true,
+        hasNursery: true,
+        atmosphereTags: true,
+        signingBonus: true,
+        trialShiftInfo: true,
       },
       take: 10,
       orderBy: { createdAt: "desc" },
@@ -534,4 +629,24 @@ export const storeRouter = createTRPCRouter({
 
     return stores;
   }),
+
+  /**
+   * 公開店舗詳細取得（認証不要）
+   */
+  getPublicDetail: publicProcedure
+    .input(z.object({ storeId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const store = await ctx.prisma.store.findFirst({
+        where: { id: input.storeId, isVerified: true },
+      });
+
+      if (!store) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "店舗が見つかりません",
+        });
+      }
+
+      return store;
+    }),
 });
