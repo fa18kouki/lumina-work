@@ -9,6 +9,7 @@ import { adminRouter } from "./routers/admin";
 import { diagnosisRouter } from "./routers/diagnosis";
 import { notificationRouter } from "./routers/notification";
 import { subscriptionRouter } from "./routers/subscription";
+import { referralRouter } from "./routers/referral";
 
 /**
  * メインルーター
@@ -24,6 +25,7 @@ export const appRouter = createTRPCRouter({
   diagnosis: diagnosisRouter,
   notification: notificationRouter,
   subscription: subscriptionRouter,
+  referral: referralRouter,
 });
 
 export type AppRouter = typeof appRouter;

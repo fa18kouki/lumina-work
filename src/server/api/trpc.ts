@@ -21,15 +21,18 @@ export const createInnerTRPCContext = (opts: CreateContextOptions) => {
   return {
     session: opts.session,
     prisma,
+    /** バッチリクエスト内で owner ルックアップを共有するキャッシュ */
+    ownerCache: new Map<string, { id: string; referralCode: string | null }>(),
   };
 };
 
 /**
  * Supabase Auth セッションから NextAuth 形式のセッションを復元
  */
-async function getSupabaseSession(): Promise<Session | null> {
+async function getSupabaseSession(
+  cookieStore: Awaited<ReturnType<typeof cookies>>,
+): Promise<Session | null> {
   try {
-    const cookieStore = await cookies();
     const supabase = createServerClient(cookieStore);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
@@ -64,12 +67,23 @@ async function getSupabaseSession(): Promise<Session | null> {
  * APIリクエスト用コンテキスト作成
  */
 export const createTRPCContext = async () => {
-  // NextAuth セッションを優先（キャスト側）
-  let session = await auth();
+  const cookieStore = await cookies();
+
+  // NextAuth セッション Cookie が存在する場合のみ auth() を呼ぶ（キャスト側）
+  // オーナー側は Supabase Auth のみ使用するため、auth() のオーバーヘッドを回避
+  const hasNextAuthCookie =
+    cookieStore.has("authjs.session-token") ||
+    cookieStore.has("__Secure-authjs.session-token");
+
+  let session: Session | null = null;
+
+  if (hasNextAuthCookie) {
+    session = await auth();
+  }
 
   // NextAuth セッションがない場合、Supabase Auth を確認（店舗側）
   if (!session) {
-    session = await getSupabaseSession();
+    session = await getSupabaseSession(cookieStore);
   }
 
   return createInnerTRPCContext({
@@ -122,13 +136,8 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
 /**
  * キャスト専用プロシージャ
  */
-export const castProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  const user = await ctx.prisma.user.findUnique({
-    where: { id: ctx.session.user.id },
-    select: { role: true },
-  });
-
-  if (user?.role !== "CAST") {
+export const castProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.session.user.role !== "CAST") {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "キャストのみアクセス可能です",
@@ -141,13 +150,8 @@ export const castProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 /**
  * オーナー専用プロシージャ
  */
-export const ownerProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  const user = await ctx.prisma.user.findUnique({
-    where: { id: ctx.session.user.id },
-    select: { role: true },
-  });
-
-  if (user?.role !== "OWNER") {
+export const ownerProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.session.user.role !== "OWNER") {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "オーナーのみアクセス可能です",
@@ -156,6 +160,37 @@ export const ownerProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 
   return next({ ctx });
 });
+
+/**
+ * オーナーレコードをコンテキストに解決するプロシージャ。
+ * 複数ハンドラーが同じオーナーIDを必要とする場合に使用。
+ * バッチリクエスト内では ownerCache で重複クエリを回避。
+ */
+export const ownerWithRecordProcedure = ownerProcedure.use(
+  async ({ ctx, next }) => {
+    const userId = ctx.session.user.id;
+    const cached = ctx.ownerCache.get(userId);
+    if (cached) {
+      return next({ ctx: { ...ctx, owner: cached } });
+    }
+
+    const owner = await ctx.prisma.owner.findUnique({
+      where: { userId },
+      select: { id: true, referralCode: true },
+    });
+
+    if (!owner) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "オーナー情報が見つかりません",
+      });
+    }
+
+    ctx.ownerCache.set(userId, owner);
+
+    return next({ ctx: { ...ctx, owner } });
+  },
+);
 
 /**
  * オーナーが所有する店舗を解決するヘルパー
@@ -194,13 +229,8 @@ export async function resolveOwnerStore(
 /**
  * 管理者専用プロシージャ
  */
-export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  const user = await ctx.prisma.user.findUnique({
-    where: { id: ctx.session.user.id },
-    select: { role: true },
-  });
-
-  if (user?.role !== "ADMIN") {
+export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.session.user.role !== "ADMIN") {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "管理者のみアクセス可能です",
