@@ -17,6 +17,7 @@ interface Props {
   data: {
     fullName: string;
     furigana: string;
+    age: number | null;
     gender: string;
     currentArea: string;
     permanentAddress: string;
@@ -91,6 +92,23 @@ export function BasicContactSection({ data, onChange }: Props) {
             value={data.furigana}
             onChange={(e) => onChange("furigana", e.target.value)}
             placeholder="ヤマダ ハナコ"
+          />
+        </FormField>
+
+        <FormField label="年齢">
+          <input
+            type="number"
+            className={inputClass}
+            value={data.age ?? ""}
+            onChange={(e) =>
+              onChange(
+                "age",
+                e.target.value ? Number(e.target.value) : null
+              )
+            }
+            placeholder="例: 25"
+            min={18}
+            max={99}
           />
         </FormField>
 

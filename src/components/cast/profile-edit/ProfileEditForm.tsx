@@ -55,6 +55,7 @@ export interface ProfileEditFormData {
   // カテゴリ1
   fullName: string;
   furigana: string;
+  age: number | null;
   gender: string;
   currentArea: string;
   permanentAddress: string;
