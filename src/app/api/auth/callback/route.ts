@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { prisma } from "@/server/db";
+import { REFERRAL_CONFIG } from "@/lib/constants";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/o/dashboard";
+  const refCode = searchParams.get("ref");
 
   if (!code) {
     return NextResponse.redirect(new URL("/o/login?error=missing_code", origin));
@@ -55,9 +57,32 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    await prisma.owner.create({
+    const newOwner = await prisma.owner.create({
       data: { userId: newUser.id },
     });
+
+    // リファーラルコードの処理
+    if (refCode) {
+      const referrer = await prisma.owner.findUnique({
+        where: { referralCode: refCode.toUpperCase() },
+        select: { id: true },
+      });
+
+      if (referrer && referrer.id !== newOwner.id) {
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + REFERRAL_CONFIG.expirationDays);
+
+        await prisma.referral.create({
+          data: {
+            referrerOwnerId: referrer.id,
+            referredOwnerId: newOwner.id,
+            code: refCode.toUpperCase(),
+            status: "PENDING",
+            expiresAt,
+          },
+        });
+      }
+    }
   }
 
   return response;

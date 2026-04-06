@@ -78,15 +78,19 @@ export async function DELETE(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { url } = body;
+    const { url, type = "photo" } = body;
 
     if (!url || typeof url !== "string") {
       return NextResponse.json({ error: "url is required" }, { status: 400 });
     }
 
+    if (!["photo", "banner", "logo"].includes(type)) {
+      return NextResponse.json({ error: "Invalid type" }, { status: 400 });
+    }
+
     const ownerDel = await prisma.owner.findUnique({
       where: { userId: session.user.id },
-      select: { stores: { select: { id: true, photos: true }, take: 1 } },
+      select: { stores: { select: { id: true, photos: true, bannerUrl: true, logoUrl: true }, take: 1 } },
     });
 
     const store = ownerDel?.stores[0];
@@ -94,18 +98,36 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Store not found" }, { status: 404 });
     }
 
-    if (!store.photos.includes(url)) {
-      return NextResponse.json({ error: "Photo not found" }, { status: 404 });
+    if (type === "banner") {
+      if (store.bannerUrl !== url) {
+        return NextResponse.json({ error: "Banner not found" }, { status: 404 });
+      }
+      await deleteStorePhoto(url);
+      await prisma.store.update({
+        where: { id: store.id },
+        data: { bannerUrl: null },
+      });
+    } else if (type === "logo") {
+      if (store.logoUrl !== url) {
+        return NextResponse.json({ error: "Logo not found" }, { status: 404 });
+      }
+      await deleteStorePhoto(url);
+      await prisma.store.update({
+        where: { id: store.id },
+        data: { logoUrl: null },
+      });
+    } else {
+      if (!store.photos.includes(url)) {
+        return NextResponse.json({ error: "Photo not found" }, { status: 404 });
+      }
+      await deleteStorePhoto(url);
+      await prisma.store.update({
+        where: { id: store.id },
+        data: {
+          photos: store.photos.filter((p) => p !== url),
+        },
+      });
     }
-
-    await deleteStorePhoto(url);
-
-    await prisma.store.update({
-      where: { id: store.id },
-      data: {
-        photos: store.photos.filter((p) => p !== url),
-      },
-    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

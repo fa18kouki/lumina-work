@@ -5,7 +5,7 @@ import { prisma } from "@/server/db";
 import type Stripe from "stripe";
 import type { SubscriptionPlan } from "@prisma/client";
 
-const VALID_PLANS: SubscriptionPlan[] = ["CASUAL", "PRO_TRIAL", "PRO_BUSINESS", "PRO_ENTERPRISE"];
+const VALID_PLANS: SubscriptionPlan[] = ["FREE", "CASUAL", "PRO_TRIAL", "PRO_BUSINESS", "PRO_ENTERPRISE"];
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -56,6 +56,48 @@ export async function POST(req: NextRequest) {
             trialEndsAt,
           },
         });
+
+        // リファーラル報酬の処理
+        const referralId = session.metadata?.referralId;
+        if (referralId) {
+          const referral = await prisma.referral.findUnique({
+            where: { id: referralId },
+            include: {
+              referrer: {
+                include: { subscription: true },
+              },
+            },
+          });
+
+          if (referral && referral.status === "PENDING") {
+            // 紹介者用クーポンを作成（¥10,000 OFF）
+            const stripe = getStripe();
+            const referrerCoupon = await stripe.coupons.create({
+              amount_off: 10000,
+              currency: "jpy",
+              duration: "once",
+              name: "紹介報酬 - ¥10,000 OFF",
+            });
+
+            // 紹介者にアクティブなStripeサブスクがあればクーポンを即適用
+            if (referral.referrer.subscription?.stripeSubscriptionId) {
+              await stripe.subscriptions.update(
+                referral.referrer.subscription.stripeSubscriptionId,
+                { discounts: [{ coupon: referrerCoupon.id }] }
+              );
+            }
+
+            // リファーラルを完了に更新
+            await prisma.referral.update({
+              where: { id: referralId },
+              data: {
+                status: "COMPLETED",
+                referrerCouponId: referrerCoupon.id,
+                completedAt: new Date(),
+              },
+            });
+          }
+        }
       }
       break;
     }
@@ -74,11 +116,15 @@ export async function POST(req: NextRequest) {
           incomplete: "INCOMPLETE",
         };
 
+        const currentItem = subscription.items.data[0];
         await prisma.subscription.update({
           where: { id: existing.id },
           data: {
             status: statusMap[subscription.status] ?? "ACTIVE",
             currentPeriodStart: new Date(subscription.start_date * 1000),
+            currentPeriodEnd: currentItem?.current_period_end
+              ? new Date(currentItem.current_period_end * 1000)
+              : null,
           },
         });
       }
@@ -95,12 +141,56 @@ export async function POST(req: NextRequest) {
         await prisma.subscription.update({
           where: { id: existing.id },
           data: {
-            plan: "CASUAL",
+            plan: "FREE",
             status: "CANCELLED",
             stripeSubscriptionId: null,
-            offerLimit: 10,
+            offerLimit: 3,
+            maxStores: 1,
           },
         });
+      }
+      break;
+    }
+
+    case "invoice.paid": {
+      const invoice = event.data.object as Stripe.Invoice;
+      const subDetails = invoice.parent?.subscription_details;
+      const subId =
+        typeof subDetails?.subscription === "string"
+          ? subDetails.subscription
+          : subDetails?.subscription?.id;
+
+      if (subId) {
+        const existing = await prisma.subscription.findFirst({
+          where: { stripeSubscriptionId: subId },
+        });
+
+        if (existing) {
+          await prisma.invoice.upsert({
+            where: { stripeInvoiceId: invoice.id },
+            create: {
+              subscriptionId: existing.id,
+              stripeInvoiceId: invoice.id,
+              number: invoice.number,
+              amountDue: invoice.amount_due,
+              amountPaid: invoice.amount_paid,
+              currency: invoice.currency ?? "jpy",
+              status: invoice.status ?? "paid",
+              invoicePdfUrl: invoice.invoice_pdf,
+              hostedInvoiceUrl: invoice.hosted_invoice_url,
+              periodStart: new Date(invoice.period_start * 1000),
+              periodEnd: new Date(invoice.period_end * 1000),
+              paidAt: new Date(),
+            },
+            update: {
+              amountPaid: invoice.amount_paid,
+              status: invoice.status ?? "paid",
+              invoicePdfUrl: invoice.invoice_pdf,
+              hostedInvoiceUrl: invoice.hosted_invoice_url,
+              paidAt: new Date(),
+            },
+          });
+        }
       }
       break;
     }
