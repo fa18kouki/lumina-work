@@ -74,6 +74,7 @@ export function DiagnosisProvider({ children }: DiagnosisProviderProps) {
   const [isTyping, setIsTyping] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDiagnosisFinalized, setIsDiagnosisFinalized] = useState(false);
 
   // tRPC mutations
   const startSessionMutation = trpc.diagnosis.startSession.useMutation();
@@ -136,7 +137,13 @@ export function DiagnosisProvider({ children }: DiagnosisProviderProps) {
       );
 
       if (!nextQuestion) {
-        // 質問がなくなったら完了
+        // 質問がなくなったら完了 → サーバー側で診断データをCastプロフィールに反映
+        try {
+          await completeDiagnosisMutation.mutateAsync();
+          setIsDiagnosisFinalized(true);
+        } catch (error) {
+          console.error("診断完了エラー（自動完了）:", error);
+        }
         setIsCompleted(true);
         await addAiMessage(getCompletionMessage(currentAnswers));
         return;
@@ -158,7 +165,7 @@ export function DiagnosisProvider({ children }: DiagnosisProviderProps) {
         nextQuestion.id
       );
     },
-    [currentQuestionIndex, currentStep, addAiMessage]
+    [currentQuestionIndex, currentStep, addAiMessage, completeDiagnosisMutation]
   );
 
   // 診断を開始
@@ -194,6 +201,7 @@ export function DiagnosisProvider({ children }: DiagnosisProviderProps) {
 
       if (result.session.isCompleted) {
         // 既に完了している場合
+        setIsDiagnosisFinalized(true);
         await addAiMessage(getCompletionMessage(existingAnswers));
       } else {
         // 引き継ぎデータがある場合は未回答質問から再開
@@ -298,9 +306,13 @@ export function DiagnosisProvider({ children }: DiagnosisProviderProps) {
 
   // 診断を完了
   const completeDiagnosis = useCallback(async () => {
+    // showNextQuestion で既に完了済みの場合はスキップ
+    if (isDiagnosisFinalized) return;
+
     setIsLoading(true);
     try {
       await completeDiagnosisMutation.mutateAsync();
+      setIsDiagnosisFinalized(true);
       setIsCompleted(true);
     } catch (error) {
       console.error("診断完了エラー:", error);
@@ -308,7 +320,7 @@ export function DiagnosisProvider({ children }: DiagnosisProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [completeDiagnosisMutation]);
+  }, [completeDiagnosisMutation, isDiagnosisFinalized]);
 
   // 診断をリセット
   const resetDiagnosis = useCallback(async () => {
@@ -321,6 +333,7 @@ export function DiagnosisProvider({ children }: DiagnosisProviderProps) {
       setAnswers({});
       setMessages([]);
       setIsCompleted(false);
+      setIsDiagnosisFinalized(false);
 
       // 最初の質問を表示
       const firstQuestion = QUESTIONS[0];
