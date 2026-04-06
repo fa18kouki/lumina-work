@@ -16,6 +16,22 @@ export type BusinessType = (typeof BUSINESS_TYPES)[number]["value"];
 /** サブスクリプションプラン定義 */
 export const SUBSCRIPTION_PLANS = [
   {
+    id: "FREE" as const,
+    name: "フリー",
+    tier: "free" as const,
+    pricePerStore: 0,
+    priceLabel: "¥0",
+    offerLimit: 3 as number | null,
+    maxStores: 1,
+    description: "まずは無料で試したい方向け",
+    features: [
+      "月3件までオファー送信",
+      "1店舗まで登録可能",
+      "キャスト検索",
+      "メッセージ機能",
+    ],
+  },
+  {
     id: "CASUAL" as const,
     name: "カジュアル",
     tier: "casual" as const,
@@ -90,14 +106,60 @@ export type SubscriptionPlanId = (typeof SUBSCRIPTION_PLANS)[number]["id"];
 
 /** プランに応じたオファー上限を返す（null = 無制限） */
 export function getOfferLimitForPlan(plan: SubscriptionPlanId): number | null {
+  if (plan === "FREE") return 3;
   if (plan === "CASUAL") return 10;
   return null;
 }
 
 /** プロ版かどうか判定 */
 export function isProPlan(plan: SubscriptionPlanId): boolean {
-  return plan !== "CASUAL";
+  return plan !== "FREE" && plan !== "CASUAL";
 }
+
+/** リファーラル設定 */
+export const REFERRAL_CONFIG = {
+  codePrefix: "LUMINA-",
+  codeLength: 6,
+  expirationDays: 90,
+  referredDiscount: { type: "percent_off" as const, value: 100, duration: "once" as const },
+  referrerDiscount: { type: "amount_off" as const, value: 10000, currency: "jpy", duration: "once" as const },
+} as const;
+
+/** 紹介コード用の文字セット（紛らわしい文字を除外） */
+const REFERRAL_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+/** 紹介コードを生成 */
+export function generateReferralCode(): string {
+  let code = REFERRAL_CONFIG.codePrefix;
+  for (let i = 0; i < REFERRAL_CONFIG.codeLength; i++) {
+    code += REFERRAL_CODE_CHARS[Math.floor(Math.random() * REFERRAL_CODE_CHARS.length)];
+  }
+  return code;
+}
+
+/** 日払いタイプ */
+export const DAILY_PAY_TYPES = [
+  { value: "NONE", label: "なし" },
+  { value: "PARTIAL", label: "一部日払い" },
+  { value: "FULL", label: "全額日払い" },
+] as const;
+
+export type DailyPayType = (typeof DAILY_PAY_TYPES)[number]["value"];
+
+/** 雰囲気タグ選択肢 */
+export const ATMOSPHERE_TAG_OPTIONS = [
+  "アットホーム",
+  "高級感",
+  "未経験歓迎",
+  "少人数",
+  "大型店",
+  "落ち着いた雰囲気",
+  "賑やか",
+  "自由出勤",
+  "若い子が多い",
+  "大人な雰囲気",
+  "しっかり稼げる",
+] as const;
 
 /** 血液型 */
 export const BLOOD_TYPES = [
