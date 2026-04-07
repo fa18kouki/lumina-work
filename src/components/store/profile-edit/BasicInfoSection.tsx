@@ -2,6 +2,8 @@
 
 import { BUSINESS_TYPES } from "@/lib/constants";
 import { AreaSelect } from "@/components/ui/area-select";
+import { PostalCodeInput } from "@/components/ui/postal-code-input";
+import { getAreaAddressPrefix } from "@/lib/areas";
 import type { SectionProps } from "./types";
 
 export function BasicInfoSection({ form, onUpdate }: SectionProps) {
@@ -40,6 +42,10 @@ export function BasicInfoSection({ form, onUpdate }: SectionProps) {
           </div>
         </div>
 
+        <PostalCodeInput
+          onAddressFound={(addr) => onUpdate({ address: addr })}
+        />
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-[var(--text-main)] mb-1.5">
@@ -47,7 +53,12 @@ export function BasicInfoSection({ form, onUpdate }: SectionProps) {
             </label>
             <AreaSelect
               value={form.area}
-              onChange={(v) => onUpdate({ area: v })}
+              onChange={(v) => {
+                onUpdate({ area: v });
+                if (!form.address.trim()) {
+                  onUpdate({ address: getAreaAddressPrefix(v) });
+                }
+              }}
               className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
             />
           </div>
@@ -61,8 +72,10 @@ export function BasicInfoSection({ form, onUpdate }: SectionProps) {
               onChange={(e) => onUpdate({ address: e.target.value })}
               required
               maxLength={200}
+              placeholder="例: 愛知県名古屋市錦2-14-5 ○○ビル3F"
               className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
             />
+            <p className="text-xs text-[var(--text-sub)] mt-1">都道府県から番地・ビル名まで入力してください</p>
           </div>
         </div>
 

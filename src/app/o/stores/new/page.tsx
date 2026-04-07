@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc";
 import { AREAS } from "@/lib/constants";
+import { getAreaAddressPrefix } from "@/lib/areas";
+import { PostalCodeInput } from "@/components/ui/postal-code-input";
 
 export default function NewStorePage() {
   const router = useRouter();
@@ -53,7 +55,13 @@ export default function NewStorePage() {
           </label>
           <select
             value={area}
-            onChange={(e) => setArea(e.target.value)}
+            onChange={(e) => {
+              const selected = e.target.value;
+              setArea(selected);
+              if (selected && !address.trim()) {
+                setAddress(getAreaAddressPrefix(selected));
+              }
+            }}
             className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
             required
           >
@@ -66,6 +74,10 @@ export default function NewStorePage() {
           </select>
         </div>
 
+        <PostalCodeInput
+          onAddressFound={(addr) => setAddress(addr)}
+        />
+
         <div>
           <label className="block text-sm font-medium text-[var(--text-main)] mb-2">
             住所 <span className="text-red-500">*</span>
@@ -75,9 +87,10 @@ export default function NewStorePage() {
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
-            placeholder="例: 東京都港区六本木1-2-3"
+            placeholder="例: 愛知県名古屋市錦2-14-5 ○○ビル3F"
             required
           />
+          <p className="text-xs text-[var(--text-sub)] mt-1">都道府県から番地・ビル名まで入力してください</p>
         </div>
 
         {createStore.error && (

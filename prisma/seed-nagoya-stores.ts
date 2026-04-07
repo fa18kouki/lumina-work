@@ -3,6 +3,7 @@ import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { getEnvFileOrder } from "../src/lib/env-files";
+import { getAreaAddressPrefix } from "../src/lib/areas";
 
 dotenv.config({ path: getEnvFileOrder(process.env.NODE_ENV) });
 
@@ -38,7 +39,7 @@ function buildStores(area: string, names: string[]): StoreEntry[] {
     store: {
       name,
       area,
-      address: "",
+      address: getAreaAddressPrefix(area),
       isVerified: true,
     },
   }));

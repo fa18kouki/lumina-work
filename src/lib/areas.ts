@@ -579,6 +579,42 @@ export function getAreaLabel(id: string): string {
   return area?.label ?? id;
 }
 
+// ─── エリア逆引き ───
+
+/** エリアの所在地情報 */
+export interface AreaLocation {
+  region: string;
+  prefecture: string;
+  city?: string;
+  area: string;
+}
+
+/** エリアラベルから所在地（地方・都道府県・市）を逆引き */
+export function getAreaLocation(areaLabel: string): AreaLocation | null {
+  for (const region of REGION_DATA) {
+    for (const pref of region.prefectures) {
+      if (pref.cities) {
+        for (const city of pref.cities) {
+          if (city.areas.some((a) => a.label === areaLabel)) {
+            return { region: region.name, prefecture: pref.name, city: city.name, area: areaLabel };
+          }
+        }
+      }
+      if (pref.areas?.some((a) => a.label === areaLabel)) {
+        return { region: region.name, prefecture: pref.name, area: areaLabel };
+      }
+    }
+  }
+  return null;
+}
+
+/** エリアラベルから住所プレフィックスを生成（例: "愛知県名古屋市錦"） */
+export function getAreaAddressPrefix(areaLabel: string): string {
+  const loc = getAreaLocation(areaLabel);
+  if (!loc) return areaLabel;
+  return `${loc.prefecture}${loc.city ?? ""}${loc.area}`;
+}
+
 // ─── 後方互換 ───
 
 /** 全エリアラベルの配列（既存のAREAS互換） */
