@@ -62,6 +62,16 @@ function OwnerRegisterForm() {
         return;
       }
 
+      // メール確認がOFFの場合、sessionが即座に返る → 直接ダッシュボードへ
+      if (data.session) {
+        const syncRes = await fetch("/api/auth/sync-owner-user", { method: "POST" });
+        if (syncRes.ok) {
+          window.location.href = `/o/dashboard`;
+          return;
+        }
+      }
+
+      // メール確認がONの場合（従来通り）
       setEmailSent(true);
     } catch {
       addToast("error", "登録に失敗しました。もう一度お試しください");
