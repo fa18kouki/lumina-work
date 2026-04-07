@@ -80,7 +80,9 @@ model User {
   owner Owner?
 
   // メッセージ送信者として
-  sentMessages Message[]
+  sentMessages  Message[]
+  notifications Notification[] @relation("notifications")
+  penalties     Penalty[]      @relation("penalties")
 
   @@map("users")
 }
@@ -627,9 +629,10 @@ model Interview {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // リレーション
-  offer Offer @relation(fields: [offerId], references: [id], onDelete: Cascade)
-  cast  Cast  @relation(fields: [castId], references: [id], onDelete: Cascade)
-  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  offer     Offer     @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  cast      Cast      @relation(fields: [castId], references: [id], onDelete: Cascade)
+  store     Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  penalties Penalty[]
 
   @@map("interviews")
 }
@@ -707,6 +710,8 @@ model Notification {
   createdAt DateTime         @default(now()) @map("created_at")
   readAt    DateTime?        @map("read_at")
 
+  user User @relation("notifications", fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, isRead])
   @@index([userId, createdAt])
   @@map("notifications")
@@ -729,6 +734,9 @@ model Penalty {
   interviewId String?     @map("interview_id")
 
   createdAt DateTime @default(now()) @map("created_at")
+
+  user      User       @relation("penalties", fields: [userId], references: [id], onDelete: Cascade)
+  interview Interview? @relation(fields: [interviewId], references: [id], onDelete: SetNull)
 
   @@map("penalties")
 }
