@@ -615,6 +615,37 @@ export function getAreaAddressPrefix(areaLabel: string): string {
   return `${loc.prefecture}${loc.city ?? ""}${loc.area}`;
 }
 
+// ─── 住所からエリア逆引き ───
+
+/** 都道府県名・市区町村名からマッチするエリアラベル一覧を返す */
+export function findAreasByAddress(
+  prefecture: string,
+  city: string
+): string[] {
+  for (const region of REGION_DATA) {
+    for (const pref of region.prefectures) {
+      if (pref.name !== prefecture) continue;
+
+      // 県に cities があれば、city パラメータが cityGroup.name で始まるかチェック
+      if (pref.cities) {
+        for (const cityGroup of pref.cities) {
+          if (city.startsWith(cityGroup.name)) {
+            return cityGroup.areas.map((a) => a.label);
+          }
+        }
+      }
+
+      // city マッチなしなら県直下の areas を返す
+      if (pref.areas) {
+        return pref.areas.map((a) => a.label);
+      }
+
+      return [];
+    }
+  }
+  return [];
+}
+
 // ─── 後方互換 ───
 
 /** 全エリアラベルの配列（既存のAREAS互換） */

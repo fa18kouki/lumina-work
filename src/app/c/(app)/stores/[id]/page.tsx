@@ -13,7 +13,9 @@ import {
   MapPin,
   Clock,
   Smile,
+  Check,
 } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { trpc } from "@/lib/trpc";
 import { getAreaLocation } from "@/lib/areas";
@@ -45,6 +47,7 @@ export default function StoreDetailPage() {
   const { data: session, status } = useAppSession();
   const [activeTab, setActiveTab] = useState<Tab>("details");
   const [liked, setLiked] = useState(false);
+  const [showApplyConfirm, setShowApplyConfirm] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated" || (session && session.user.role !== "CAST")) {
@@ -56,7 +59,15 @@ export default function StoreDetailPage() {
   const storeId = params.id as string;
   const { data: store, isLoading: storeLoading } = trpc.cast.getStoreDetail.useQuery({ storeId });
   const { data: blockStatus } = trpc.cast.isStoreBlocked.useQuery({ storeId });
+  const { data: applicationStatus } = trpc.cast.getApplicationStatus.useQuery({ storeId });
   const utils = trpc.useUtils();
+
+  const applyMutation = trpc.cast.applyToStore.useMutation({
+    onSuccess: () => {
+      utils.cast.getApplicationStatus.invalidate({ storeId });
+      setShowApplyConfirm(false);
+    },
+  });
 
   const blockMutation = trpc.cast.blockStore.useMutation({
     onSuccess: () => {
@@ -251,10 +262,34 @@ export default function StoreDetailPage() {
 
       {/* 固定CTAフッター */}
       <div className="sticky bottom-0 bg-white px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex gap-3 z-40">
-        <button className="flex-1 h-12 bg-gradient-to-r from-[#FF69B4] to-[#FF8DA1] text-white rounded-full flex items-center justify-center font-bold text-sm shadow-[0_4px_12px_rgba(255,105,180,0.3)]">
-          応募する
-        </button>
+        {applicationStatus?.applied ? (
+          <button
+            disabled
+            className="flex-1 h-12 bg-gray-300 text-white rounded-full flex items-center justify-center font-bold text-sm gap-2"
+          >
+            <Check className="w-4 h-4" />
+            応募済み
+          </button>
+        ) : (
+          <button
+            onClick={() => setShowApplyConfirm(true)}
+            disabled={applyMutation.isPending}
+            className="flex-1 h-12 bg-gradient-to-r from-[#FF69B4] to-[#FF8DA1] text-white rounded-full flex items-center justify-center font-bold text-sm shadow-[0_4px_12px_rgba(255,105,180,0.3)] disabled:opacity-50"
+          >
+            {applyMutation.isPending ? "送信中..." : "応募する"}
+          </button>
+        )}
       </div>
+
+      <ConfirmDialog
+        open={showApplyConfirm}
+        title="この店舗に応募しますか？"
+        description={`「${store.name}」に応募します。店舗側があなたのプロフィールを確認し、承認・辞退を行います。`}
+        confirmLabel="応募する"
+        cancelLabel="キャンセル"
+        onConfirm={() => applyMutation.mutate({ storeId })}
+        onCancel={() => setShowApplyConfirm(false)}
+      />
     </div>
   );
 }

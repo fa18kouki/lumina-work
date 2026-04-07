@@ -632,6 +632,99 @@ export const castRouter = createTRPCRouter({
     }),
 
   /**
+   * 店舗に応募
+   */
+  applyToStore: castProcedure
+    .input(z.object({ storeId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const cast = await ctx.prisma.cast.findUnique({
+        where: { userId: ctx.session.user.id },
+        select: {
+          id: true,
+          nickname: true,
+          lineId: true,
+          user: { select: { email: true, phone: true } },
+        },
+      });
+
+      if (!cast) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "キャストプロフィールが見つかりません",
+        });
+      }
+
+      // 店舗存在確認
+      const store = await ctx.prisma.store.findUnique({
+        where: { id: input.storeId, isVerified: true },
+        select: {
+          id: true,
+          name: true,
+          owner: {
+            select: {
+              userId: true,
+              user: { select: { email: true } },
+            },
+          },
+        },
+      });
+
+      if (!store) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "店舗が見つかりません",
+        });
+      }
+
+      // 重複応募チェック
+      const existingMatch = await ctx.prisma.match.findUnique({
+        where: { castId_storeId: { castId: cast.id, storeId: input.storeId } },
+      });
+
+      if (existingMatch) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "この店舗には既に応募済みです",
+        });
+      }
+
+      // Match をPENDINGで作成
+      const match = await ctx.prisma.match.create({
+        data: {
+          castId: cast.id,
+          storeId: input.storeId,
+          status: "PENDING",
+        },
+      });
+
+      return match;
+    }),
+
+  /**
+   * 店舗への応募状態を確認
+   */
+  getApplicationStatus: castProcedure
+    .input(z.object({ storeId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const cast = await ctx.prisma.cast.findUnique({
+        where: { userId: ctx.session.user.id },
+        select: { id: true },
+      });
+
+      if (!cast) return { applied: false, status: null };
+
+      const match = await ctx.prisma.match.findUnique({
+        where: { castId_storeId: { castId: cast.id, storeId: input.storeId } },
+        select: { status: true },
+      });
+
+      return {
+        applied: !!match,
+        status: match?.status ?? null,
+      };
+    }),
+
+  /**
    * 店舗詳細取得
    */
   getStoreDetail: castProcedure

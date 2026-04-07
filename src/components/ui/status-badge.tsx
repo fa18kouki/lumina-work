@@ -1,4 +1,4 @@
-type StatusVariant = "offer" | "applicant" | "interview";
+type StatusVariant = "offer" | "applicant" | "interview" | "match";
 type BadgeSize = "sm" | "md";
 
 const OFFER_STYLES: Record<string, string> = {
@@ -45,10 +45,23 @@ const INTERVIEW_LABELS: Record<string, string> = {
   CANCELLED: "キャンセル",
 };
 
+const MATCH_STYLES: Record<string, string> = {
+  PENDING: "bg-yellow-100 text-yellow-700",
+  ACCEPTED: "bg-green-100 text-green-700",
+  REJECTED: "bg-gray-100 text-gray-700",
+};
+
+const MATCH_LABELS: Record<string, string> = {
+  PENDING: "審査中",
+  ACCEPTED: "承認済",
+  REJECTED: "不採用",
+};
+
 const VARIANT_MAP: Record<StatusVariant, { styles: Record<string, string>; labels: Record<string, string> }> = {
   offer: { styles: OFFER_STYLES, labels: OFFER_LABELS },
   applicant: { styles: APPLICANT_STYLES, labels: APPLICANT_LABELS },
   interview: { styles: INTERVIEW_STYLES, labels: INTERVIEW_LABELS },
+  match: { styles: MATCH_STYLES, labels: MATCH_LABELS },
 };
 
 const sizeStyles: Record<BadgeSize, string> = {

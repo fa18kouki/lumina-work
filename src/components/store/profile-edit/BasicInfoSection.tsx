@@ -3,7 +3,7 @@
 import { BUSINESS_TYPES } from "@/lib/constants";
 import { AreaSelect } from "@/components/ui/area-select";
 import { PostalCodeInput } from "@/components/ui/postal-code-input";
-import { getAreaAddressPrefix } from "@/lib/areas";
+import { getAreaAddressPrefix, findAreasByAddress } from "@/lib/areas";
 import type { SectionProps } from "./types";
 
 export function BasicInfoSection({ form, onUpdate }: SectionProps) {
@@ -43,7 +43,13 @@ export function BasicInfoSection({ form, onUpdate }: SectionProps) {
         </div>
 
         <PostalCodeInput
-          onAddressFound={(addr) => onUpdate({ address: addr })}
+          onAddressFound={({ prefecture, city, town }) => {
+            onUpdate({ address: `${prefecture}${city}${town}` });
+            const candidates = findAreasByAddress(prefecture, city);
+            if (candidates.length > 0 && !form.area) {
+              onUpdate({ area: candidates[0] });
+            }
+          }}
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -14,8 +14,14 @@ interface ZipcloudResponse {
   results: ZipcloudResult[] | null;
 }
 
+export interface PostalCodeAddress {
+  prefecture: string; // 都道府県
+  city: string; // 市区町村
+  town: string; // 町域
+}
+
 interface PostalCodeInputProps {
-  onAddressFound: (address: string) => void;
+  onAddressFound: (address: PostalCodeAddress) => void;
   className?: string;
 }
 
@@ -60,8 +66,11 @@ export function PostalCodeInput({ onAddressFound, className }: PostalCodeInputPr
       }
 
       const result = data.results[0];
-      const address = `${result.address1}${result.address2}${result.address3}`;
-      onAddressFound(address);
+      onAddressFound({
+        prefecture: result.address1,
+        city: result.address2,
+        town: result.address3,
+      });
     } catch {
       setError("住所の検索に失敗しました");
     } finally {

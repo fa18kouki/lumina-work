@@ -461,6 +461,7 @@ model Store {
   interviews Interview[]
   castBlocks CastStoreBlock[]
 
+  @@index([ownerId])
   @@map("stores")
 }
 
@@ -604,6 +605,7 @@ model Offer {
   cast       Cast        @relation(fields: [castId], references: [id], onDelete: Cascade)
   interviews Interview[]
 
+  @@index([storeId, status])
   @@map("offers")
 }
 
@@ -634,6 +636,7 @@ model Interview {
   store     Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
   penalties Penalty[]
 
+  @@index([storeId])
   @@map("interviews")
 }
 

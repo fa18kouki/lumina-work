@@ -38,7 +38,6 @@ export const ownerRouter = createTRPCRouter({
             name: true,
             area: true,
             address: true,
-            photos: true,
             isVerified: true,
             createdAt: true,
             _count: {
@@ -203,47 +202,61 @@ export const ownerRouter = createTRPCRouter({
 
     const stores = await ctx.prisma.store.findMany({
       where: { ownerId: owner.id },
-      select: {
-        id: true,
-        name: true,
-        area: true,
-        _count: {
-          select: {
-            offers: true,
-            interviews: true,
-          },
-        },
-      },
+      select: { id: true, name: true, area: true },
       orderBy: { createdAt: "asc" },
     });
 
-    // 各店舗のオファーステータス別カウントを取得
-    const storeStats = await Promise.all(
-      stores.map(async (store) => {
-        const [pending, accepted, rejected, expired] = await Promise.all([
-          ctx.prisma.offer.count({ where: { storeId: store.id, status: "PENDING" } }),
-          ctx.prisma.offer.count({ where: { storeId: store.id, status: "ACCEPTED" } }),
-          ctx.prisma.offer.count({ where: { storeId: store.id, status: "REJECTED" } }),
-          ctx.prisma.offer.count({ where: { storeId: store.id, status: "EXPIRED" } }),
-        ]);
+    if (stores.length === 0) return [];
 
-        return {
-          storeId: store.id,
-          storeName: store.name,
-          storeArea: store.area,
-          total: store._count.offers,
-          pending,
-          accepted,
-          rejected,
-          expired,
-          interviews: store._count.interviews,
-          acceptRate: store._count.offers > 0
-            ? Math.round((accepted / store._count.offers) * 100)
-            : 0,
-        };
-      })
-    );
+    const storeIds = stores.map((s) => s.id);
 
-    return storeStats;
+    // groupBy で全店舗のオファーステータスを1クエリで取得
+    const [offerGroups, interviewGroups] = await Promise.all([
+      ctx.prisma.offer.groupBy({
+        by: ["storeId", "status"],
+        where: { storeId: { in: storeIds } },
+        _count: true,
+      }),
+      ctx.prisma.interview.groupBy({
+        by: ["storeId"],
+        where: { storeId: { in: storeIds } },
+        _count: true,
+      }),
+    ]);
+
+    // 店舗IDごとにステータス別カウントをマッピング
+    const offerMap = new Map<string, Record<string, number>>();
+    for (const row of offerGroups) {
+      const existing = offerMap.get(row.storeId) ?? {};
+      offerMap.set(row.storeId, { ...existing, [row.status]: row._count });
+    }
+
+    const interviewMap = new Map<string, number>();
+    for (const row of interviewGroups) {
+      interviewMap.set(row.storeId, row._count);
+    }
+
+    return stores.map((store) => {
+      const counts = offerMap.get(store.id) ?? {};
+      const pending = counts["PENDING"] ?? 0;
+      const accepted = counts["ACCEPTED"] ?? 0;
+      const rejected = counts["REJECTED"] ?? 0;
+      const expired = counts["EXPIRED"] ?? 0;
+      const total = pending + accepted + rejected + expired;
+      const interviews = interviewMap.get(store.id) ?? 0;
+
+      return {
+        storeId: store.id,
+        storeName: store.name,
+        storeArea: store.area,
+        total,
+        pending,
+        accepted,
+        rejected,
+        expired,
+        interviews,
+        acceptRate: total > 0 ? Math.round((accepted / total) * 100) : 0,
+      };
+    });
   }),
 });

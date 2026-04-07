@@ -2,7 +2,7 @@
 
 import { use } from "react";
 import Link from "next/link";
-import { Users, FileText, CalendarCheck, Settings, Store } from "lucide-react";
+import { Users, FileText, CalendarCheck, Settings, Store, Inbox } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 export default function StoreDetailPage({
@@ -35,6 +35,12 @@ export default function StoreDetailPage({
       label: "キャスト検索",
       description: "キャストを検索してオファーを送信",
       icon: Users,
+    },
+    {
+      href: `/o/stores/${storeId}/applications`,
+      label: "応募管理",
+      description: "キャストからの応募の確認と承認",
+      icon: Inbox,
     },
     {
       href: `/o/stores/${storeId}/offers`,
