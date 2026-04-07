@@ -35,7 +35,7 @@ export const storeRouter = createTRPCRouter({
         storeId: z.string(),
         name: z.string().min(1).max(100),
         area: z.string().min(1).max(50),
-        address: z.string().min(1).max(200),
+        address: z.string().trim().min(1, "住所を入力してください").max(200),
         description: z.string().max(2000).optional(),
         photos: z.array(z.string().url()).max(5).optional(),
         bannerUrl: z.string().url().nullable().optional(),

@@ -125,7 +125,7 @@ export const ownerRouter = createTRPCRouter({
       z.object({
         name: z.string().min(1).max(100),
         area: z.string().min(1).max(50),
-        address: z.string().min(1).max(200),
+        address: z.string().trim().min(1, "住所を入力してください").max(200),
         referralSource: z.string().max(100).optional(),
       })
     )
