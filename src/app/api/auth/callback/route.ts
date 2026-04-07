@@ -58,7 +58,12 @@ export async function GET(request: NextRequest) {
     });
 
     const newOwner = await prisma.owner.create({
-      data: { userId: newUser.id },
+      data: {
+        userId: newUser.id,
+        subscription: {
+          create: { plan: "FREE", status: "ACTIVE", offerLimit: 3 },
+        },
+      },
     });
 
     // リファーラルコードの処理

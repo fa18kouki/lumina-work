@@ -15,6 +15,24 @@ function createAuthAdapter() {
     ...base,
     async createUser({ id: _id, name: _name, ...data }: AdapterUser) {
       const user = await prisma.user.create({ data });
+
+      // CAST ロールのユーザーには Cast レコードを自動作成
+      // LINE/Twitter/Email どの認証経路でも Cast の存在を保証する
+      if (user.role === "CAST") {
+        await prisma.cast.create({
+          data: {
+            userId: user.id,
+            nickname: "ゲスト",
+            age: 18,
+            photos: [],
+            desiredAreas: [],
+            preferredAtmosphere: [],
+            preferredClientele: [],
+            isAvailableNow: true,
+          },
+        });
+      }
+
       return { ...user, name: null } as AdapterUser;
     },
     async getUserByAccount(provider_providerAccountId: {

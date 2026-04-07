@@ -73,9 +73,14 @@ export async function POST() {
         },
       });
 
-      // Owner レコードも同時作成
+      // Owner レコードとデフォルト FREE サブスクリプションを同時作成
       await prisma.owner.create({
-        data: { userId: prismaUser.id },
+        data: {
+          userId: prismaUser.id,
+          subscription: {
+            create: { plan: "FREE", status: "ACTIVE", offerLimit: 3 },
+          },
+        },
       });
     }
 

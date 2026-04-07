@@ -5,7 +5,7 @@ import { prisma } from "@/server/db";
 
 /**
  * 店舗がメール/パスワードでログインしたあと、
- * Prisma User を role=STORE で作成または既存をそのまま返す。
+ * Prisma User を role=OWNER で作成または既存をそのまま返す。
  * Cookie の Supabase セッションでユーザーを識別する。
  */
 export async function POST() {
@@ -70,6 +70,16 @@ export async function POST() {
             : null,
           role: "OWNER",
           supabaseAuthId: supabaseUser.id,
+        },
+      });
+
+      // Owner レコードとデフォルト FREE サブスクリプションを同時作成
+      await prisma.owner.create({
+        data: {
+          userId: prismaUser.id,
+          subscription: {
+            create: { plan: "FREE", status: "ACTIVE", offerLimit: 3 },
+          },
         },
       });
     }
