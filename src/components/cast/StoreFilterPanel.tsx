@@ -143,7 +143,7 @@ export function StoreFilterPanel({
     <>
       {/* オーバーレイ */}
       <div
-        className={`fixed inset-0 z-40 bg-black/40 transition-opacity duration-300 ${
+        className={`fixed inset-0 z-[60] bg-black/40 transition-opacity duration-300 ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={handleOverlayClick}
@@ -155,7 +155,7 @@ export function StoreFilterPanel({
         role="dialog"
         aria-modal="true"
         aria-label="詳細フィルター"
-        className={`fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-lg transition-transform duration-300 ease-out max-h-[85vh] flex flex-col ${
+        className={`fixed inset-x-0 bottom-0 z-[70] bg-white rounded-t-2xl shadow-lg transition-transform duration-300 ease-out max-h-[85vh] flex flex-col ${
           isOpen ? "translate-y-0" : "translate-y-full"
         }`}
       >

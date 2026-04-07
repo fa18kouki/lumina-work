@@ -16,8 +16,16 @@ import {
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { trpc } from "@/lib/trpc";
+import { getAreaLocation } from "@/lib/areas";
 
 const DEFAULT_IMAGE = "/service-scene-10.png";
+
+function formatDisplayAddress(address: string, area: string): string {
+  if (address.trim()) return address;
+  const loc = getAreaLocation(area);
+  if (!loc) return "住所未登録";
+  return [loc.prefecture, loc.city, `${loc.area}エリア`].filter(Boolean).join(" ");
+}
 
 function formatSalary(salarySystem: unknown): string {
   if (!salarySystem) return "応相談";
@@ -95,7 +103,7 @@ export default function StoreDetailPage() {
     ?? DEFAULT_IMAGE;
 
   return (
-    <div className="min-h-screen bg-(--bg-gray) -m-4 md:-m-8">
+    <div className="flex flex-col min-h-full bg-(--bg-gray) -m-4 md:-m-8">
       {/* ヒーロー画像 */}
       <div className="relative h-[200px] sm:h-[280px] w-full">
         <Image
@@ -143,7 +151,7 @@ export default function StoreDetailPage() {
       </div>
 
       {/* コンテンツカード */}
-      <div className="relative bg-white rounded-t-[30px] -mt-10 min-h-[calc(100vh-240px)] pb-28">
+      <div className="relative bg-white rounded-t-[30px] -mt-10 flex-1 pb-4">
         {storeData.logoUrl && (
           <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-10 w-16 h-16 rounded-full border-4 border-white overflow-hidden shadow-md bg-white">
             <Image src={storeData.logoUrl} alt={`${store.name} ロゴ`} fill className="object-cover" sizes="64px" />
@@ -157,7 +165,7 @@ export default function StoreDetailPage() {
             </h1>
             <div className="flex items-center justify-center gap-1.5 text-(--text-sub) text-sm mb-3">
               <MapPin className="w-4 h-4 text-(--primary)" />
-              <span>東京都{store.area}区 X-X-X</span>
+              <span>{formatDisplayAddress(store.address, store.area)}</span>
             </div>
             <span className="inline-block px-5 py-1.5 bg-(--primary-bg) text-(--primary) text-2xl font-bold rounded-full">
               {formatSalary(store.salarySystem)}
@@ -242,8 +250,8 @@ export default function StoreDetailPage() {
       </div>
 
       {/* 固定CTAフッター */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white px-4 sm:px-6 py-3 sm:py-4 pb-6 sm:pb-8 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex gap-3 z-50">
-        <button className="flex-1 h-12 sm:h-[54px] bg-gradient-to-r from-[#FF69B4] to-[#FF8DA1] text-white rounded-full flex items-center justify-center font-bold text-sm sm:text-base shadow-[0_4px_12px_rgba(255,105,180,0.3)]">
+      <div className="sticky bottom-0 bg-white px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex gap-3 z-40">
+        <button className="flex-1 h-12 bg-gradient-to-r from-[#FF69B4] to-[#FF8DA1] text-white rounded-full flex items-center justify-center font-bold text-sm shadow-[0_4px_12px_rgba(255,105,180,0.3)]">
           応募する
         </button>
       </div>
