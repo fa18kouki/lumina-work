@@ -1,5 +1,7 @@
 "use client";
 
+import { calculateBaseRate, calculateRank } from "./diagnosis/calculate-rank";
+
 // 診断セッションの型定義
 export type DiagnosisStep =
   | "START"
@@ -173,45 +175,16 @@ export function hasDiagnosisSession(): boolean {
 export function calculateDiagnosisResult(
   answers: DiagnosisAnswers
 ): DiagnosisResult {
-  const years = answers.totalExperienceYears ?? 0;
-
-  // 経験年数によるベース時給
-  let baseRate = 3000;
-  if (years >= 5) baseRate = 6000;
-  else if (years >= 2) baseRate = 5000;
-  else if (years > 0) baseRate = 4000;
-
-  // エリアによる補正（最も高いエリアボーナスを採用）
-  const areaBonus: Record<string, number> = {
-    銀座: 2000,
-    六本木: 1500,
-    新宿: 1000,
-    渋谷: 800,
-    池袋: 700,
-    歌舞伎町: 900,
-    上野: 600,
-    五反田: 600,
-    横浜: 700,
-    大阪: 800,
-    名古屋: 700,
-    福岡: 600,
-  };
-  const maxAreaBonus = (answers.desiredAreas ?? []).reduce(
-    (max, area) => Math.max(max, areaBonus[area] ?? 0),
-    0
-  );
-  baseRate += maxAreaBonus;
-
-  // 過去時給による補正
-  if (answers.previousHourlyRate && answers.previousHourlyRate > baseRate) {
-    baseRate = Math.round((baseRate + answers.previousHourlyRate) / 2);
-  }
-
-  // ランク判定
-  let rank: CastRank = "C";
-  if (baseRate >= 7000) rank = "S";
-  else if (baseRate >= 5500) rank = "A";
-  else if (baseRate >= 4000) rank = "B";
+  const baseRate = calculateBaseRate({
+    totalExperienceYears: answers.totalExperienceYears,
+    desiredAreas: answers.desiredAreas,
+    previousHourlyRate: answers.previousHourlyRate,
+  });
+  const rank: CastRank = calculateRank({
+    totalExperienceYears: answers.totalExperienceYears,
+    desiredAreas: answers.desiredAreas,
+    previousHourlyRate: answers.previousHourlyRate,
+  });
 
   // 月収計算（出勤日数ベース、1日6時間想定）
   const daysPerWeek = answers.availableDaysPerWeek ?? 3;

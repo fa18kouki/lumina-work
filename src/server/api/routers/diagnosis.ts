@@ -7,6 +7,7 @@ import {
   areRequiredQuestionsAnswered,
   calculateProgress,
 } from "@/lib/diagnosis/question-flow";
+import { calculateRank } from "@/lib/diagnosis/calculate-rank";
 
 // 回答値のZodスキーマ
 const answerValueSchema = z.union([
@@ -266,6 +267,19 @@ export const diagnosisRouter = createTRPCRouter({
     const profileData: Prisma.CastUpdateInput = {
       diagnosisCompleted: true,
       diagnosisCompletedAt: now,
+      rank: calculateRank({
+        totalExperienceYears:
+          typeof answers.totalExperienceYears === "number"
+            ? answers.totalExperienceYears
+            : undefined,
+        desiredAreas: Array.isArray(answers.desiredAreas)
+          ? (answers.desiredAreas as string[])
+          : undefined,
+        previousHourlyRate:
+          typeof answers.previousHourlyRate === "number"
+            ? answers.previousHourlyRate
+            : undefined,
+      }),
     };
 
     // 基本情報
