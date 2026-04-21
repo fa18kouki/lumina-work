@@ -510,11 +510,17 @@ model Subscription {
   stripeSubscriptionId String?            @unique @map("stripe_subscription_id")
   plan                 SubscriptionPlan   @default(FREE)
   status               SubscriptionStatus @default(ACTIVE)
+  // offerLimit / maxStores は SubscriptionPlanConfig への移行中の後方互換カラム。
+  // 新規コードでは planConfig.offerLimit / planConfig.maxStores を参照すること。
   offerLimit           Int?               @map("offer_limit")
   maxStores            Int?               @map("max_stores")
   trialEndsAt          DateTime?          @map("trial_ends_at")
   currentPeriodStart   DateTime?          @map("current_period_start")
   currentPeriodEnd     DateTime?          @map("current_period_end")
+
+  // プランマスタへの参照（RUN-237 で追加）
+  planConfigId String?                 @map("plan_config_id")
+  planConfig   SubscriptionPlanConfig? @relation(fields: [planConfigId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -523,6 +529,30 @@ model Subscription {
   invoices Invoice[]
 
   @@map("subscriptions")
+}
+
+// ==================== プランマスタ ====================
+// 各 SubscriptionPlan の価格・上限・Stripe Price ID を一元管理する。
+// これまで Subscription 行に直接書かれていた offerLimit / maxStores を
+// このマスタに集約し、プラン間の整合性を保証する。
+model SubscriptionPlanConfig {
+  id              String           @id @default(cuid())
+  plan            SubscriptionPlan @unique
+  displayName     String           @map("display_name")
+  offerLimit      Int?             @map("offer_limit") // null = 無制限
+  maxStores       Int?             @map("max_stores") // null = 無制限
+  monthlyPriceJpy Int              @default(0) @map("monthly_price_jpy")
+  stripePriceId   String?          @unique @map("stripe_price_id")
+  features        Json?
+  isActive        Boolean          @default(true) @map("is_active")
+  sortOrder       Int              @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  subscriptions Subscription[]
+
+  @@map("subscription_plan_configs")
 }
 
 model Invoice {
