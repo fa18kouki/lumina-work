@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAppSession } from "@/lib/auth-helpers";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { trpc } from "@/lib/trpc";
 import { SalaryDisplay } from "@/components/store/salary-display";
 import {
@@ -30,6 +31,7 @@ export default function OfferDetailPage() {
   const offerId = params.offerId as string;
   const { data: session, status } = useAppSession();
   const utils = trpc.useUtils();
+  const [pendingAccept, setPendingAccept] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/c/login");
@@ -50,9 +52,13 @@ export default function OfferDetailPage() {
   });
 
   const handleRespond = (accept: boolean) => {
-    if (confirm(accept ? "このオファーを承諾しますか？" : "このオファーを辞退しますか？")) {
-      respondToOffer.mutate({ offerId, accept });
-    }
+    setPendingAccept(accept);
+  };
+
+  const handleConfirmResponse = () => {
+    if (pendingAccept === null) return;
+    respondToOffer.mutate({ offerId, accept: pendingAccept });
+    setPendingAccept(null);
   };
 
   if (status === "loading" || !session || session.user.role !== "CAST") {
@@ -329,6 +335,20 @@ export default function OfferDetailPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingAccept !== null}
+        title={pendingAccept ? "オファーを承諾しますか？" : "オファーを辞退しますか？"}
+        description={
+          pendingAccept
+            ? "承諾後、店舗に通知され面接日程の調整へ進みます。"
+            : "辞退すると取り消すことはできません。よろしいですか？"
+        }
+        confirmLabel={pendingAccept ? "承諾する" : "辞退する"}
+        variant={pendingAccept ? "default" : "danger"}
+        onConfirm={handleConfirmResponse}
+        onCancel={() => setPendingAccept(null)}
+      />
     </div>
   );
 }
