@@ -381,10 +381,13 @@ async function main() {
         },
       });
 
+      // 店舗名ベースで簡易的な法人名・代表者名を生成
+      // （名古屋シードは件数が多いため最低限の companyName のみ埋める）
+      const companyName = `株式会社${s.store.name.replace(/\s+/g, "")}`;
       const owner = await prisma.owner.upsert({
         where: { userId: user.id },
-        update: {},
-        create: { userId: user.id },
+        update: { companyName },
+        create: { userId: user.id, companyName, isVerified: true },
       });
 
       await prisma.store.upsert({
