@@ -28,6 +28,18 @@ async function main() {
   const stores = [
     {
       email: "seed-store-luna@example.com",
+      owner: {
+        companyName: "株式会社ルナエンターテイメント",
+        representativeName: "月島 雅之",
+        representativeFurigana: "つきしま まさゆき",
+        representativePhone: "03-5411-1001",
+        corporateNumber: "1010401001001",
+        invoiceRegistrationNumber: "T1010401001001",
+        headOfficeAddress: "東京都港区六本木3-10-5 LUNAビル5F",
+        billingContactName: "経理部 山本",
+        billingContactEmail: "keiri@luna-ent.example.com",
+        isVerified: true,
+      },
       store: {
         name: "Club LUNA",
         area: "六本木",
@@ -56,6 +68,18 @@ async function main() {
     },
     {
       email: "seed-store-stella@example.com",
+      owner: {
+        companyName: "ステラ企画合同会社",
+        representativeName: "星野 理恵",
+        representativeFurigana: "ほしの りえ",
+        representativePhone: "03-3461-2002",
+        corporateNumber: "5010403002002",
+        invoiceRegistrationNumber: "T5010403002002",
+        headOfficeAddress: "東京都渋谷区道玄坂2-15-1",
+        billingContactName: "星野 理恵",
+        billingContactEmail: "hoshino@stella-bar.example.com",
+        isVerified: true,
+      },
       store: {
         name: "Girls Bar STELLA",
         area: "渋谷",
@@ -76,6 +100,18 @@ async function main() {
     },
     {
       email: "seed-store-amour@example.com",
+      owner: {
+        companyName: "株式会社アムール",
+        representativeName: "久保田 瑠美",
+        representativeFurigana: "くぼた るみ",
+        representativePhone: "03-3571-3003",
+        corporateNumber: "2010001003003",
+        invoiceRegistrationNumber: "T2010001003003",
+        headOfficeAddress: "東京都中央区銀座7-5-12 銀座AMOURビル",
+        billingContactName: "経理部 田中",
+        billingContactEmail: "billing@amour-ginza.example.com",
+        isVerified: true,
+      },
       store: {
         name: "Lounge AMOUR",
         area: "銀座",
@@ -104,6 +140,20 @@ async function main() {
     },
     {
       email: "seed-store-brilliance@example.com",
+      owner: {
+        companyName: "ブリリアンスホールディングス株式会社",
+        representativeName: "三宅 健一",
+        representativeFurigana: "みやけ けんいち",
+        representativePhone: "03-5291-4004",
+        corporateNumber: "8010001004004",
+        invoiceRegistrationNumber: "T8010001004004",
+        headOfficeAddress: "東京都新宿区歌舞伎町1-8-3 Brilliance Tower 10F",
+        billingAddress: "東京都新宿区西新宿2-6-1 新宿住友ビル12F",
+        billingContactName: "経理部 佐藤",
+        billingContactEmail: "keiri@brilliance-hd.example.com",
+        billingContactPhone: "03-5291-4010",
+        isVerified: true,
+      },
       store: {
         name: "Club Brilliance",
         area: "新宿",
@@ -138,6 +188,18 @@ async function main() {
     },
     {
       email: "seed-store-elegance@example.com",
+      owner: {
+        companyName: "株式会社エレガンス赤坂",
+        representativeName: "西園寺 彩香",
+        representativeFurigana: "さいおんじ あやか",
+        representativePhone: "03-3582-5005",
+        corporateNumber: "3010401005005",
+        invoiceRegistrationNumber: "T3010401005005",
+        headOfficeAddress: "東京都港区赤坂3-2-8",
+        billingContactName: "西園寺 彩香",
+        billingContactEmail: "info@elegance-akasaka.example.com",
+        isVerified: true,
+      },
       store: {
         name: "Lounge Elegance",
         area: "赤坂",
@@ -167,6 +229,16 @@ async function main() {
     },
     {
       email: "seed-store-paradise@example.com",
+      owner: {
+        companyName: "パラダイス池袋合同会社",
+        representativeName: "大野 翔太",
+        representativeFurigana: "おおの しょうた",
+        representativePhone: "03-3981-6006",
+        headOfficeAddress: "東京都豊島区西池袋1-12-5",
+        billingContactName: "大野 翔太",
+        billingContactEmail: "ohno@paradise-ike.example.com",
+        isVerified: false, // 未確認オーナーのサンプル
+      },
       store: {
         name: "Girls Bar Paradise",
         area: "池袋",
@@ -195,6 +267,20 @@ async function main() {
     },
     {
       email: "seed-store-velvet@example.com",
+      owner: {
+        companyName: "株式会社ヴェルヴェット",
+        representativeName: "黒川 真司",
+        representativeFurigana: "くろかわ しんじ",
+        representativePhone: "03-3572-7007",
+        corporateNumber: "6010001007007",
+        invoiceRegistrationNumber: "T6010001007007",
+        headOfficeAddress: "東京都中央区銀座8-3-11 銀座VELVETビル3F",
+        billingAddress: "東京都中央区銀座8-3-11 銀座VELVETビル3F 経理室",
+        billingContactName: "経理部 高橋",
+        billingContactEmail: "keiri@velvet-ginza.example.com",
+        billingContactPhone: "03-3572-7008",
+        isVerified: true,
+      },
       store: {
         name: "Club Velvet",
         area: "銀座",
@@ -227,6 +313,16 @@ async function main() {
     },
     {
       email: "seed-store-noel@example.com",
+      owner: {
+        companyName: "スナックノエル",
+        representativeName: "小林 敦子",
+        representativeFurigana: "こばやし あつこ",
+        representativePhone: "03-3792-8008",
+        headOfficeAddress: "東京都渋谷区恵比寿南1-5-7",
+        billingContactName: "小林 敦子",
+        billingContactEmail: "mama@noel-ebisu.example.com",
+        isVerified: true,
+      },
       store: {
         name: "Snack Noël",
         area: "恵比寿",
@@ -255,6 +351,18 @@ async function main() {
     },
     {
       email: "seed-store-cherry@example.com",
+      owner: {
+        companyName: "チェリー歌舞伎町株式会社",
+        representativeName: "松本 悠真",
+        representativeFurigana: "まつもと ゆうま",
+        representativePhone: "03-5272-9009",
+        corporateNumber: "9010001009009",
+        invoiceRegistrationNumber: "T9010001009009",
+        headOfficeAddress: "東京都新宿区歌舞伎町2-25-3",
+        billingContactName: "松本 悠真",
+        billingContactEmail: "matsumoto@cherry-kabuki.example.com",
+        isVerified: false,
+      },
       store: {
         name: "Girls Bar Cherry",
         area: "新宿",
@@ -282,6 +390,19 @@ async function main() {
     },
     {
       email: "seed-store-azure@example.com",
+      owner: {
+        companyName: "株式会社アジュール・インターナショナル",
+        representativeName: "藤堂 美月",
+        representativeFurigana: "とうどう みづき",
+        representativePhone: "03-3408-1010",
+        corporateNumber: "4010401010010",
+        invoiceRegistrationNumber: "T4010401010010",
+        headOfficeAddress: "東京都港区六本木5-18-2",
+        billingContactName: "経理部 ウィリアムズ",
+        billingContactEmail: "billing@azure-intl.example.com",
+        billingContactPhone: "03-3408-1011",
+        isVerified: true,
+      },
       store: {
         name: "Lounge Azure",
         area: "六本木",
@@ -326,8 +447,8 @@ async function main() {
 
     const owner = await prisma.owner.upsert({
       where: { userId: user.id },
-      update: {},
-      create: { userId: user.id },
+      update: s.owner ?? {},
+      create: { userId: user.id, ...(s.owner ?? {}) },
     });
 
     const store = await prisma.store.upsert({
