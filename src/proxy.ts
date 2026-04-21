@@ -60,7 +60,7 @@ async function hasSupabaseSession(req: NextRequest): Promise<boolean> {
   return !!user;
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (isPublicRoute(pathname)) {
