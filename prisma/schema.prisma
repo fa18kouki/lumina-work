@@ -366,6 +366,27 @@ model Owner {
   userId      String  @unique @map("user_id")
   companyName String? @map("company_name")
 
+  // 代表者情報（契約主体）
+  representativeName     String? @map("representative_name")
+  representativeFurigana String? @map("representative_furigana")
+  representativePhone    String? @map("representative_phone")
+
+  // 法人・税務情報（請求書発行用）
+  corporateNumber           String? @map("corporate_number") // 法人番号（13桁）
+  invoiceRegistrationNumber String? @map("invoice_registration_number") // 適格請求書発行事業者登録番号
+
+  // 住所
+  headOfficeAddress String? @map("head_office_address") // 本社・本店所在地
+  billingAddress    String? @map("billing_address") // 請求先住所（本社と異なる場合）
+
+  // 請求担当者（契約主体とは別の窓口）
+  billingContactName  String? @map("billing_contact_name")
+  billingContactEmail String? @map("billing_contact_email")
+  billingContactPhone String? @map("billing_contact_phone")
+
+  // 本人確認ステータス（Store.isVerified とは別で、オーナー自体の確認）
+  isVerified Boolean @default(false) @map("is_verified")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
