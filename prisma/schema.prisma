@@ -541,7 +541,9 @@ model Invoice {
   paidAt           DateTime? @map("paid_at")
   createdAt        DateTime @default(now()) @map("created_at")
 
-  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  // 会計証跡として保持するため、Subscription 削除時のカスケード削除は禁止する。
+  // Subscription を消したい場合は先に Invoice をアーカイブ/移管する運用とする。
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
 
   @@index([subscriptionId, createdAt])
   @@map("invoices")

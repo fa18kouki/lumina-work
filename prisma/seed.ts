@@ -1469,9 +1469,11 @@ async function main() {
     { storeIndex: 9, plan: "PRO_TRIAL", offerLimit: null },
   ];
 
+  const createdSubscriptions: { storeIndex: number; subscriptionId: string; plan: string }[] = [];
+
   for (const sub of subscriptionData) {
     const ownerId = createdStores[sub.storeIndex].ownerId;
-    await prisma.subscription.upsert({
+    const subscription = await prisma.subscription.upsert({
       where: { ownerId },
       update: { plan: sub.plan, status: "ACTIVE", offerLimit: sub.offerLimit },
       create: {
@@ -1481,8 +1483,83 @@ async function main() {
         offerLimit: sub.offerLimit,
       },
     });
+    createdSubscriptions.push({ storeIndex: sub.storeIndex, subscriptionId: subscription.id, plan: sub.plan });
   }
   console.log(`  ✅ サブスクリプション: ${subscriptionData.length}件 (CASUAL: ${subscriptionData.filter(s => s.plan === "CASUAL").length}, PRO: ${subscriptionData.filter(s => s.plan !== "CASUAL").length})`);
+
+  // ==================== 請求書（Invoice）====================
+  // PRO 系プランのサブスクに過去数ヶ月分のダミー請求書を投入する。
+  // paid / open / void の混在で、一覧・詳細画面の動作確認や会計証跡 (onDelete: Restrict) のチェック用。
+  const planMonthlyPriceJpy: Record<string, number> = {
+    CASUAL: 0, // CASUAL は課金なし想定で請求書は生成しない
+    PRO_TRIAL: 0, // トライアル中は 0 円
+    PRO_BUSINESS: 29800,
+    PRO_ENTERPRISE: 98000,
+  };
+
+  // 月初を返すヘルパー
+  function monthStart(monthsAgo: number): Date {
+    const d = new Date();
+    d.setDate(1);
+    d.setHours(0, 0, 0, 0);
+    d.setMonth(d.getMonth() - monthsAgo);
+    return d;
+  }
+  function monthEnd(monthsAgo: number): Date {
+    const d = monthStart(monthsAgo);
+    d.setMonth(d.getMonth() + 1);
+    d.setDate(0);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }
+
+  let invoiceCount = 0;
+  let invoiceIndex = 0;
+  for (const sub of createdSubscriptions) {
+    const price = planMonthlyPriceJpy[sub.plan] ?? 0;
+    if (price <= 0) continue;
+
+    // 直近3ヶ月: paid, paid, open の順で生成
+    const statusPlan: { monthsAgo: number; status: "paid" | "open" | "void"; paid: boolean }[] = [
+      { monthsAgo: 3, status: "paid", paid: true },
+      { monthsAgo: 2, status: "paid", paid: true },
+      { monthsAgo: 1, status: "open", paid: false },
+    ];
+
+    // 1件だけ void の例として -4 ヶ月目を追加（PRO_ENTERPRISE のみ）
+    if (sub.plan === "PRO_ENTERPRISE") {
+      statusPlan.unshift({ monthsAgo: 4, status: "void", paid: false });
+    }
+
+    for (const iv of statusPlan) {
+      invoiceIndex++;
+      const periodStart = monthStart(iv.monthsAgo);
+      const periodEnd = monthEnd(iv.monthsAgo);
+      const stripeInvoiceId = `seed_in_${sub.subscriptionId.slice(0, 8)}_${iv.monthsAgo}`;
+
+      await prisma.invoice.upsert({
+        where: { stripeInvoiceId },
+        update: {},
+        create: {
+          subscriptionId: sub.subscriptionId,
+          stripeInvoiceId,
+          number: `INV-${new Date().getFullYear()}${String(invoiceIndex).padStart(4, "0")}`,
+          amountDue: price,
+          amountPaid: iv.paid ? price : 0,
+          currency: "jpy",
+          status: iv.status,
+          invoicePdfUrl: iv.status === "void" ? null : `https://example.com/invoice/${stripeInvoiceId}.pdf`,
+          hostedInvoiceUrl: iv.status === "void" ? null : `https://example.com/invoice/${stripeInvoiceId}`,
+          periodStart,
+          periodEnd,
+          paidAt: iv.paid ? new Date(periodEnd.getTime() + 2 * 24 * 60 * 60 * 1000) : null,
+          createdAt: periodEnd,
+        },
+      });
+      invoiceCount++;
+    }
+  }
+  console.log(`  ✅ 請求書: ${invoiceCount}件`);
 
   console.log("\n🎉 シードデータの投入が完了しました！");
   console.log(`  店舗: ${stores.length}件`);
@@ -1491,6 +1568,7 @@ async function main() {
   console.log(`  やりとり: ${matchData.length}件`);
   console.log(`  面接: ${interviewCount}件`);
   console.log(`  サブスクリプション: ${subscriptionData.length}件`);
+  console.log(`  請求書: ${invoiceCount}件`);
 }
 
 main()
