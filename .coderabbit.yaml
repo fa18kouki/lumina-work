@@ -1,0 +1,64 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "ja-JP"
+
+# レビューの"口調"を揃える（短く・根拠と代替案）
+tone_instructions: "丁寧語で、指摘は根拠→影響→代替案の順に簡潔に。推測は推測と明記してください。"
+
+reviews:
+  # 最初は chill 推奨（assertive は"細かい指摘も増えやすい"）
+  profile: "chill"
+
+  # PR 要約を有効に（チームの合意形成が速くなる）
+  high_level_summary: true
+
+  # "遊び"はまず切る（必要なら後で ON）
+  poem: false
+
+  # PR 内のコメントに AI エージェント向けの修正プロンプトを含める
+  enable_prompt_for_ai_agents: true
+
+  # 生成物・成果物・依存ロックなど「見てもノイズになりやすい」ものを除外
+  path_filters:
+    - "!dist/**"
+    - "!build/**"
+    - "!.next/**"
+    - "!coverage/**"
+    - "!**/*.lock"
+    - "!**/*.min.*"
+    - "!**/*.tsbuildinfo"
+    - "!prisma/migrations/**"
+    - "!public/**"
+
+  # ディレクトリ単位でレビュー観点を追加
+  path_instructions:
+    - path: "src/app/**"
+      instructions: "Next.js App Router 前提。Server Components と Client Components の境界、use server / use client の取り違え、データ取得のキャッシュ戦略、認証ガード漏れを重点的に確認してください。"
+    - path: "src/components/**"
+      instructions: "React/TypeScript は、状態管理の単純化・依存配列・例外系の UI 崩れ・アクセシビリティ（aria, キーボード操作）を重点的に確認してください。"
+    - path: "src/server/**"
+      instructions: "tRPC / サーバー処理では、境界条件、Zod 等での入力バリデーション、ログの粒度、例外の握りつぶしがないか、権限チェック漏れを重点的に確認してください。"
+    - path: "prisma/schema.prisma"
+      instructions: "スキーマ変更時は、onDelete の方向、nullable の妥当性、index の不足、マイグレーションとの整合性を確認してください。"
+    - path: "prisma/seed*.ts"
+      instructions: "seed は冪等性（upsert 利用）・依存順序・既存データを壊さないかを重点的に確認してください。"
+    - path: "tests/**"
+      instructions: "テストは、観点の重複・setup/teardown の漏れ・固定 seed に依存していないか・型レベルテストの妥当性を確認してください。"
+
+  auto_review:
+    enabled: true
+    drafts: false
+
+    # "WIP/作業中" は自動レビューしない（通知荒れの最大原因を潰す）
+    labels:
+      - "!wip"
+      - "!do-not-review"
+
+    # タイトルに特定キーワードが含まれる場合もスキップ
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT MERGE"
+      - "DRAFT"
+
+chat:
+  # PR 上での対話を前提にする
+  auto_reply: true
