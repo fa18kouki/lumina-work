@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, type Prisma } from "@prisma/client";
 import { getEnvFileOrder } from "../src/lib/env-files";
 
 dotenv.config({ path: getEnvFileOrder(process.env.NODE_ENV) });
@@ -1456,6 +1456,55 @@ async function main() {
 
   // ==================== サブスクリプション ====================
 
+  // ==================== プランマスタ (SubscriptionPlanConfig) ====================
+  // 既存の Subscription.offerLimit / maxStores はコード互換のため残すが、
+  // 新規コードは SubscriptionPlanConfig を参照する運用に切り替える。
+  const planConfigs: {
+    plan: "FREE" | "CASUAL" | "PRO_TRIAL" | "PRO_BUSINESS" | "PRO_ENTERPRISE";
+    displayName: string;
+    offerLimit: number | null;
+    maxStores: number | null;
+    monthlyPriceJpy: number;
+    stripePriceId: string | null;
+    sortOrder: number;
+    features: Prisma.InputJsonValue;
+  }[] = [
+    { plan: "FREE",           displayName: "Free",           offerLimit: 3,    maxStores: 1,  monthlyPriceJpy: 0,     stripePriceId: null,                        sortOrder: 0, features: { trial: true } },
+    { plan: "CASUAL",         displayName: "Casual",         offerLimit: 10,   maxStores: 1,  monthlyPriceJpy: 0,     stripePriceId: null,                        sortOrder: 1, features: { adSupported: true } },
+    { plan: "PRO_TRIAL",      displayName: "Pro トライアル", offerLimit: null, maxStores: 3,  monthlyPriceJpy: 0,     stripePriceId: null,                        sortOrder: 2, features: { trial: true, trialDays: 14 } },
+    { plan: "PRO_BUSINESS",   displayName: "Pro Business",   offerLimit: null, maxStores: 3,  monthlyPriceJpy: 29800, stripePriceId: "price_seed_pro_business",   sortOrder: 3, features: { priorityMatching: true } },
+    { plan: "PRO_ENTERPRISE", displayName: "Pro Enterprise", offerLimit: null, maxStores: 10, monthlyPriceJpy: 98000, stripePriceId: "price_seed_pro_enterprise", sortOrder: 4, features: { priorityMatching: true, dedicatedSupport: true } },
+  ];
+
+  const planConfigByPlan = new Map<string, string>();
+  for (const pc of planConfigs) {
+    const saved = await prisma.subscriptionPlanConfig.upsert({
+      where: { plan: pc.plan },
+      update: {
+        displayName: pc.displayName,
+        offerLimit: pc.offerLimit,
+        maxStores: pc.maxStores,
+        monthlyPriceJpy: pc.monthlyPriceJpy,
+        stripePriceId: pc.stripePriceId,
+        sortOrder: pc.sortOrder,
+        features: pc.features,
+        isActive: true,
+      },
+      create: {
+        plan: pc.plan,
+        displayName: pc.displayName,
+        offerLimit: pc.offerLimit,
+        maxStores: pc.maxStores,
+        monthlyPriceJpy: pc.monthlyPriceJpy,
+        stripePriceId: pc.stripePriceId,
+        sortOrder: pc.sortOrder,
+        features: pc.features,
+      },
+    });
+    planConfigByPlan.set(pc.plan, saved.id);
+  }
+  console.log(`  ✅ プランマスタ: ${planConfigs.length}件`);
+
   const subscriptionData: { storeIndex: number; plan: "CASUAL" | "PRO_TRIAL" | "PRO_BUSINESS" | "PRO_ENTERPRISE"; offerLimit: number | null }[] = [
     { storeIndex: 0, plan: "PRO_TRIAL", offerLimit: null },
     { storeIndex: 1, plan: "CASUAL", offerLimit: 10 },
@@ -1473,14 +1522,21 @@ async function main() {
 
   for (const sub of subscriptionData) {
     const ownerId = createdStores[sub.storeIndex].ownerId;
+    const planConfigId = planConfigByPlan.get(sub.plan) ?? null;
     const subscription = await prisma.subscription.upsert({
       where: { ownerId },
-      update: { plan: sub.plan, status: "ACTIVE", offerLimit: sub.offerLimit },
+      update: {
+        plan: sub.plan,
+        status: "ACTIVE",
+        offerLimit: sub.offerLimit,
+        planConfigId,
+      },
       create: {
         ownerId,
         plan: sub.plan,
         status: "ACTIVE",
         offerLimit: sub.offerLimit,
+        planConfigId,
       },
     });
     createdSubscriptions.push({ storeIndex: sub.storeIndex, subscriptionId: subscription.id, plan: sub.plan });
