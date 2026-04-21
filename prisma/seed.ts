@@ -464,6 +464,97 @@ async function main() {
     console.log(`  ✅ 店舗: ${s.store.name}`);
   }
 
+  // ==================== 多店舗オーナー（1オーナー:N店舗のデモ）====================
+  // スキーマは Owner 1:N Store を許容しているが、既存シードは 1:1 固定になっている。
+  // 管理画面の多店舗切替や maxStores 制約の動作確認用に、1オーナーで3店舗保有するケースを追加する。
+  // 既存10店とは独立したオーナー/店舗のため、既存データを壊さない。
+
+  const multiOwnerEmail = "seed-owner-multi-tokyo@example.com";
+  const multiOwnerProfile = {
+    companyName: "株式会社LUMINAグループ",
+    representativeName: "灯 光一",
+    representativeFurigana: "あかり こういち",
+    representativePhone: "03-6800-0001",
+    corporateNumber: "1000001000001",
+    invoiceRegistrationNumber: "T1000001000001",
+    headOfficeAddress: "東京都港区虎ノ門1-1-1 LUMINAタワー20F",
+    billingAddress: "東京都港区虎ノ門1-1-1 LUMINAタワー20F 経理部",
+    billingContactName: "経理部 本社担当",
+    billingContactEmail: "keiri-hq@lumina-group.example.com",
+    billingContactPhone: "03-6800-0099",
+    isVerified: true,
+  };
+
+  const multiOwnerUser = await prisma.user.upsert({
+    where: { email: multiOwnerEmail },
+    update: {},
+    create: {
+      email: multiOwnerEmail,
+      role: "OWNER",
+      emailVerified: new Date(),
+    },
+  });
+
+  const multiOwner = await prisma.owner.upsert({
+    where: { userId: multiOwnerUser.id },
+    update: multiOwnerProfile,
+    create: { userId: multiOwnerUser.id, ...multiOwnerProfile },
+  });
+
+  const multiOwnerStores = [
+    {
+      id: "seed-multi-lumina-roppongi",
+      name: "LUMINA Premium Roppongi",
+      area: "六本木",
+      address: "東京都港区六本木6-10-2",
+      description:
+        "LUMINAグループ旗艦店。六本木ヒルズ近くの高級キャバクラ。",
+      photos: [],
+      businessHours: "20:00〜翌1:00",
+      benefits: ["送迎あり", "日払いOK", "ヘアメイク完備", "ドレス貸出無料"],
+      isVerified: true,
+    },
+    {
+      id: "seed-multi-lumina-ginza",
+      name: "LUMINA Premium Ginza",
+      area: "銀座",
+      address: "東京都中央区銀座6-8-3",
+      description:
+        "LUMINAグループ銀座店。企業役員・士業のお客様中心の上品な会員制ラウンジ。",
+      photos: [],
+      businessHours: "19:00〜翌0:00",
+      benefits: ["送迎あり", "日払いOK", "ドレス貸出無料", "週1OK"],
+      isVerified: true,
+    },
+    {
+      id: "seed-multi-lumina-nishiazabu",
+      name: "LUMINA Premium 西麻布",
+      area: "六本木",
+      address: "東京都港区西麻布2-24-12",
+      description:
+        "LUMINAグループ西麻布店。落ち着いた大人の空間で上質な接客を提供。",
+      photos: [],
+      businessHours: "20:00〜翌2:00",
+      benefits: ["送迎あり", "日払いOK", "ヘアメイク完備"],
+      isVerified: false, // 新店舗で未認証のまま
+    },
+  ];
+
+  for (const st of multiOwnerStores) {
+    const store = await prisma.store.upsert({
+      where: { id: st.id },
+      update: st,
+      create: { ownerId: multiOwner.id, ...st },
+    });
+    createdStores.push({
+      userId: multiOwnerUser.id,
+      storeId: store.id,
+      ownerId: multiOwner.id,
+    });
+    console.log(`  ✅ 店舗(multi): ${st.name}`);
+  }
+  console.log(`  ✅ 多店舗オーナー: ${multiOwnerProfile.companyName} (${multiOwnerStores.length}店舗)`);
+
   // ==================== キャストユーザー + キャストプロフィール ====================
 
   const casts = [

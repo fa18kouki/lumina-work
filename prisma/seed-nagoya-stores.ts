@@ -408,6 +408,85 @@ async function main() {
     }
   }
 
+  // ==================== 多店舗オーナー（1オーナー:N店舗のデモ）====================
+  // 名古屋エリアで1法人が複数店舗（5店舗）を保有するケース。
+  // 管理画面で「店舗切替」「maxStores 制約」などを検証するためのデモデータ。
+  try {
+    const chainOwnerEmail = "seed-owner-multi-nagoya@example.com";
+    const chainOwnerUser = await prisma.user.upsert({
+      where: { email: chainOwnerEmail },
+      update: {},
+      create: {
+        email: chainOwnerEmail,
+        role: "OWNER",
+        emailVerified: new Date(),
+      },
+    });
+
+    const chainOwner = await prisma.owner.upsert({
+      where: { userId: chainOwnerUser.id },
+      update: {
+        companyName: "株式会社名古屋ナイトワークス",
+        representativeName: "愛知 健三",
+        representativeFurigana: "あいち けんぞう",
+        representativePhone: "052-300-0001",
+        corporateNumber: "2000002000002",
+        invoiceRegistrationNumber: "T2000002000002",
+        headOfficeAddress: "愛知県名古屋市中村区名駅3-1-1 本社ビル12F",
+        billingContactName: "経理部 本社担当",
+        billingContactEmail: "keiri-hq@nagoya-nightworks.example.com",
+        isVerified: true,
+      },
+      create: {
+        userId: chainOwnerUser.id,
+        companyName: "株式会社名古屋ナイトワークス",
+        representativeName: "愛知 健三",
+        representativeFurigana: "あいち けんぞう",
+        representativePhone: "052-300-0001",
+        corporateNumber: "2000002000002",
+        invoiceRegistrationNumber: "T2000002000002",
+        headOfficeAddress: "愛知県名古屋市中村区名駅3-1-1 本社ビル12F",
+        billingContactName: "経理部 本社担当",
+        billingContactEmail: "keiri-hq@nagoya-nightworks.example.com",
+        isVerified: true,
+      },
+    });
+
+    const chainStores = [
+      { id: "seed-chain-nagoya-meieki", name: "Premium Chain 名駅", area: "名駅" },
+      { id: "seed-chain-nagoya-nishiki", name: "Premium Chain 錦", area: "錦" },
+      { id: "seed-chain-nagoya-sakae", name: "Premium Chain 栄", area: "栄" },
+      { id: "seed-chain-nagoya-kanayama", name: "Premium Chain 金山", area: "金山" },
+      { id: "seed-chain-nagoya-imaike", name: "Premium Chain 今池", area: "今池" },
+    ];
+
+    for (const st of chainStores) {
+      await prisma.store.upsert({
+        where: { id: st.id },
+        update: {
+          name: st.name,
+          area: st.area,
+          address: getAreaAddressPrefix(st.area),
+          isVerified: true,
+        },
+        create: {
+          id: st.id,
+          ownerId: chainOwner.id,
+          name: st.name,
+          area: st.area,
+          address: getAreaAddressPrefix(st.area),
+          isVerified: true,
+        },
+      });
+      successCount++;
+      console.log(`  ✅ [chain] [${st.area}] ${st.name}`);
+    }
+    console.log(`  ✅ チェーン店オーナー: 株式会社名古屋ナイトワークス (${chainStores.length}店舗)`);
+  } catch (error) {
+    errorCount++;
+    console.error(`  ❌ 多店舗オーナー seed 失敗:`, error);
+  }
+
   console.log(`\n🎉 完了: ${successCount} 件成功, ${errorCount} 件エラー`);
 }
 
