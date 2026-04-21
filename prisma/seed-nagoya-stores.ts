@@ -391,6 +391,7 @@ async function main() {
         where: { id: `seed-${s.email}` },
         update: s.store,
         create: {
+          id: `seed-${s.email}`,
           ownerId: owner.id,
           ...s.store,
         },
