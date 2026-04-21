@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { TabFilter } from "@/components/ui/tab-filter";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Thumbnail } from "@/components/ui/thumbnail";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ScheduleInterviewDialog } from "@/components/store/schedule-interview-dialog";
 import { trpc } from "@/lib/trpc";
 import { ChevronRight, Mail } from "lucide-react";
@@ -29,6 +30,9 @@ export default function OffersPage() {
   const [statusFilter, setStatusFilter] = useState<OfferStatus | "ALL">("ALL");
   const [scheduleOfferId, setScheduleOfferId] = useState<string | null>(null);
   const [scheduleStoreName, setScheduleStoreName] = useState<string>("");
+  const [pendingResponse, setPendingResponse] = useState<
+    { offerId: string; accept: boolean } | null
+  >(null);
   const utils = trpc.useUtils();
 
   useEffect(() => {
@@ -67,9 +71,13 @@ export default function OffersPage() {
   const offers = data?.pages.flatMap((page) => page.offers) ?? [];
 
   const handleRespond = (offerId: string, accept: boolean) => {
-    if (confirm(accept ? "このオファーを承諾しますか？" : "このオファーを辞退しますか？")) {
-      respondToOffer.mutate({ offerId, accept });
-    }
+    setPendingResponse({ offerId, accept });
+  };
+
+  const handleConfirmResponse = () => {
+    if (!pendingResponse) return;
+    respondToOffer.mutate(pendingResponse);
+    setPendingResponse(null);
   };
 
   if (status === "loading" || !session || session.user.role !== "CAST") {
@@ -106,7 +114,10 @@ export default function OffersPage() {
             <Card
               key={offer.id}
               className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => router.push(`/c/offers/${offer.id}`)}
+              onClick={(e) => {
+                if ((e.target as HTMLElement).closest("button")) return;
+                router.push(`/c/offers/${offer.id}`);
+              }}
             >
               <CardContent className="py-4">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
@@ -188,6 +199,19 @@ export default function OffersPage() {
           onClose={() => setScheduleOfferId(null)}
         />
       )}
+      <ConfirmDialog
+        open={!!pendingResponse}
+        title={pendingResponse?.accept ? "オファーを承諾しますか？" : "オファーを辞退しますか？"}
+        description={
+          pendingResponse?.accept
+            ? "承諾後、店舗に通知され面接日程の調整へ進みます。"
+            : "辞退すると取り消すことはできません。よろしいですか？"
+        }
+        confirmLabel={pendingResponse?.accept ? "承諾する" : "辞退する"}
+        variant={pendingResponse?.accept ? "default" : "danger"}
+        onConfirm={handleConfirmResponse}
+        onCancel={() => setPendingResponse(null)}
+      />
     </div>
   );
 }
