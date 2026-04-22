@@ -128,6 +128,12 @@ export interface ProfileEditFormData {
 
 interface Props {
   initialData: ProfileEditFormData;
+  /**
+   * DB から取得した充実度の初期値。
+   * 編集中は useMemo による動的計算値で上書きされるが、SSR/初期描画直後は
+   * この値を使って UI がチカつかないようにする。
+   */
+  initialCompletenessPercent?: number;
   onSubmit: (data: ProfileEditFormData) => Promise<void>;
   isSaving: boolean;
 }
@@ -197,13 +203,20 @@ function formToCompletenessData(data: ProfileEditFormData): CastProfileData {
   };
 }
 
-export function ProfileEditForm({ initialData, onSubmit, isSaving }: Props) {
+export function ProfileEditForm({
+  initialData,
+  initialCompletenessPercent,
+  onSubmit,
+  isSaving,
+}: Props) {
   const [activeTab, setActiveTab] = useState(1);
   const [formData, setFormData] = useState<ProfileEditFormData>(initialData);
+  const [hasEdited, setHasEdited] = useState(false);
 
   const handleFieldChange = useCallback(
     (field: string, value: unknown) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
+      setHasEdited(true);
     },
     []
   );
@@ -211,14 +224,24 @@ export function ProfileEditForm({ initialData, onSubmit, isSaving }: Props) {
   const handleWorkHistoriesChange = useCallback(
     (histories: WorkHistory[]) => {
       setFormData((prev) => ({ ...prev, workHistories: histories }));
+      setHasEdited(true);
     },
     []
   );
 
-  const completeness = useMemo(
+  const computedCompleteness = useMemo(
     () => calculateProfileCompleteness(formToCompletenessData(formData)),
     [formData]
   );
+
+  // ユーザが一度も編集していない初回表示は DB 値を優先（保存直後の揺れ防止）。
+  const completeness =
+    !hasEdited && initialCompletenessPercent !== undefined
+      ? {
+          ...computedCompleteness,
+          totalPercent: initialCompletenessPercent,
+        }
+      : computedCompleteness;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

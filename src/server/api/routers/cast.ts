@@ -8,6 +8,7 @@ import {
 } from "@/server/api/trpc";
 import { dispatchNotification } from "@/server/notifications";
 import { emergencyContactSchema } from "@/lib/cast/emergency-contact";
+import { deriveProfileCompletenessPercent } from "@/lib/profile-completeness";
 
 export const castRouter = createTRPCRouter({
   /**
@@ -343,8 +344,22 @@ export const castRouter = createTRPCRouter({
         }
       });
 
+      // プロフィール充実度を再計算して DB に保存 (RUN-249 I)
+      const latestWorkHistories = await ctx.prisma.castWorkHistory.findMany({
+        where: { castId: cast.id },
+        select: { storeName: true },
+      });
+      const profileCompletenessPercent = deriveProfileCompletenessPercent({
+        cast: profileData as Record<string, unknown>,
+        workHistories: latestWorkHistories,
+      });
+      const castWithCompleteness = await ctx.prisma.cast.update({
+        where: { id: cast.id },
+        data: { profileCompletenessPercent },
+      });
+
       // LINEアカウントからlineUserIdを同期（未設定の場合のみ）
-      if (!cast.lineUserId) {
+      if (!castWithCompleteness.lineUserId) {
         const lineAccount = await ctx.prisma.account.findFirst({
           where: { userId: ctx.session.user.id, provider: "line" },
           select: { providerAccountId: true },
@@ -363,7 +378,7 @@ export const castRouter = createTRPCRouter({
         data: { role: "CAST" },
       });
 
-      return cast;
+      return castWithCompleteness;
     }),
 
   /**

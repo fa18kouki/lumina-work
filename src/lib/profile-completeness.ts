@@ -195,3 +195,82 @@ export function calculateProfileCompleteness(
     categories: categoryResults,
   };
 }
+
+type CastLike = Partial<Record<keyof CastProfileData, unknown>>;
+
+export interface DerivePercentInput {
+  cast: CastLike;
+  workHistories: Array<{ storeName: string }>;
+}
+
+/**
+ * Prisma の Cast upsert 入力などから充実度 0-100 の整数値を導出する。
+ * 内部的に `calculateProfileCompleteness` を呼び、`totalPercent` のみを返す。
+ * DB への永続化値として使う用途を想定しており、カテゴリ詳細は不要。
+ */
+export function deriveProfileCompletenessPercent(
+  input: DerivePercentInput,
+): number {
+  const castData = normalizeCastInput(input.cast);
+  const profile: CastProfileData = {
+    ...castData,
+    workHistories: input.workHistories,
+  };
+  return calculateProfileCompleteness(profile).totalPercent;
+}
+
+function normalizeCastInput(cast: CastLike): Omit<CastProfileData, "workHistories"> {
+  const get = <K extends keyof CastProfileData>(key: K): CastProfileData[K] => {
+    const value = cast[key];
+    return (value === undefined ? null : value) as CastProfileData[K];
+  };
+
+  return {
+    fullName: get("fullName"),
+    furigana: get("furigana"),
+    gender: get("gender"),
+    currentArea: get("currentArea"),
+    permanentAddress: get("permanentAddress"),
+    phoneNumber: get("phoneNumber"),
+    bloodType: get("bloodType"),
+    zodiacSign: get("zodiacSign"),
+    email: get("email"),
+    pcEmail: get("pcEmail"),
+    instagramId: get("instagramId"),
+    lineId: get("lineId"),
+    facebookId: get("facebookId"),
+    twitterId: get("twitterId"),
+    tiktokId: get("tiktokId"),
+    hobbies: get("hobbies"),
+    specialSkills: get("specialSkills"),
+    emergencyContact: cast.emergencyContact ?? null,
+    livingArrangement: get("livingArrangement"),
+    transportation: get("transportation"),
+    needsPickup: get("needsPickup"),
+    hasTattoo: get("hasTattoo"),
+    dressAvailability: get("dressAvailability"),
+    hasBoyfriend: get("hasBoyfriend"),
+    hasHusband: get("hasHusband"),
+    hasChildren: get("hasChildren"),
+    currentOccupation: get("currentOccupation"),
+    height: get("height"),
+    weight: get("weight"),
+    bust: get("bust"),
+    waist: get("waist"),
+    hip: get("hip"),
+    cupSize: get("cupSize"),
+    languageSkills: cast.languageSkills ?? null,
+    cosmeticSurgery: get("cosmeticSurgery"),
+    birthdayEventWillingness: get("birthdayEventWillingness"),
+    photoPublicationConsent: get("photoPublicationConsent"),
+    familyApproval: get("familyApproval"),
+    desiredAreas: (cast.desiredAreas as string[] | undefined) ?? [],
+    desiredHourlyRate: get("desiredHourlyRate"),
+    desiredMonthlyIncome: get("desiredMonthlyIncome"),
+    availableDaysPerWeek: get("availableDaysPerWeek"),
+    shiftPreferences: cast.shiftPreferences ?? null,
+    motivation: get("motivation"),
+    storePreferences: get("storePreferences"),
+    guaranteedHourlyRate: get("guaranteedHourlyRate"),
+  };
+}

@@ -322,6 +322,11 @@ export default function CastProfileEditPage() {
 
         <ProfileEditForm
           initialData={initialFormData}
+          initialCompletenessPercent={
+            typeof profile?.profileCompletenessPercent === "number"
+              ? profile.profileCompletenessPercent
+              : undefined
+          }
           onSubmit={handleSubmit}
           isSaving={upsertProfile.isPending}
         />
