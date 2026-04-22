@@ -8,6 +8,7 @@ import {
   calculateProgress,
 } from "@/lib/diagnosis/question-flow";
 import { calculateRank } from "@/lib/diagnosis/calculate-rank";
+import { resolveAge } from "@/lib/age";
 
 // 回答値のZodスキーマ
 const answerValueSchema = z.union([
@@ -284,8 +285,18 @@ export const diagnosisRouter = createTRPCRouter({
 
     // 基本情報
     if (answers.nickname) profileData.nickname = answers.nickname;
-    if (answers.age) profileData.age = answers.age as number;
-    if (answers.birthDate) profileData.birthDate = new Date(answers.birthDate);
+
+    // 年齢は birthDate があればそこから再計算・優先する (RUN-249 G)
+    const parsedBirthDate = answers.birthDate
+      ? new Date(answers.birthDate as string)
+      : undefined;
+    if (parsedBirthDate) profileData.birthDate = parsedBirthDate;
+    const resolvedAge = resolveAge(
+      typeof answers.age === "number" ? answers.age : undefined,
+      parsedBirthDate,
+    );
+    if (resolvedAge !== undefined) profileData.age = resolvedAge;
+
     if (answers.photos) profileData.photos = answers.photos;
 
     // 連絡先

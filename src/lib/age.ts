@@ -19,3 +19,18 @@ export function calculateAge(birthDate: Date, referenceDate: Date = new Date()):
 
   return age < 0 ? 0 : age;
 }
+
+/**
+ * 選択式で入力された age と、任意で提供された birthDate から最終的な年齢を決める。
+ * birthDate があればそこから再計算した値を優先し、選択式の丸めを上書きする。
+ */
+export function resolveAge(
+  selectedAge: number | undefined,
+  birthDate: Date | null | undefined,
+  referenceDate?: Date,
+): number | undefined {
+  if (birthDate) {
+    return calculateAge(birthDate, referenceDate);
+  }
+  return selectedAge;
+}
