@@ -78,7 +78,6 @@ describe("Nodemailer provider - sendVerificationRequest", () => {
     const emailProvider = config.providers.find(
       (p: { id: string }) => p.id === "nodemailer"
     );
-    const fakeTransport = { sendMail: mockSendMail };
     mockSendMail.mockResolvedValueOnce({ accepted: ["user@example.com"], rejected: [] });
 
     await emailProvider.sendVerificationRequest({
@@ -92,7 +91,7 @@ describe("Nodemailer provider - sendVerificationRequest", () => {
       expires: new Date(Date.now() + 86400000),
       token: "tok",
       theme: {},
-    }, fakeTransport);
+    });
 
     expect(mockSendMail).toHaveBeenCalledOnce();
     const mailOptions = mockSendMail.mock.calls[0][0];

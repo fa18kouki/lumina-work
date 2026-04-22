@@ -6,6 +6,7 @@ import Twitter from "next-auth/providers/twitter";
 import Nodemailer from "next-auth/providers/nodemailer";
 import { prisma } from "@/server/db";
 import type { UserRole } from "@prisma/client";
+import { buildVerificationEmail } from "@/lib/auth-email-template";
 
 // Prisma 7 + PrismaPg 使用時、API ルートで account の findUnique/findFirst が
 // Invalid invocation になるため、getUserByAccount / unlinkAccount のみ $queryRaw / $executeRaw で実装
@@ -100,6 +101,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         },
       },
       from: process.env.EMAIL_FROM,
+      sendVerificationRequest: async ({ identifier, url, provider }) => {
+        const nodemailer = (await import("nodemailer")).default;
+        const transport = nodemailer.createTransport(provider.server);
+        const { host } = new URL(url);
+        const { subject, html, text } = buildVerificationEmail({ url, host });
+        const result = await transport.sendMail({
+          to: identifier,
+          from: provider.from,
+          subject,
+          text,
+          html,
+        });
+        const failed = (result?.rejected ?? [])
+          .concat(result?.pending ?? [])
+          .filter(Boolean);
+        if (failed.length > 0) {
+          throw new Error(
+            `Email(s) (${failed.join(", ")}) could not be sent`
+          );
+        }
+      },
     }),
   ],
   callbacks: {
