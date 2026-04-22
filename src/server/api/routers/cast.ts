@@ -7,6 +7,7 @@ import {
   castProcedure,
 } from "@/server/api/trpc";
 import { dispatchNotification } from "@/server/notifications";
+import { emergencyContactSchema } from "@/lib/cast/emergency-contact";
 
 export const castRouter = createTRPCRouter({
   /**
@@ -89,7 +90,7 @@ export const castRouter = createTRPCRouter({
         interviewDate: z.string().optional(),
         trialDate: z.string().optional(),
         employmentStatus: z.enum(["INTERVIEW_ONLY", "TRIAL", "EMPLOYED", "RESIGNED"]).optional(),
-        emergencyContact: z.record(z.string(), z.unknown()).optional(),
+        emergencyContact: emergencyContactSchema.optional(),
 
         // カテゴリ2: 属性・ライフスタイル
         livingArrangement: z.enum(["WITH_FAMILY", "ALONE", "OTHER"]).optional(),
