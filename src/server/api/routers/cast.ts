@@ -390,6 +390,7 @@ export const castRouter = createTRPCRouter({
         area: z.string().optional(),
         minSalary: z.number().optional(),
         benefit: z.string().optional(),
+        atmosphereTags: z.array(z.string()).optional(),
         storeType: z.enum(["CABARET", "CLUB", "LOUNGE", "GIRLS_BAR", "SNACK", "OTHER"]).optional(),
         hasTransportation: z.boolean().optional(),
         hasDressRental: z.boolean().optional(),
@@ -402,11 +403,15 @@ export const castRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
+      const atmosphereTags = input.atmosphereTags?.filter((t) => t.length > 0) ?? [];
       const stores = await ctx.prisma.store.findMany({
         where: {
           isVerified: true,
           ...(input.area && { area: { contains: input.area } }),
           ...(input.benefit && { benefits: { has: input.benefit } }),
+          ...(atmosphereTags.length > 0 && {
+            atmosphereTags: { hasSome: atmosphereTags },
+          }),
           ...(input.storeType && { storeType: input.storeType }),
           ...(input.hasTransportation && { hasTransportation: true }),
           ...(input.hasDressRental && { hasDressRental: true }),
@@ -431,6 +436,33 @@ export const castRouter = createTRPCRouter({
         nextCursor,
       };
     }),
+
+  /**
+   * Store.atmosphereTags の出現頻度上位 20 件を返す
+   */
+  listAtmosphereTags: castProcedure.query(async ({ ctx }) => {
+    const rows = await ctx.prisma.store.findMany({
+      where: { isVerified: true },
+      select: { atmosphereTags: true },
+    });
+
+    const counts = new Map<string, number>();
+    for (const row of rows) {
+      const tags = row.atmosphereTags ?? [];
+      for (const tag of tags) {
+        if (!tag) continue;
+        counts.set(tag, (counts.get(tag) ?? 0) + 1);
+      }
+    }
+
+    return [...counts.entries()]
+      .sort((a, b) => {
+        if (b[1] !== a[1]) return b[1] - a[1];
+        return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0;
+      })
+      .slice(0, 20)
+      .map(([tag]) => tag);
+  }),
 
   /**
    * 受信オファー一覧
