@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { calculateAge } from "@/lib/age";
+import { calculateAge, resolveAge } from "@/lib/age";
 
 describe("calculateAge", () => {
   beforeEach(() => {
@@ -39,5 +39,37 @@ describe("calculateAge", () => {
   it("1 歳未満（誕生日前）は 0 を返す", () => {
     // 2025-06-01 生まれ → 2026-04-22 時点で 10 ヶ月 → 0 歳
     expect(calculateAge(new Date("2025-06-01"))).toBe(0);
+  });
+});
+
+describe("resolveAge", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-22T00:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("birthDate があれば選択式 age より birthDate から再計算した年齢を優先する", () => {
+    // 2000-03-15 生まれ → 26 歳。選択式は 22 (21-23 レンジ) だが birthDate 優先
+    expect(resolveAge(22, new Date("2000-03-15"))).toBe(26);
+  });
+
+  it("birthDate が undefined の場合は selectedAge をそのまま返す", () => {
+    expect(resolveAge(25, undefined)).toBe(25);
+  });
+
+  it("birthDate が null の場合は selectedAge をそのまま返す", () => {
+    expect(resolveAge(25, null)).toBe(25);
+  });
+
+  it("selectedAge も birthDate もない場合は undefined を返す", () => {
+    expect(resolveAge(undefined, undefined)).toBeUndefined();
+  });
+
+  it("selectedAge が undefined でも birthDate があれば再計算する", () => {
+    expect(resolveAge(undefined, new Date("2000-03-15"))).toBe(26);
   });
 });
