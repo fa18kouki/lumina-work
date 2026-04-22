@@ -3,11 +3,14 @@ import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { prisma } from "@/server/db";
 import { REFERRAL_CONFIG } from "@/lib/constants";
+import { resolveNextUrl } from "@/app/api/auth/callback/resolve-next-url";
+
+const DEFAULT_NEXT = "/o/dashboard";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/o/dashboard";
+  const next = resolveNextUrl(searchParams.get("next"), origin, DEFAULT_NEXT);
   const refCode = searchParams.get("ref");
 
   if (!code) {
