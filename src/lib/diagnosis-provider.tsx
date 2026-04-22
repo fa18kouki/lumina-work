@@ -31,6 +31,8 @@ interface DiagnosisContextValue {
   addAnswers: (answers: Partial<DiagnosisAnswers>) => void;
   completeInterview: () => DiagnosisResult | null;
   reset: () => void;
+  // RUN-248: 診断セッションを消費済みにする (localStorage をクリア)
+  clearSession: () => void;
   // ヘルパー
   hasSession: boolean;
   currentStep: DiagnosisStep | null;
@@ -90,6 +92,8 @@ export function DiagnosisProvider({ children }: { children: ReactNode }) {
     setSession(null);
   }, []);
 
+  const clearSession = reset;
+
   const value: DiagnosisContextValue = {
     session,
     isLoading,
@@ -98,6 +102,7 @@ export function DiagnosisProvider({ children }: { children: ReactNode }) {
     addAnswers,
     completeInterview,
     reset,
+    clearSession,
     hasSession: session !== null,
     currentStep: session?.step ?? null,
   };
