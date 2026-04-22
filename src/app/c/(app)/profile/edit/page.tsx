@@ -51,6 +51,7 @@ function profileToFormData(profile: Record<string, unknown>): ProfileEditFormDat
       relation: ec?.relation ?? "",
       name: ec?.name ?? "",
       address: ec?.address ?? "",
+      phone: ec?.phone ?? "",
     },
 
     // カテゴリ2
@@ -144,7 +145,8 @@ export default function CastProfileEditPage() {
     const ec =
       data.emergencyContact.relation ||
       data.emergencyContact.name ||
-      data.emergencyContact.address
+      data.emergencyContact.address ||
+      data.emergencyContact.phone
         ? data.emergencyContact
         : undefined;
 
@@ -284,7 +286,7 @@ export default function CastProfileEditPage() {
     instagramId: "", lineId: "", facebookId: "", twitterId: "", tiktokId: "",
     hobbies: "", specialSkills: "", medicalConditions: "", debt: "", qualifications: "",
     interviewDate: "", trialDate: "", employmentStatus: "",
-    emergencyContact: { relation: "", name: "", address: "" },
+    emergencyContact: { relation: "", name: "", address: "", phone: "" },
     livingArrangement: "", transportation: "", needsPickup: null, hasTattoo: null,
     dressAvailability: "", hasBoyfriend: null, hasHusband: null, hasChildren: null,
     currentOccupation: "", height: null, weight: null, bust: null, waist: null, hip: null,

@@ -37,6 +37,7 @@ interface EmergencyContact {
   relation: string;
   name: string;
   address: string;
+  phone: string;
 }
 
 interface LanguageSkills {
