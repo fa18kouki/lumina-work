@@ -8,6 +8,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { trpc } from "@/lib/trpc";
 import { TagFilter } from "@/components/cast/TagFilter";
+import { AtmosphereTagFilter } from "@/components/cast/AtmosphereTagFilter";
 import { StoreCard } from "@/components/cast/StoreCard";
 import {
   StoreFilterPanel,
@@ -53,6 +54,12 @@ function StoresContent() {
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "");
   const [filters, setFilters] = useState<StoreFilterState>(INITIAL_FILTER_STATE);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedAtmosphereTags, setSelectedAtmosphereTags] = useState<string[]>(
+    () => searchParams.getAll("atmosphere"),
+  );
+
+  const { data: atmosphereTagsData } = trpc.cast.listAtmosphereTags.useQuery();
+  const atmosphereTags = atmosphereTagsData ?? [];
 
   useEffect(() => {
     localStorage.setItem("lumina:onboarding:storesViewed", "true");
@@ -69,8 +76,11 @@ function StoresContent() {
     if (filters.hasNoQuota) params.hasNoQuota = true;
     if (filters.hasDormitory) params.hasDormitory = true;
     if (filters.hasNursery) params.hasNursery = true;
+    if (selectedAtmosphereTags.length > 0) {
+      params.atmosphereTags = selectedAtmosphereTags;
+    }
     return params;
-  }, [filters]);
+  }, [filters, selectedAtmosphereTags]);
 
   // サーバーサイドフィルタリング（詳細フィルター）
   const { data: storesData, isLoading } = trpc.cast.searchStores.useQuery(queryParams);
@@ -101,22 +111,31 @@ function StoresContent() {
 
   const handleSelectTag = (tag: string) => {
     setSelectedTag(tag);
-    updateURL(searchQuery, tag);
+    updateURL(searchQuery, tag, selectedAtmosphereTags);
   };
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
-    updateURL(value, selectedTag);
+    updateURL(value, selectedTag, selectedAtmosphereTags);
   };
 
   const handleApplyFilters = (newFilters: StoreFilterState) => {
     setFilters(newFilters);
   };
 
-  const updateURL = (query: string, tag: string) => {
+  const handleToggleAtmosphereTag = (tag: string) => {
+    setSelectedAtmosphereTags((prev) => {
+      const next = prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag];
+      updateURL(searchQuery, selectedTag, next);
+      return next;
+    });
+  };
+
+  const updateURL = (query: string, tag: string, atmosphere: string[]) => {
     const params = new URLSearchParams();
     if (query) params.set("q", query);
     if (tag !== "すべて") params.set("tag", tag);
+    for (const t of atmosphere) params.append("atmosphere", t);
     const qs = params.toString();
     router.replace(`/c/stores${qs ? `?${qs}` : ""}`, { scroll: false });
   };
@@ -166,6 +185,16 @@ function StoresContent() {
           selectedTag={selectedTag}
           onSelectTag={handleSelectTag}
         />
+
+        {atmosphereTags.length > 0 && (
+          <div className="mt-2">
+            <AtmosphereTagFilter
+              tags={atmosphereTags}
+              selectedTags={selectedAtmosphereTags}
+              onToggleTag={handleToggleAtmosphereTag}
+            />
+          </div>
+        )}
       </div>
 
       <div className="space-y-4 pb-4">
