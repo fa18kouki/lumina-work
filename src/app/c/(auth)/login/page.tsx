@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Suspense, useState } from "react";
 import { useDiagnosis } from "@/lib/diagnosis-provider";
+import { resolveLoginCallback } from "@/lib/login-callback";
 import { createBrowserClient } from "@/lib/supabase-auth";
 
 const useSupabaseAuth = () =>
@@ -17,7 +18,7 @@ const useSupabaseAuth = () =>
 
 function LoginContent() {
   const searchParams = useSearchParams();
-  const { session: diagnosisSession } = useDiagnosis();
+  const { session: diagnosisSession, clearSession } = useDiagnosis();
   const [email, setEmail] = useState("");
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -25,14 +26,17 @@ function LoginContent() {
   const [showEmailForm, setShowEmailForm] = useState(false);
   const useSupabase = useSupabaseAuth();
 
-  // 診断経由かどうか
-  const diagnosisId = searchParams.get("diagnosisId");
-  const fromDiagnosisParam = searchParams.get("fromDiagnosis");
-  const fromDiagnosis = Boolean(diagnosisId || fromDiagnosisParam || diagnosisSession?.result);
-
-  const callbackUrl = fromDiagnosis ? "/c/ai-diagnosis" : "/c/dashboard";
+  // RUN-248: 診断結果が未消費 (session.result あり) の時のみ fromDiagnosis とみなす
+  const { fromDiagnosis, callbackUrl } = resolveLoginCallback({
+    diagnosisId: searchParams.get("diagnosisId"),
+    fromDiagnosisParam: searchParams.get("fromDiagnosis"),
+    diagnosisSession,
+  });
 
   const handleLogin = () => {
+    // 成功遷移の前に localStorage 上の診断セッションをクリアして「消費済み」にする。
+    // これにより、次回 /c/login に来たときは fromDiagnosis=false で /c/dashboard に戻る。
+    clearSession();
     signIn("line", { callbackUrl });
   };
 
@@ -55,6 +59,7 @@ function LoginContent() {
           return;
         }
         setEmailSent(true);
+        clearSession();
       } else {
         await signIn("nodemailer", {
           email,
@@ -62,6 +67,7 @@ function LoginContent() {
           redirect: false,
         });
         setEmailSent(true);
+        clearSession();
       }
     } catch {
       console.error("Email sign in failed");
