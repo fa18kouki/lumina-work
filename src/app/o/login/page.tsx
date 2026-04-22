@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { createBrowserClient } from "@/lib/supabase-auth";
+import { ownerLoginErrorMessage } from "@/app/o/login/error-message";
 
 export default function OwnerLoginPage() {
   return (
@@ -29,9 +30,7 @@ function OwnerLoginForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(
-    urlError === "auth_failed" ? "認証に失敗しました。もう一度お試しください" : ""
-  );
+  const [error, setError] = useState(ownerLoginErrorMessage(urlError));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
