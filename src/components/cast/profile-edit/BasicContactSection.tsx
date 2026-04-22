@@ -11,6 +11,7 @@ interface EmergencyContact {
   relation: string;
   name: string;
   address: string;
+  phone: string;
 }
 
 interface Props {
@@ -362,7 +363,7 @@ export function BasicContactSection({ data, onChange }: Props) {
         緊急連絡先
       </h3>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FormField label="続柄">
           <input
             type="text"
@@ -389,6 +390,23 @@ export function BasicContactSection({ data, onChange }: Props) {
                 name: e.target.value,
               })
             }
+          />
+        </FormField>
+
+        <FormField label="電話番号">
+          <input
+            type="tel"
+            inputMode="tel"
+            pattern="[+\d\-\s]*"
+            className={inputClass}
+            value={data.emergencyContact?.phone ?? ""}
+            onChange={(e) =>
+              onChange("emergencyContact", {
+                ...data.emergencyContact,
+                phone: e.target.value,
+              })
+            }
+            placeholder="090-1234-5678"
           />
         </FormField>
 
