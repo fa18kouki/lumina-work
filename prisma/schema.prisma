@@ -264,6 +264,9 @@ model Cast {
   diagnosisCompleted   Boolean   @default(false) @map("diagnosis_completed")
   diagnosisCompletedAt DateTime? @map("diagnosis_completed_at")
 
+  // プロフィール充実度 (0-100) — upsertProfile 時に再計算して保存
+  profileCompletenessPercent Int @default(0) @map("profile_completeness_percent")
+
   // リレーション
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   matches          Match[]
