@@ -29,10 +29,12 @@ export async function POST() {
     });
 
     if (!prismaUser && supabaseUser.email) {
+      // soft-delete 済 (deletedAt IS NOT NULL) のユーザーは新規登録を許容するため除外。
       const existingByEmail = await prisma.user.findFirst({
         where: {
           email: supabaseUser.email,
           role: "OWNER",
+          deletedAt: null,
         },
       });
       if (existingByEmail) {

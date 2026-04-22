@@ -71,6 +71,9 @@ model User {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
+  // ソフトデリート: null = 有効アカウント, not null = 退会済み（メール再登録を許容）
+  deletedAt DateTime? @map("deleted_at")
+
   // 認証関連
   accounts Account[]
   sessions Session[]
@@ -84,6 +87,7 @@ model User {
   notifications Notification[] @relation("notifications")
   penalties     Penalty[]      @relation("penalties")
 
+  @@index([deletedAt])
   @@map("users")
 }
 
