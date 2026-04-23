@@ -54,6 +54,7 @@ interface ShiftPreferences {
 
 export interface ProfileEditFormData {
   // カテゴリ1
+  nickname: string;
   fullName: string;
   furigana: string;
   age: number | null;
