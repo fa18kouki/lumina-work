@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 interface CastDetailData {
   id: string;
   nickname: string;
-  age: number;
+  age: number | null;
   rank: string;
   photos: string[];
   description?: string | null;
@@ -95,7 +95,9 @@ export function CastDetailModal({ cast, open, onClose, onOffer }: CastDetailModa
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <h4 className="text-xl font-bold text-[var(--text-main)]">{cast.nickname}</h4>
-                <span className="text-sm text-[var(--text-sub)]">{cast.age}歳</span>
+                {cast.age != null && (
+                  <span className="text-sm text-[var(--text-sub)]">{cast.age}歳</span>
+                )}
                 <RankBadge rank={cast.rank} />
               </div>
               <p className="text-sm text-[var(--text-sub)] mb-2">

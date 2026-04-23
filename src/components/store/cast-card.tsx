@@ -7,7 +7,7 @@ interface CastCardProps {
   cast: {
     id: string;
     nickname: string;
-    age: number;
+    age: number | null;
     photos: string[];
     desiredAreas: string[];
     rank: string;
@@ -52,9 +52,11 @@ export function CastCard({ cast, onDetail, onOffer }: CastCardProps) {
             <h3 className="font-semibold text-(--text-main) truncate">
               {cast.nickname}
             </h3>
-            <span className="text-sm text-(--text-sub) flex-shrink-0">
-              {cast.age}歳
-            </span>
+            {cast.age != null && (
+              <span className="text-sm text-(--text-sub) flex-shrink-0">
+                {cast.age}歳
+              </span>
+            )}
             <RankBadge rank={cast.rank} className="flex-shrink-0" />
           </div>
 
