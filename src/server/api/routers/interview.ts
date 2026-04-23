@@ -102,7 +102,7 @@ export const interviewRouter = createTRPCRouter({
           recipientUserId: offer.store.owner.userId,
           interviewId: interview.id,
           storeEmail: offer.store.owner.user.email,
-          castNickname: offer.cast.nickname ?? "キャスト",
+          castNickname: offer.cast.nickname || "キャスト",
           scheduledAt: input.scheduledAt,
         },
       });
@@ -279,7 +279,7 @@ export const interviewRouter = createTRPCRouter({
             recipientUserId: interview.store.owner.userId,
             interviewId: interview.id,
             storeEmail: interview.store.owner.user.email,
-            castNickname: interview.cast.nickname ?? "キャスト",
+            castNickname: interview.cast.nickname || "キャスト",
             scheduledAt,
           },
         });

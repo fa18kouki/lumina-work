@@ -34,7 +34,7 @@ export const castRouter = createTRPCRouter({
       z.object({
         // 基本情報
         nickname: z.string().min(1).max(50),
-        age: z.number().min(18).max(99),
+        age: z.number().min(18).max(99).optional(),
         birthDate: z.string().optional(), // ISO8601形式
         description: z.string().max(1000).optional(),
         photos: z.array(z.string().url()).max(10).optional(),
@@ -201,7 +201,7 @@ export const castRouter = createTRPCRouter({
 
       const profileData = {
         nickname: input.nickname,
-        age: input.age,
+        age: input.age ?? null,
         birthDate,
         description: input.description,
         photos: input.photos ?? [],
@@ -225,7 +225,7 @@ export const castRouter = createTRPCRouter({
         preferredClientele: input.preferredClientele ?? [],
         // リスク回避
         downtimeUntil,
-        isAvailableNow: input.isAvailableNow ?? true,
+        isAvailableNow: input.isAvailableNow ?? false,
         // 自己PR
         birthdaySales: input.birthdaySales,
         hasVipClients: input.hasVipClients ?? false,
@@ -649,7 +649,7 @@ export const castRouter = createTRPCRouter({
       // 店舗に通知送信
       const storeUserId = offer.store.owner.userId;
       const storeEmail = offer.store.owner.user.email;
-      const castNickname = cast.nickname ?? "キャスト";
+      const castNickname = cast.nickname || "キャスト";
 
       if (input.accept) {
         await dispatchNotification({
