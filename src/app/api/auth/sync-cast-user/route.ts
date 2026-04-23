@@ -77,17 +77,16 @@ export async function POST() {
         },
       });
 
-      // メールで新規登録したキャスト用に、Prisma に最小限の Cast を作成（getProfile 等で null にならないようにする）
+      // メールで新規登録したキャスト用に、空の Cast を作成（getProfile 等で null にならないようにする）。
+      // nickname/age/isAvailableNow は本人が診断 or 編集画面で入れるまで未設定(空/null/false)。
       await prisma.cast.create({
         data: {
           userId: prismaUser.id,
-          nickname: "ゲスト",
-          age: 18,
+          nickname: "",
           photos: [],
           desiredAreas: [],
           preferredAtmosphere: [],
           preferredClientele: [],
-          isAvailableNow: true,
         },
       });
     }
