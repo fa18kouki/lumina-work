@@ -3,8 +3,11 @@ import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { getEnvFileOrder } from "../src/lib/env-files";
+import { assertNotProductionDb } from "./_safety";
 
 dotenv.config({ path: getEnvFileOrder(process.env.NODE_ENV) });
+
+assertNotProductionDb("delete-non-seed-users");
 
 const pool = new Pool({
   connectionString: process.env.DIRECT_URL || process.env.DATABASE_URL,
