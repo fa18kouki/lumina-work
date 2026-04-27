@@ -10,6 +10,15 @@ import {
 } from "@/lib/supabase-storage";
 import { prisma } from "@/server/db";
 
+type MediaType = "image" | "animated";
+
+const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "webp"];
+const ANIMATED_EXTENSIONS = ["gif", "mp4", "webm"];
+
+function allowedExtensionsFor(mediaType: MediaType): string[] {
+  return mediaType === "animated" ? ANIMATED_EXTENSIONS : IMAGE_EXTENSIONS;
+}
+
 /**
  * リクエスト元の OWNER に紐づく対象 Store を解決する。
  * storeId が指定されていればその ID で検索 (権限チェック付き)、
@@ -40,12 +49,7 @@ async function resolveOwnerStore(storeId?: string) {
   if (storeId) {
     const store = await prisma.store.findFirst({
       where: { id: storeId, ownerId: owner.id },
-      select: {
-        id: true,
-        photos: true,
-        bannerUrl: true,
-        logoUrl: true,
-      },
+      select: { id: true },
     });
     if (!store) {
       return { error: "Store not found" as const, status: 404 };
@@ -56,17 +60,22 @@ async function resolveOwnerStore(storeId?: string) {
   const fallback = await prisma.store.findFirst({
     where: { ownerId: owner.id },
     orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      photos: true,
-      bannerUrl: true,
-      logoUrl: true,
-    },
+    select: { id: true },
   });
   if (!fallback) {
     return { error: "Store not found" as const, status: 404 };
   }
   return { store: fallback };
+}
+
+function urlBelongsToStore(url: string, storeId: string): boolean {
+  try {
+    const parsed = new URL(url);
+    // 想定パス: /<bucket>/<storeId>/<filename>
+    return parsed.pathname.includes(`/${storeId}/`);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -76,9 +85,10 @@ async function resolveOwnerStore(storeId?: string) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { fileExt, storeId } = body as {
+    const { fileExt, storeId, mediaType: rawMediaType } = body as {
       fileExt?: string;
       storeId?: string;
+      mediaType?: string;
     };
 
     if (!fileExt || typeof fileExt !== "string") {
@@ -88,10 +98,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const allowedExtensions = ["jpg", "jpeg", "png", "webp"];
-    if (!allowedExtensions.includes(fileExt.toLowerCase())) {
+    const mediaType: MediaType =
+      rawMediaType === "animated" ? "animated" : "image";
+
+    const allowed = allowedExtensionsFor(mediaType);
+    if (!allowed.includes(fileExt.toLowerCase())) {
       return NextResponse.json(
-        { error: "Invalid file extension" },
+        {
+          error: `Invalid file extension for ${mediaType}`,
+          allowed,
+        },
         { status: 400 },
       );
     }
@@ -121,24 +137,22 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * 店舗写真削除
+ * 店舗メディアを Storage から削除する。
+ * DB 上のフィールド更新は form 送信側に委ね、ここでは Storage 上のファイルを消すだけ。
+ *
  * DELETE /api/upload/store
+ *   body: { url: string, storeId?: string }
  */
 export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json();
-    const { url, type = "photo", storeId } = body as {
+    const { url, storeId } = body as {
       url?: string;
-      type?: "photo" | "banner" | "logo";
       storeId?: string;
     };
 
     if (!url || typeof url !== "string") {
       return NextResponse.json({ error: "url is required" }, { status: 400 });
-    }
-
-    if (!["photo", "banner", "logo"].includes(type)) {
-      return NextResponse.json({ error: "Invalid type" }, { status: 400 });
     }
 
     const resolved = await resolveOwnerStore(storeId);
@@ -151,48 +165,26 @@ export async function DELETE(request: NextRequest) {
 
     const store = resolved.store;
 
-    if (type === "banner") {
-      if (store.bannerUrl !== url) {
-        return NextResponse.json(
-          { error: "Banner not found" },
-          { status: 404 },
-        );
-      }
+    // URL のパスに /{storeId}/ が含まれていなければ別 Store のリソース削除を試みている可能性 → 拒否
+    if (!urlBelongsToStore(url, store.id)) {
+      return NextResponse.json(
+        { error: "URL does not belong to this store" },
+        { status: 403 },
+      );
+    }
+
+    try {
       await deleteStorePhoto(url);
-      await prisma.store.update({
-        where: { id: store.id },
-        data: { bannerUrl: null },
-      });
-    } else if (type === "logo") {
-      if (store.logoUrl !== url) {
-        return NextResponse.json({ error: "Logo not found" }, { status: 404 });
-      }
-      await deleteStorePhoto(url);
-      await prisma.store.update({
-        where: { id: store.id },
-        data: { logoUrl: null },
-      });
-    } else {
-      if (!store.photos.includes(url)) {
-        return NextResponse.json(
-          { error: "Photo not found" },
-          { status: 404 },
-        );
-      }
-      await deleteStorePhoto(url);
-      await prisma.store.update({
-        where: { id: store.id },
-        data: {
-          photos: store.photos.filter((p) => p !== url),
-        },
-      });
+    } catch (e) {
+      // Storage 側での削除失敗 (既に消えている等) は無視
+      console.warn("[upload/store] storage delete failed (ignored)", e);
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[upload/store] DELETE error", error);
     return NextResponse.json(
-      { error: "Failed to delete photo" },
+      { error: "Failed to delete media" },
       { status: 500 },
     );
   }

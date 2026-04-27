@@ -39,6 +39,8 @@ export const storeRouter = createTRPCRouter({
         description: z.string().max(2000).optional(),
         photos: z.array(z.string().url()).max(5).optional(),
         bannerUrl: z.string().url().nullable().optional(),
+        bannerUrls: z.array(z.string().url()).max(10).optional(),
+        animatedUrls: z.array(z.string().url()).max(10).optional(),
         logoUrl: z.string().url().nullable().optional(),
         // 業種・アクセス
         storeType: z.enum(["CABARET", "CLUB", "LOUNGE", "GIRLS_BAR", "SNACK", "OTHER"]).nullable().optional(),
@@ -126,6 +128,8 @@ export const storeRouter = createTRPCRouter({
           description: input.description,
           photos: input.photos ?? [],
           bannerUrl: input.bannerUrl,
+          ...(input.bannerUrls !== undefined && { bannerUrls: input.bannerUrls }),
+          ...(input.animatedUrls !== undefined && { animatedUrls: input.animatedUrls }),
           logoUrl: input.logoUrl,
           // 業種・アクセス
           storeType: input.storeType,

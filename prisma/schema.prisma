@@ -420,7 +420,9 @@ model Store {
   address     String
   description String?  @db.Text
   photos      String[]
-  bannerUrl   String?  @map("banner_url")
+  bannerUrl   String?  @map("banner_url") // deprecated: 後方互換のため残置。バナーは bannerUrls を参照する
+  bannerUrls    String[] @default([]) @map("banner_urls") // 複数バナー (jpg/png/webp)
+  animatedUrls  String[] @default([]) @map("animated_urls") // GIF・動画 (gif/mp4/webm)
   logoUrl     String?  @map("logo_url")
 
   // 業種・アクセス
