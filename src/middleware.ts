@@ -61,8 +61,14 @@ function hasSupabaseSessionCookie(req: NextRequest): boolean {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // server layout が現在の pathname を読めるよう header に転写
+  // (next/headers の cookies/headers から取り出す。リダイレクトループ判定に使用)
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-pathname", pathname);
+  const passThrough = NextResponse.next({ request: { headers: requestHeaders } });
+
   if (isPublicRoute(pathname)) {
-    return NextResponse.next();
+    return passThrough;
   }
 
   // 旧 /s/ ルートは /o/ にリダイレクト
@@ -78,7 +84,7 @@ export async function middleware(req: NextRequest) {
       url.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(url);
     }
-    return NextResponse.next();
+    return passThrough;
   }
 
   // キャスト・その他ルート: NextAuth または Supabase セッション cookie を確認
@@ -92,7 +98,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  return passThrough;
 }
 
 export const config = {
