@@ -24,15 +24,18 @@ export const matchRouter = createTRPCRouter({
       }
 
       const isCast = user.role === "CAST";
-      const profileId = isCast ? user.cast?.id : user.owner?.stores[0]?.id;
+      const castId = user.cast?.id;
+      const storeIds = user.owner?.stores.map((s) => s.id) ?? [];
 
-      if (!profileId) {
+      if (isCast ? !castId : storeIds.length === 0) {
         return { matches: [], nextCursor: undefined };
       }
 
       const matches = await ctx.prisma.match.findMany({
         where: {
-          ...(isCast ? { castId: profileId } : { storeId: profileId }),
+          ...(isCast
+            ? { castId: castId ?? "" }
+            : { storeId: { in: storeIds } }),
           ...(input.status && { status: input.status }),
         },
         include: {
@@ -88,16 +91,21 @@ export const matchRouter = createTRPCRouter({
       });
 
       const castId = user?.cast?.id;
-      const storeId = user?.owner?.stores[0]?.id;
+      const storeIds = user?.owner?.stores.map((s) => s.id) ?? [];
 
-      // 自分に関連するか確認
+      const orClauses: Array<Record<string, unknown>> = [];
+      if (castId) orClauses.push({ castId });
+      if (storeIds.length > 0) orClauses.push({ storeId: { in: storeIds } });
+
+      if (orClauses.length === 0) {
+        throw new Error("該当するやりとりが見つかりません");
+      }
+
+      // 自分に関連するか確認 (複数店舗 OWNER も全店舗カバー)
       const match = await ctx.prisma.match.findFirst({
         where: {
           id: input.matchId,
-          OR: [
-            { castId: castId ?? "" },
-            { storeId: storeId ?? "" },
-          ],
+          OR: orClauses,
         },
       });
 
