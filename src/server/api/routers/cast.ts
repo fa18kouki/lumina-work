@@ -29,7 +29,7 @@ export const castRouter = createTRPCRouter({
   /**
    * キャストプロフィール作成・更新
    */
-  upsertProfile: protectedProcedure
+  upsertProfile: castProcedure
     .input(
       z.object({
         // 基本情報

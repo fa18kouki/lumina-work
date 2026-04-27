@@ -1,12 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { Store, Plus, FileText, Users } from "lucide-react";
+import { Store, Plus, FileText, Users, AlertCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 export default function OwnerStoresPage() {
-  const { data: stores, isLoading } = trpc.owner.listStores.useQuery();
+  const storesQuery = trpc.owner.listStores.useQuery(undefined, {
+    retry: 1,
+    staleTime: 30_000,
+  });
   const { data: storeCount } = trpc.owner.getStoreCount.useQuery();
+  const { data: stores, isLoading, isError, error, refetch } = storesQuery;
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <AlertCircle className="w-10 h-10 text-red-400" />
+        <p className="text-sm text-[var(--text-main)]">
+          店舗一覧の取得に失敗しました
+        </p>
+        <p className="text-xs text-[var(--text-sub)] max-w-md text-center">
+          {error?.message ?? "もう一度試してください"}
+        </p>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors"
+        >
+          再読み込み
+        </button>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

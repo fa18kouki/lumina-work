@@ -5,7 +5,10 @@ import type { Session } from "next-auth";
 import { cookies } from "next/headers";
 import { prisma } from "@/server/db";
 import { auth } from "@/lib/auth";
-import { createServerClient } from "@/lib/supabase-auth";
+import {
+  getCachedPrismaUserBySupabaseId,
+  getCachedSupabaseUser,
+} from "@/lib/auth-cached";
 
 /**
  * コンテキスト型の定義
@@ -27,20 +30,17 @@ export const createInnerTRPCContext = (opts: CreateContextOptions) => {
 };
 
 /**
- * Supabase Auth セッションから NextAuth 形式のセッションを復元
+ * Supabase Auth セッションから NextAuth 形式のセッションを復元。
+ * React cache 経由で getUser / Prisma user lookup を request-scoped
+ * memoize するため、同一リクエスト内で layout / tRPC が直列に呼んでも
+ * Supabase Auth API への HTTP は 1 回、Prisma クエリも 1 回に収束する。
  */
-async function getSupabaseSession(
-  cookieStore: Awaited<ReturnType<typeof cookies>>,
-): Promise<Session | null> {
+async function getSupabaseSession(): Promise<Session | null> {
   try {
-    const supabase = createServerClient(cookieStore);
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCachedSupabaseUser();
     if (!user) return null;
 
-    const prismaUser = await prisma.user.findUnique({
-      where: { supabaseAuthId: user.id },
-      select: { id: true, email: true, image: true, role: true },
-    });
+    const prismaUser = await getCachedPrismaUserBySupabaseId(user.id);
 
     // Prisma ユーザーが存在しない場合は null を返す。
     // ユーザー作成は正規フロー（/api/auth/callback または /api/auth/sync-cast-user）に任せる。
@@ -83,7 +83,7 @@ export const createTRPCContext = async () => {
 
   // NextAuth セッションがない場合、Supabase Auth を確認（店舗側）
   if (!session) {
-    session = await getSupabaseSession(cookieStore);
+    session = await getSupabaseSession();
   }
 
   return createInnerTRPCContext({

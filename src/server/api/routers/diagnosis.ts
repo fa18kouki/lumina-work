@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { castProcedure, createTRPCRouter } from "@/server/api/trpc";
 import type { DiagnosisAnswers } from "@/lib/diagnosis/types";
 import {
   areRequiredQuestionsAnswered,
@@ -24,14 +24,16 @@ export const diagnosisRouter = createTRPCRouter({
   /**
    * 診断セッションを開始または再開
    */
-  startSession: protectedProcedure.mutation(async ({ ctx }) => {
+  startSession: castProcedure.mutation(async ({ ctx }) => {
     // 既存のキャストプロフィールとセッションを確認
     const existingCast = await ctx.prisma.cast.findUnique({
       where: { userId: ctx.session.user.id },
       include: { diagnosisSession: true },
     });
 
-    // キャストプロフィールがない場合は空の Cast を作成(age は診断 BASIC_INFO で入力される)
+    // キャストプロフィールがない場合は空の Cast を作成(age は診断 BASIC_INFO で入力される)。
+    // role は castProcedure で既に CAST が確定しているため、ここでの user.update
+    // (旧コードの privilege escalation 経路) は削除済み。
     if (!existingCast) {
       const cast = await ctx.prisma.cast.create({
         data: {
@@ -40,12 +42,6 @@ export const diagnosisRouter = createTRPCRouter({
           photos: [],
           desiredAreas: [],
         },
-      });
-
-      // ユーザーロールをCASTに設定
-      await ctx.prisma.user.update({
-        where: { id: ctx.session.user.id },
-        data: { role: "CAST" },
       });
 
       // 新しいセッションを作成
@@ -111,7 +107,7 @@ export const diagnosisRouter = createTRPCRouter({
   /**
    * 現在のセッションを取得
    */
-  getSession: protectedProcedure.query(async ({ ctx }) => {
+  getSession: castProcedure.query(async ({ ctx }) => {
     const cast = await ctx.prisma.cast.findUnique({
       where: { userId: ctx.session.user.id },
       include: { diagnosisSession: true },
@@ -135,7 +131,7 @@ export const diagnosisRouter = createTRPCRouter({
   /**
    * 回答を保存
    */
-  saveAnswer: protectedProcedure
+  saveAnswer: castProcedure
     .input(
       z.object({
         questionId: z.string(),
@@ -190,7 +186,7 @@ export const diagnosisRouter = createTRPCRouter({
   /**
    * ステップを更新
    */
-  updateStep: protectedProcedure
+  updateStep: castProcedure
     .input(
       z.object({
         step: z.enum([
@@ -229,7 +225,7 @@ export const diagnosisRouter = createTRPCRouter({
   /**
    * 診断を完了
    */
-  completeDiagnosis: protectedProcedure.mutation(async ({ ctx }) => {
+  completeDiagnosis: castProcedure.mutation(async ({ ctx }) => {
     const cast = await ctx.prisma.cast.findUnique({
       where: { userId: ctx.session.user.id },
       include: { diagnosisSession: true },
@@ -372,7 +368,7 @@ export const diagnosisRouter = createTRPCRouter({
   /**
    * 診断をリセット
    */
-  resetDiagnosis: protectedProcedure.mutation(async ({ ctx }) => {
+  resetDiagnosis: castProcedure.mutation(async ({ ctx }) => {
     const cast = await ctx.prisma.cast.findUnique({
       where: { userId: ctx.session.user.id },
       include: { diagnosisSession: true },

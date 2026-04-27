@@ -35,6 +35,7 @@ export function OwnerNav() {
           <Link
             key={item.href}
             href={item.href}
+            prefetch={false}
             className={`
               flex items-center gap-4 px-5 py-3.5 rounded-md font-medium text-sm transition-all
               ${isActive ? "bg-slate-100 text-slate-900 font-bold" : "text-[var(--text-sub)] hover:bg-slate-50 hover:text-slate-700"}
@@ -49,6 +50,7 @@ export function OwnerNav() {
       <div className="mt-auto pt-2">
         <Link
           href="/o/settings"
+          prefetch={false}
           className={`
             flex items-center gap-4 px-5 py-3.5 rounded-md font-medium text-sm transition-all
             ${pathname === "/o/settings" ? "bg-slate-100 text-slate-900 font-bold" : "text-[var(--text-sub)] hover:bg-slate-50 hover:text-slate-700"}

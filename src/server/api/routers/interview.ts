@@ -202,15 +202,23 @@ export const interviewRouter = createTRPCRouter({
       });
 
       const castId = user?.cast?.id;
-      const storeId = user?.owner?.stores[0]?.id;
+      const storeIds = user?.owner?.stores.map((s) => s.id) ?? [];
+
+      const orClauses: Array<Record<string, unknown>> = [];
+      if (castId) orClauses.push({ castId });
+      if (storeIds.length > 0) orClauses.push({ storeId: { in: storeIds } });
+
+      if (orClauses.length === 0) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "面接をキャンセルする権限がありません",
+        });
+      }
 
       const interview = await ctx.prisma.interview.findFirst({
         where: {
           id: input.interviewId,
-          OR: [
-            { castId: castId ?? "" },
-            { storeId: storeId ?? "" },
-          ],
+          OR: orClauses,
           status: "SCHEDULED",
         },
         include: {
@@ -256,7 +264,7 @@ export const interviewRouter = createTRPCRouter({
       const scheduledAt = interview.scheduledAt.toISOString();
 
       // キャンセルした側の相手方に通知
-      const isCancelledByStore = storeId === interview.storeId;
+      const isCancelledByStore = storeIds.includes(interview.storeId);
 
       if (isCancelledByStore) {
         // 店舗がキャンセル → キャストに通知
@@ -303,9 +311,9 @@ export const interviewRouter = createTRPCRouter({
         select: { owner: { select: { stores: { select: { id: true } } } } },
       });
 
-      const storeId = user?.owner?.stores[0]?.id;
+      const storeIds = user?.owner?.stores.map((s) => s.id) ?? [];
 
-      if (!storeId) {
+      if (storeIds.length === 0) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "店舗のみ面接を完了にできます",
@@ -315,7 +323,7 @@ export const interviewRouter = createTRPCRouter({
       const interview = await ctx.prisma.interview.findFirst({
         where: {
           id: input.interviewId,
-          storeId,
+          storeId: { in: storeIds },
           status: "SCHEDULED",
         },
         include: {
@@ -372,9 +380,9 @@ export const interviewRouter = createTRPCRouter({
         select: { owner: { select: { stores: { select: { id: true } } } } },
       });
 
-      const storeId = user?.owner?.stores[0]?.id;
+      const storeIds = user?.owner?.stores.map((s) => s.id) ?? [];
 
-      if (!storeId) {
+      if (storeIds.length === 0) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "店舗のみ無断欠席を報告できます",
@@ -384,7 +392,7 @@ export const interviewRouter = createTRPCRouter({
       const interview = await ctx.prisma.interview.findFirst({
         where: {
           id: input.interviewId,
-          storeId,
+          storeId: { in: storeIds },
           status: "SCHEDULED",
         },
         include: {
