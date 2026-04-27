@@ -6,6 +6,7 @@ import { Save } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { StoreSingleImageUploader } from "@/components/store/store-single-image-uploader";
+import { StoreMediaListUploader } from "@/components/store/store-media-list-uploader";
 import type { SalarySystem, TrialShiftInfo, WorkConditions, SnsLinks } from "@/lib/types/store";
 import {
   BasicInfoSection,
@@ -64,6 +65,8 @@ export default function StoreProfilePage({
       businessHours: store.businessHours ?? "",
       regularHolidays: store.regularHolidays ?? "",
       bannerUrl: store.bannerUrl ?? null,
+      bannerUrls: (store as { bannerUrls?: string[] }).bannerUrls ?? [],
+      animatedUrls: (store as { animatedUrls?: string[] }).animatedUrls ?? [],
       logoUrl: store.logoUrl ?? null,
       salary: {
         hourlyRateMin: s.hourlyRateMin ?? 3000,
@@ -112,7 +115,9 @@ export default function StoreProfilePage({
       area: form.area,
       address: form.address,
       description: form.description || undefined,
-      bannerUrl: form.bannerUrl,
+      bannerUrl: form.bannerUrls[0] ?? form.bannerUrl,
+      bannerUrls: form.bannerUrls,
+      animatedUrls: form.animatedUrls,
       logoUrl: form.logoUrl,
       storeType: form.storeType,
       nearestStation: form.nearestStation || undefined,
@@ -178,14 +183,28 @@ export default function StoreProfilePage({
           </p>
           <div className="mb-5">
             <label className="block text-sm font-medium text-[var(--text-main)] mb-2">
-              バナー画像 <span className="text-xs text-[var(--text-sub)] font-normal">（推奨：横長 3:1）</span>
+              バナー画像 <span className="text-xs text-[var(--text-sub)] font-normal">（複数枚アップロード可・推奨：横長 3:1）</span>
             </label>
-            <StoreSingleImageUploader
-              currentUrl={form.bannerUrl}
-              onUrlChange={(url) => onUpdate({ bannerUrl: url })}
-              aspectRatio="banner"
-              placeholder="/service-scene-10.png"
-              deleteType="banner"
+            <StoreMediaListUploader
+              urls={form.bannerUrls}
+              onUrlsChange={(urls) => onUpdate({ bannerUrls: urls })}
+              storeId={storeId}
+              mediaType="image"
+              maxCount={5}
+              addLabel="バナーを追加"
+            />
+          </div>
+          <div className="mb-5">
+            <label className="block text-sm font-medium text-[var(--text-main)] mb-2">
+              GIF・動画 <span className="text-xs text-[var(--text-sub)] font-normal">（GIF / MP4 / WebM 対応）</span>
+            </label>
+            <StoreMediaListUploader
+              urls={form.animatedUrls}
+              onUrlsChange={(urls) => onUpdate({ animatedUrls: urls })}
+              storeId={storeId}
+              mediaType="animated"
+              maxCount={3}
+              addLabel="GIF・動画を追加"
             />
           </div>
           <div>

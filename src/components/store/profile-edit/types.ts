@@ -13,7 +13,9 @@ export interface StoreProfileFormData {
   businessHours: string;
   regularHolidays: string;
   // ビジュアル
-  bannerUrl: string | null;
+  bannerUrl: string | null; // deprecated: bannerUrls 表示の後方互換 (form 送信時にも併送)
+  bannerUrls: string[];
+  animatedUrls: string[]; // GIF / 動画 (mp4, webm)
   logoUrl: string | null;
   // 給与
   salary: SalarySystem;
@@ -62,6 +64,8 @@ export const defaultFormData: StoreProfileFormData = {
   businessHours: "",
   regularHolidays: "",
   bannerUrl: null,
+  bannerUrls: [],
+  animatedUrls: [],
   logoUrl: null,
   salary: { hourlyRateMin: 3000, hourlyRateMax: 10000 },
   dailyPayType: "NONE",
