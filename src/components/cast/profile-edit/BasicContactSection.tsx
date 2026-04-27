@@ -16,6 +16,7 @@ interface EmergencyContact {
 
 interface Props {
   data: {
+    nickname: string;
     fullName: string;
     furigana: string;
     age: number | null;
@@ -76,6 +77,18 @@ export function BasicContactSection({ data, onChange }: Props) {
       </h3>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FormField label="ニックネーム（公開名・必須）">
+          <input
+            type="text"
+            className={inputClass}
+            value={data.nickname}
+            onChange={(e) => onChange("nickname", e.target.value)}
+            placeholder="例: さくら"
+            required
+            maxLength={50}
+          />
+        </FormField>
+
         <FormField label="氏名（本名）">
           <input
             type="text"

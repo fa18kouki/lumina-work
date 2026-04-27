@@ -6,7 +6,7 @@ interface ApplicantListItemProps {
   cast: {
     id: string;
     nickname: string;
-    age: number;
+    age: number | null;
     photos: string[];
     desiredAreas: string[];
     rank: string;
@@ -64,9 +64,11 @@ export function ApplicantListItem({ cast, onDetail, onOffer }: ApplicantListItem
           <span className="font-semibold text-(--text-main) truncate">
             {cast.nickname}
           </span>
-          <span className="text-sm text-(--text-sub) flex-shrink-0">
-            {cast.age}歳
-          </span>
+          {cast.age != null && (
+            <span className="text-sm text-(--text-sub) flex-shrink-0">
+              {cast.age}歳
+            </span>
+          )}
           <RankBadge rank={cast.rank} className="flex-shrink-0" />
           {showNew && (
             <span className="px-1.5 py-0.5 bg-orange-100 text-orange-600 text-xs font-bold rounded flex-shrink-0">

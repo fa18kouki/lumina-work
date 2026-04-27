@@ -326,6 +326,13 @@ export const storeRouter = createTRPCRouter({
       const casts = await ctx.prisma.cast.findMany({
         where: {
           isSuspended: false,
+          // プロフィール未入力 (nickname 空 / age 未入力) のキャストは OWNER 検索に出さない
+          nickname: { not: "" },
+          age: {
+            not: null,
+            ...(input.minAge != null && { gte: input.minAge }),
+            ...(input.maxAge != null && { lte: input.maxAge }),
+          },
           NOT: {
             storeBlocks: {
               some: { storeId: store.id },
@@ -334,8 +341,6 @@ export const storeRouter = createTRPCRouter({
           ...(input.area && {
             desiredAreas: { has: input.area },
           }),
-          ...(input.minAge && { age: { gte: input.minAge } }),
-          ...(input.maxAge && { age: { lte: input.maxAge } }),
           ...(input.rank && { rank: input.rank }),
           ...((input.minExperience != null || input.maxExperience != null) && {
             totalExperienceYears: {

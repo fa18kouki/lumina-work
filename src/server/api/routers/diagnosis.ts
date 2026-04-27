@@ -31,13 +31,12 @@ export const diagnosisRouter = createTRPCRouter({
       include: { diagnosisSession: true },
     });
 
-    // キャストプロフィールがない場合は作成
+    // キャストプロフィールがない場合は空の Cast を作成(age は診断 BASIC_INFO で入力される)
     if (!existingCast) {
       const cast = await ctx.prisma.cast.create({
         data: {
           userId: ctx.session.user.id,
           nickname: "",
-          age: 18,
           photos: [],
           desiredAreas: [],
         },
