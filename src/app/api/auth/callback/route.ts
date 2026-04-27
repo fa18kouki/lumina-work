@@ -56,67 +56,104 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 2) Prisma User を冪等に upsert。create が落ちると orphan auth.users が残るため、
-  //    transaction で User+Owner+Subscription をまとめて作る。失敗時は明示的にエラー
-  //    リダイレクトしてログを残す (silent skip しない)。
+  // 2) Prisma User を冪等に provision。
+  //    - supabaseAuthId 一致 → そのまま使う
+  //    - email 一致の OWNER user (旧 supabaseAuthId が delete された) → supabaseAuthId を再リンク
+  //    - どちらも無し → User+Owner+Subscription を transaction で新規作成
   try {
-    const existingUser = await prisma.user.findUnique({
+    const existingBySupabase = await prisma.user.findUnique({
       where: { supabaseAuthId: supabaseUser.id },
       select: { id: true },
     });
 
-    if (!existingUser) {
-      const newOwner = await prisma.$transaction(async (tx) => {
-        const createdUser = await tx.user.create({
+    let newOwnerId: string | null = null;
+
+    if (!existingBySupabase) {
+      const existingByEmail = supabaseUser.email
+        ? await prisma.user.findFirst({
+            where: { email: supabaseUser.email, role: "OWNER" },
+            select: { id: true, supabaseAuthId: true },
+          })
+        : null;
+
+      if (existingByEmail) {
+        // auth.users 削除→再登録による supabaseAuthId 変化を吸収。
+        // 別の active な supabaseAuthId に既に紐付いていたら衝突として停止。
+        if (
+          existingByEmail.supabaseAuthId &&
+          existingByEmail.supabaseAuthId !== supabaseUser.id
+        ) {
+          console.error(
+            "[auth/callback] OWNER email collision with different supabaseAuthId",
+            { email: supabaseUser.email },
+          );
+          return NextResponse.redirect(
+            new URL("/o/login?error=email_collision", origin),
+          );
+        }
+        await prisma.user.update({
+          where: { id: existingByEmail.id },
           data: {
-            email: supabaseUser.email,
+            supabaseAuthId: supabaseUser.id,
             emailVerified: supabaseUser.email_confirmed_at
               ? new Date(supabaseUser.email_confirmed_at)
-              : null,
-            role: "OWNER",
-            supabaseAuthId: supabaseUser.id,
+              : undefined,
           },
         });
-
-        const createdOwner = await tx.owner.create({
-          data: {
-            userId: createdUser.id,
-            subscription: {
-              create: { plan: "FREE", status: "ACTIVE", offerLimit: 3 },
+      } else {
+        const created = await prisma.$transaction(async (tx) => {
+          const createdUser = await tx.user.create({
+            data: {
+              email: supabaseUser.email,
+              emailVerified: supabaseUser.email_confirmed_at
+                ? new Date(supabaseUser.email_confirmed_at)
+                : null,
+              role: "OWNER",
+              supabaseAuthId: supabaseUser.id,
             },
-          },
-        });
-
-        return createdOwner;
-      });
-
-      // リファーラルコードの処理 (失敗しても本体ログインは妨げない)
-      if (refCode) {
-        try {
-          const referrer = await prisma.owner.findUnique({
-            where: { referralCode: refCode.toUpperCase() },
-            select: { id: true },
           });
 
-          if (referrer && referrer.id !== newOwner.id) {
-            const expiresAt = new Date();
-            expiresAt.setDate(
-              expiresAt.getDate() + REFERRAL_CONFIG.expirationDays,
-            );
-
-            await prisma.referral.create({
-              data: {
-                referrerOwnerId: referrer.id,
-                referredOwnerId: newOwner.id,
-                code: refCode.toUpperCase(),
-                status: "PENDING",
-                expiresAt,
+          const createdOwner = await tx.owner.create({
+            data: {
+              userId: createdUser.id,
+              subscription: {
+                create: { plan: "FREE", status: "ACTIVE", offerLimit: 3 },
               },
-            });
-          }
-        } catch (refErr) {
-          console.error("[auth/callback] referral create failed", refErr);
+            },
+          });
+
+          return createdOwner;
+        });
+        newOwnerId = created.id;
+      }
+    }
+
+    // リファーラルコードの処理 (新規作成時のみ、失敗しても本体ログインは妨げない)
+    if (newOwnerId && refCode) {
+      try {
+        const referrer = await prisma.owner.findUnique({
+          where: { referralCode: refCode.toUpperCase() },
+          select: { id: true },
+        });
+
+        if (referrer && referrer.id !== newOwnerId) {
+          const expiresAt = new Date();
+          expiresAt.setDate(
+            expiresAt.getDate() + REFERRAL_CONFIG.expirationDays,
+          );
+
+          await prisma.referral.create({
+            data: {
+              referrerOwnerId: referrer.id,
+              referredOwnerId: newOwnerId,
+              code: refCode.toUpperCase(),
+              status: "PENDING",
+              expiresAt,
+            },
+          });
         }
+      } catch (refErr) {
+        console.error("[auth/callback] referral create failed", refErr);
       }
     }
   } catch (e) {
