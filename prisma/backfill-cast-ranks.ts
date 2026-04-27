@@ -4,8 +4,11 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { getEnvFileOrder } from "../src/lib/env-files";
 import { calculateRank } from "../src/lib/diagnosis/calculate-rank";
+import { assertNotProductionDb } from "./_safety";
 
 dotenv.config({ path: getEnvFileOrder(process.env.NODE_ENV) });
+
+assertNotProductionDb("backfill-cast-ranks");
 
 const pool = new Pool({
   connectionString: process.env.DIRECT_URL || process.env.DATABASE_URL,
