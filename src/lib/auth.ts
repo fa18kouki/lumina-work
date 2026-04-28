@@ -149,8 +149,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   },
   pages: {
+    // NextAuth は CAST 専用 (LINE / Twitter / メールOTP)
+    // OWNER は Supabase Auth を使用するため、このページ設定は CAST にのみ影響する。
+    // error はデフォルト (/api/auth/error) のままにする。
+    // 誤って OWNER が NextAuth エラーを踏んだ場合に /c/login へ飛ばないようにする。
     signIn: "/c/login",
-    error: "/c/login",
   },
 });
 
