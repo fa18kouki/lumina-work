@@ -31,7 +31,13 @@ export const getCachedPrismaUserBySupabaseId = cache(
   async (supabaseAuthId: string) => {
     return prisma.user.findUnique({
       where: { supabaseAuthId },
-      select: { id: true, email: true, image: true, role: true },
+      select: {
+        id: true,
+        email: true,
+        image: true,
+        role: true,
+        deletedAt: true,
+      },
     });
   },
 );
