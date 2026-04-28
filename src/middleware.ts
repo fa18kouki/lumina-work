@@ -78,7 +78,10 @@ export async function middleware(req: NextRequest) {
   }
 
   // オーナールート: Supabase Auth cookie の有無のみチェック
-  if (pathname.startsWith("/o")) {
+  // "/o/" で判定することで "/o" 単体や "/oauth" などへの誤マッチを防ぐ。
+  // publicRoutes に含まれる /o/login 等は既に上で通過しているため、
+  // ここに来る /o/* は認証が必要なページのみ。
+  if (pathname.startsWith("/o/")) {
     if (!hasSupabaseSessionCookie(req)) {
       const url = new URL("/o/login", req.nextUrl.origin);
       url.searchParams.set("callbackUrl", pathname);
