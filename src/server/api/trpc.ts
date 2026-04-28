@@ -48,6 +48,11 @@ async function getSupabaseSession(): Promise<Session | null> {
       return null;
     }
 
+    // 退会済みアカウントは未認証扱い（残ったセッションで API を叩けないよう保護）
+    if (prismaUser.deletedAt) {
+      return null;
+    }
+
     return {
       user: {
         id: prismaUser.id,

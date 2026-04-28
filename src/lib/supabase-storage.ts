@@ -19,7 +19,7 @@ function getSupabaseClient(): SupabaseClient {
   return supabase;
 }
 
-function getSupabaseAdminClient(): SupabaseClient {
+export function getSupabaseAdminClient(): SupabaseClient {
   if (supabaseAdmin) return supabaseAdmin;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

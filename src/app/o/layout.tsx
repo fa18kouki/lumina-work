@@ -54,5 +54,14 @@ export default async function OwnerLayout({
     redirect("/o/login?error=not_owner");
   }
 
+  // 退会済みアカウントを保護: 残ったセッションでアクセスしてきた場合は
+  // /o/login?reason=deleted へ送り、認証ページではない限りコンテンツを出さない。
+  if (prismaUser.deletedAt) {
+    if (onAuthPage) {
+      return <OwnerLayoutWrapper>{children}</OwnerLayoutWrapper>;
+    }
+    redirect("/o/login?error=account_deleted");
+  }
+
   return <OwnerLayoutWrapper>{children}</OwnerLayoutWrapper>;
 }

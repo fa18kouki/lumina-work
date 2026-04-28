@@ -5,6 +5,8 @@ import {
   createTRPCRouter,
   ownerProcedure,
 } from "@/server/api/trpc";
+import { getStripe } from "@/lib/stripe";
+import { getSupabaseAdminClient } from "@/lib/supabase-storage";
 
 export const ownerRouter = createTRPCRouter({
   /**
@@ -58,23 +60,61 @@ export const ownerRouter = createTRPCRouter({
 
   /**
    * オーナープロフィール更新
+   *
+   * Why: Owner スキーマには代表者・法人税務情報・住所・請求担当者のフィールドが
+   * 定義済みだが、API がこれを露出していなかったため UI から保存できなかった。
+   * 全フィールド optional で受け取り、空文字は null として保存する。
    */
   upsertProfile: ownerProcedure
     .input(
       z.object({
         companyName: z.string().max(200).optional(),
+        representativeName: z.string().max(100).optional(),
+        representativeFurigana: z.string().max(100).optional(),
+        representativePhone: z.string().max(30).optional(),
+        corporateNumber: z.string().max(13).optional(),
+        invoiceRegistrationNumber: z.string().max(20).optional(),
+        headOfficeAddress: z.string().max(300).optional(),
+        billingAddress: z.string().max(300).optional(),
+        billingContactName: z.string().max(100).optional(),
+        billingContactEmail: z.string().email().max(254).or(z.literal("")).optional(),
+        billingContactPhone: z.string().max(30).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // 空文字は null に正規化（DB に "" を残さない）
+      const norm = (v: string | undefined): string | null | undefined => {
+        if (v === undefined) return undefined;
+        const trimmed = v.trim();
+        return trimmed === "" ? null : trimmed;
+      };
+
+      const data = {
+        companyName: norm(input.companyName),
+        representativeName: norm(input.representativeName),
+        representativeFurigana: norm(input.representativeFurigana),
+        representativePhone: norm(input.representativePhone),
+        corporateNumber: norm(input.corporateNumber),
+        invoiceRegistrationNumber: norm(input.invoiceRegistrationNumber),
+        headOfficeAddress: norm(input.headOfficeAddress),
+        billingAddress: norm(input.billingAddress),
+        billingContactName: norm(input.billingContactName),
+        billingContactEmail: norm(input.billingContactEmail),
+        billingContactPhone: norm(input.billingContactPhone),
+      };
+
+      // upsert の create 側は null を許容 (createInput では undefined と同等)
+      const createData: Prisma.OwnerCreateInput = {
+        user: { connect: { id: ctx.session.user.id } },
+        ...Object.fromEntries(
+          Object.entries(data).filter(([, v]) => v !== undefined && v !== null)
+        ),
+      };
+
       const owner = await ctx.prisma.owner.upsert({
         where: { userId: ctx.session.user.id },
-        update: {
-          companyName: input.companyName,
-        },
-        create: {
-          userId: ctx.session.user.id,
-          companyName: input.companyName,
-        },
+        update: data,
+        create: createData,
       });
 
       return owner;
@@ -259,4 +299,122 @@ export const ownerRouter = createTRPCRouter({
       };
     });
   }),
+
+  /**
+   * アカウント削除（退会）
+   *
+   * Why: ユーザーがオーナーアカウントを退会できる導線が無く、解約フロー
+   * から逃げ道がなかった。ソフトデリート方式で User/Owner/Store に
+   * deletedAt をセットし、Supabase Auth ユーザーは削除して再ログイン
+   * できないようにする。
+   *
+   * 有料サブスクが残っている場合は、Stripe を即時キャンセルしてから
+   * 退会する（ユーザー選択: 自動キャンセル）。
+   */
+  deleteAccount: ownerProcedure
+    .input(
+      z.object({
+        confirmText: z.literal("DELETE"),
+      })
+    )
+    .mutation(async ({ ctx }) => {
+      const owner = await ctx.prisma.owner.findUnique({
+        where: { userId: ctx.session.user.id },
+        include: {
+          subscription: true,
+          stores: { select: { id: true } },
+        },
+      });
+
+      if (!owner) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "オーナー情報が見つかりません",
+        });
+      }
+
+      // トランザクション前に supabaseAuthId を取得しておく
+      // （トランザクション内で null に書き換えるため）
+      const userBefore = await ctx.prisma.user.findUnique({
+        where: { id: ctx.session.user.id },
+        select: { supabaseAuthId: true, email: true },
+      });
+
+      // 1. Stripe サブスクの即時キャンセル（有料プランのみ）
+      const stripeSubscriptionId = owner.subscription?.stripeSubscriptionId;
+      const isPaidPlan =
+        owner.subscription?.plan && owner.subscription.plan !== "FREE";
+
+      if (stripeSubscriptionId && isPaidPlan) {
+        try {
+          await getStripe().subscriptions.cancel(stripeSubscriptionId);
+        } catch (e) {
+          // Stripe 側で既に解約済み等は許容（ログのみ残して退会は続行）
+          const message = e instanceof Error ? e.message : String(e);
+          console.error("[deleteAccount] Stripe cancel failed (continuing)", {
+            stripeSubscriptionId,
+            error: message,
+          });
+        }
+      }
+
+      const now = new Date();
+
+      // 2. DB をトランザクションでソフトデリート
+      await ctx.prisma.$transaction(async (tx) => {
+        // Store: 全店舗を非公開化
+        if (owner.stores.length > 0) {
+          await tx.store.updateMany({
+            where: { ownerId: owner.id },
+            data: { deletedAt: now },
+          });
+        }
+
+        // Owner: 退会フラグ
+        await tx.owner.update({
+          where: { id: owner.id },
+          data: { deletedAt: now },
+        });
+
+        // Subscription: ステータスを CANCELED に
+        if (owner.subscription) {
+          await tx.subscription.update({
+            where: { id: owner.subscription.id },
+            data: { status: "CANCELLED" },
+          });
+        }
+
+        // User: 退会フラグ + 認証情報を切り離し（再登録時の重複回避）
+        // Email は UNIQUE 制約があるので suffix を付けて退避。
+        await tx.user.update({
+          where: { id: ctx.session.user.id },
+          data: {
+            deletedAt: now,
+            email: userBefore?.email
+              ? `${userBefore.email}.deleted-${now.getTime()}`
+              : null,
+            supabaseAuthId: null,
+          },
+        });
+      });
+
+      // 3. Supabase Auth ユーザー削除（service role 必須）
+      // DB 側のソフトデリートが完了してから実施。失敗しても DB の整合性は保てる。
+      if (userBefore?.supabaseAuthId) {
+        try {
+          const admin = getSupabaseAdminClient();
+          await admin.auth.admin.deleteUser(userBefore.supabaseAuthId);
+        } catch (e) {
+          // Supabase 側の削除失敗は致命的ではない（DB 側は既に退会済）。
+          // ログだけ残してクライアントには成功を返す。
+          const message = e instanceof Error ? e.message : String(e);
+          console.error("[deleteAccount] Supabase admin delete failed", {
+            supabaseAuthId: userBefore.supabaseAuthId,
+            error: message,
+          });
+        }
+      }
+
+      return { success: true as const };
+    }),
 });
