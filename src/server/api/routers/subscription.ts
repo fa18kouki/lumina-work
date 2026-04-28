@@ -8,10 +8,10 @@ import type { SubscriptionPlanId } from "@/lib/constants";
 /** プランIDからStripe Price IDを取得 */
 function getStripePriceId(plan: Exclude<SubscriptionPlanId, "FREE">): string {
   const map: Record<Exclude<SubscriptionPlanId, "FREE">, string | undefined> = {
-    CASUAL: process.env.STRIPE_CASUAL_PRICE_ID,
-    PRO_TRIAL: process.env.STRIPE_PRO_TRIAL_PRICE_ID,
-    PRO_BUSINESS: process.env.STRIPE_PRO_BUSINESS_PRICE_ID,
-    PRO_ENTERPRISE: process.env.STRIPE_PRO_ENTERPRISE_PRICE_ID,
+    CASUAL: process.env.STRIPE_CASUAL_PRICE_ID?.trim(),
+    PRO_TRIAL: process.env.STRIPE_PRO_TRIAL_PRICE_ID?.trim(),
+    PRO_BUSINESS: process.env.STRIPE_PRO_BUSINESS_PRICE_ID?.trim(),
+    PRO_ENTERPRISE: process.env.STRIPE_PRO_ENTERPRISE_PRICE_ID?.trim(),
   };
   const priceId = map[plan];
   if (!priceId) {
@@ -136,7 +136,7 @@ export const subscriptionRouter = createTRPCRouter({
       const useDiscount = !!discounts;
       const applyTrial = isEligibleForTrial && !useDiscount;
 
-      const baseUrl = process.env.AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL;
+      const baseUrl = (process.env.AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL)?.trim();
       if (!baseUrl) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -295,9 +295,17 @@ export const subscriptionRouter = createTRPCRouter({
       });
     }
 
+    const returnUrl = process.env.AUTH_URL?.trim();
+    if (!returnUrl) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "AUTH_URL が設定されていません",
+      });
+    }
+
     const session = await getStripe().billingPortal.sessions.create({
       customer: owner.subscription.stripeCustomerId,
-      return_url: `${process.env.AUTH_URL}/o/subscription`,
+      return_url: `${returnUrl}/o/subscription`,
     });
 
     return { url: session.url };
