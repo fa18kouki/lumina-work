@@ -1,5 +1,6 @@
 import { CastNav } from "@/components/layout/cast-nav";
 import { NotificationToast } from "@/components/ui/toast-notification";
+import { DiagnosisSync } from "@/components/diagnosis/diagnosis-sync";
 
 export default function CastLayout({
   children,
@@ -14,6 +15,7 @@ export default function CastLayout({
         </main>
         <CastNav />
         <NotificationToast />
+        <DiagnosisSync />
       </div>
     </div>
   );

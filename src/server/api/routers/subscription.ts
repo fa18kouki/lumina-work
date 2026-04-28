@@ -136,30 +136,56 @@ export const subscriptionRouter = createTRPCRouter({
       const useDiscount = !!discounts;
       const applyTrial = isEligibleForTrial && !useDiscount;
 
-      const session = await getStripe().checkout.sessions.create({
-        mode: "subscription",
-        line_items: [{ price: priceId, quantity }],
-        success_url: `${process.env.AUTH_URL}/o/subscription?success=true`,
-        cancel_url: `${process.env.AUTH_URL}/o/subscription?cancelled=true`,
-        metadata: {
-          ownerId: owner.id,
-          plan: input.plan,
-          offerLimit: offerLimit !== null ? String(offerLimit) : "",
-          trialEndsAt: applyTrial ? trialEnd.toISOString() : "",
-          ...(pendingReferral && { referralId: pendingReferral.id }),
-        },
-        ...(discounts && { discounts }),
-        ...(applyTrial && {
-          subscription_data: {
-            trial_end: Math.floor(trialEnd.getTime() / 1000),
-          },
-        }),
-        ...(owner.subscription?.stripeCustomerId && {
-          customer: owner.subscription.stripeCustomerId,
-        }),
-      });
+      const baseUrl = process.env.AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL;
+      if (!baseUrl) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "AUTH_URL / NEXT_PUBLIC_APP_URL が設定されていません",
+        });
+      }
 
-      return { url: session.url };
+      try {
+        const session = await getStripe().checkout.sessions.create({
+          mode: "subscription",
+          line_items: [{ price: priceId, quantity }],
+          success_url: `${baseUrl}/o/subscription?success=true`,
+          cancel_url: `${baseUrl}/o/subscription?cancelled=true`,
+          metadata: {
+            ownerId: owner.id,
+            plan: input.plan,
+            offerLimit: offerLimit !== null ? String(offerLimit) : "",
+            trialEndsAt: applyTrial ? trialEnd.toISOString() : "",
+            ...(pendingReferral && { referralId: pendingReferral.id }),
+          },
+          ...(discounts && { discounts }),
+          ...(applyTrial && {
+            subscription_data: {
+              trial_end: Math.floor(trialEnd.getTime() / 1000),
+            },
+          }),
+          ...(owner.subscription?.stripeCustomerId && {
+            customer: owner.subscription.stripeCustomerId,
+          }),
+        });
+
+        return { url: session.url };
+      } catch (e) {
+        // Stripe API エラーをログに出して TRPCError として再投げ。原因 (price ID 不一致 / customer ID 不正等)
+        // を確実に Vercel runtime logs に残す。
+        const message = e instanceof Error ? e.message : String(e);
+        console.error("[subscription.createCheckoutSession] Stripe error", {
+          plan: input.plan,
+          priceId,
+          quantity,
+          ownerId: owner.id,
+          stripeCustomerId: owner.subscription?.stripeCustomerId ?? null,
+          error: message,
+        });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Stripe checkout 作成に失敗しました: ${message}`,
+        });
+      }
     }),
 
   /**

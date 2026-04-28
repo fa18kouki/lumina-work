@@ -10,13 +10,23 @@ export default function OwnerSubscriptionPage() {
 
   const createCheckout = trpc.subscription.createCheckoutSession.useMutation({
     onSuccess: (data) => {
-      if (data.url) window.location.href = data.url;
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert("チェックアウト URL の取得に失敗しました");
+      }
+    },
+    onError: (err) => {
+      alert(`プラン変更に失敗しました: ${err.message}`);
     },
   });
 
   const createPortal = trpc.subscription.createPortalSession.useMutation({
     onSuccess: (data) => {
       if (data.url) window.location.href = data.url;
+    },
+    onError: (err) => {
+      alert(`契約管理ページの取得に失敗しました: ${err.message}`);
     },
   });
 
