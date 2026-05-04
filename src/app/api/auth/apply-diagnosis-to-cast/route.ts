@@ -18,16 +18,21 @@ const inputSchema = z.object({
     .enum(["NONE", "WEAK", "MODERATE", "STRONG", "NG"])
     .optional(),
   preferredAtmosphere: z.array(z.string()).max(20).optional(),
-  // BUG-6: blob: URL は永続化できないので拒否する。
-  // クライアント (DiagnosisSync) 側でも blob: をフィルタリングする想定だが、
-  // サーバ側でも防御層として弾いておく。
+  // BUG-6 + C-2: photos は https:// 始まりの URL のみ許可する allowlist 方式。
+  //   - blob: / Blob: / BLOB: などの大小文字バリアント (case-insensitive)
+  //   - data: (DoS / 巨大ペイロード)
+  //   - javascript: (XSS)
+  //   - file:// (LFI)
+  //   - http:// (mixed-content / 改ざんリスク)
+  // をすべて拒否する。クライアント (DiagnosisSync) 側でも事前フィルタするが、
+  // サーバ側でも防御層として allowlist で弾く。
   photos: z
     .array(
       z
         .string()
         .url()
-        .refine((u) => !u.startsWith("blob:"), {
-          message: "blob: URL は永続化できません",
+        .refine((u) => /^https:\/\//i.test(u), {
+          message: "https:// で始まる URL のみ許可されます",
         }),
     )
     .max(10)
@@ -58,8 +63,11 @@ async function resolveCaller(): Promise<CallerIdentity | null> {
   return { userId: prismaUser.id, role: prismaUser.role ?? null };
 }
 
-// BUG-3: 既存 description との重複を避けつつ強みを追記する純粋関数。
-// - 既に "強み:" を含む description の場合は idempotent に何もしない (undefined を返す)
+// BUG-3 + H-4: 既存 description との重複を避けつつ強みを追記する純粋関数。
+// - 既に **行頭** で "強み:" を含む description の場合は idempotent に何もしない
+//   (undefined を返す)
+//   * 「私の強み: 笑顔」のような行頭以外のフレーズは検出しない
+//     (永久 skip を避けるため)
 // - description が空 (null/undefined/空文字) のときは "強み: A、B" を新規セット
 // - 既存 description がある場合は "<existing>\n\n強み: A、B" を返す
 function buildDescriptionWithStrengths(
@@ -68,7 +76,8 @@ function buildDescriptionWithStrengths(
 ): string | undefined {
   if (strengths.length === 0) return undefined;
   const trimmed = (existing ?? "").trim();
-  if (trimmed.includes("強み:")) return undefined;
+  // 行頭マーカー判定: 文頭 or 改行直後の "強み:" のみ idempotent と扱う
+  if (/(^|\n)強み:\s/m.test(trimmed)) return undefined;
   const strengthsLine = `強み: ${strengths.join("、")}`;
   if (trimmed.length === 0) return strengthsLine;
   return `${trimmed}\n\n${strengthsLine}`;
