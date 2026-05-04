@@ -63,6 +63,58 @@ function generateId(): string {
   return `diag_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }
 
+// Storage migration:
+//   旧バージョンは sessionStorage を使っていたが、 LINE 認証から戻った直後に
+//   tab/オリジン跨ぎでセッションが失われ、Cast への診断データ反映が失われていた。
+//   そのため localStorage に保管先を変更する。一方、既存ユーザーが診断途中で
+//   バージョンが上がるケースを救うため、 sessionStorage に残っているデータが
+//   あれば 1 度だけ localStorage に移し替える。
+
+function readFromLocalStorage(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function readFromSessionStorage(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.sessionStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeToLocalStorage(value: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, value);
+  } catch {
+    // quota / private mode 等で書けないケースは諦める
+  }
+}
+
+function removeFromLocalStorage(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // noop
+  }
+}
+
+function removeFromSessionStorage(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // noop
+  }
+}
+
 // 新規セッション作成
 export function createDiagnosisSession(): DiagnosisSession {
   const now = new Date();
@@ -74,9 +126,7 @@ export function createDiagnosisSession(): DiagnosisSession {
     expiresAt: new Date(now.getTime() + SESSION_DURATION_MS).toISOString(),
   };
 
-  if (typeof window !== "undefined") {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-  }
+  writeToLocalStorage(JSON.stringify(session));
 
   return session;
 }
@@ -87,7 +137,19 @@ export function getDiagnosisSession(): DiagnosisSession | null {
     return null;
   }
 
-  const stored = sessionStorage.getItem(STORAGE_KEY);
+  let stored = readFromLocalStorage();
+
+  // ワンタイム migration: localStorage に無く、 sessionStorage にだけあるなら
+  // 移し替えてから返す。
+  if (!stored) {
+    const legacy = readFromSessionStorage();
+    if (legacy) {
+      writeToLocalStorage(legacy);
+      removeFromSessionStorage();
+      stored = legacy;
+    }
+  }
+
   if (!stored) {
     return null;
   }
@@ -126,9 +188,7 @@ export function updateDiagnosisSession(
     },
   };
 
-  if (typeof window !== "undefined") {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSession));
-  }
+  writeToLocalStorage(JSON.stringify(updatedSession));
 
   return updatedSession;
 }
@@ -159,11 +219,10 @@ export function setDiagnosisResult(
   return updateDiagnosisSession({ result, step: "RESULT" });
 }
 
-// セッション削除
+// セッション削除 (新旧両方の保管先をクリア)
 export function clearDiagnosisSession(): void {
-  if (typeof window !== "undefined") {
-    sessionStorage.removeItem(STORAGE_KEY);
-  }
+  removeFromLocalStorage();
+  removeFromSessionStorage();
 }
 
 // セッションが存在するか確認
