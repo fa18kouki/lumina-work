@@ -175,4 +175,165 @@ describe("POST /api/auth/apply-diagnosis-to-cast", () => {
     expect(res.status).toBe(400);
     expect(castUpdateMock).not.toHaveBeenCalled();
   });
+
+  // BUG-3: strengths を Cast.description に追記する (Prisma スキーマ変更不要)
+  describe("BUG-3: strengths の Cast.description 追記", () => {
+    beforeEach(() => {
+      authMock.mockResolvedValue({
+        user: { id: "cast-user", role: "CAST" },
+        expires: new Date(Date.now() + 60_000).toISOString(),
+      });
+      castUpdateMock.mockResolvedValue({});
+    });
+
+    it("既存 description が空の Cast に strengths を渡すと '強み: ...' が description に書き込まれる", async () => {
+      castFindUniqueMock.mockResolvedValue({
+        id: "cast-3",
+        userId: "cast-user",
+        diagnosisCompleted: false,
+        description: null,
+      });
+
+      const { POST } = await import(
+        "@/app/api/auth/apply-diagnosis-to-cast/route"
+      );
+      const res = await POST(
+        makeRequest({
+          ...validAnswers,
+          strengths: ["コミュニケーション力", "容姿"],
+        }),
+      );
+
+      expect(res.status).toBe(200);
+      const args = castUpdateMock.mock.calls[0][0] as {
+        data: Record<string, unknown>;
+      };
+      expect(args.data.description).toBe(
+        "強み: コミュニケーション力、容姿",
+      );
+    });
+
+    it("既存 description がある Cast に strengths を追加すると '\\n\\n強み: ...' で末尾に追記される", async () => {
+      castFindUniqueMock.mockResolvedValue({
+        id: "cast-4",
+        userId: "cast-user",
+        diagnosisCompleted: false,
+        description: "既存の自己紹介",
+      });
+
+      const { POST } = await import(
+        "@/app/api/auth/apply-diagnosis-to-cast/route"
+      );
+      const res = await POST(
+        makeRequest({
+          ...validAnswers,
+          strengths: ["コミュニケーション力", "容姿"],
+        }),
+      );
+
+      expect(res.status).toBe(200);
+      const args = castUpdateMock.mock.calls[0][0] as {
+        data: Record<string, unknown>;
+      };
+      expect(args.data.description).toBe(
+        "既存の自己紹介\n\n強み: コミュニケーション力、容姿",
+      );
+    });
+
+    it("既存 description に既に '強み:' が含まれる場合は追記しない (idempotent)", async () => {
+      castFindUniqueMock.mockResolvedValue({
+        id: "cast-5",
+        userId: "cast-user",
+        diagnosisCompleted: false,
+        description: "既存の自己紹介\n\n強み: 古い強み",
+      });
+
+      const { POST } = await import(
+        "@/app/api/auth/apply-diagnosis-to-cast/route"
+      );
+      const res = await POST(
+        makeRequest({
+          ...validAnswers,
+          strengths: ["コミュニケーション力", "容姿"],
+        }),
+      );
+
+      expect(res.status).toBe(200);
+      const args = castUpdateMock.mock.calls[0][0] as {
+        data: Record<string, unknown>;
+      };
+      expect(args.data.description).toBeUndefined();
+    });
+
+    it("strengths が空配列の場合は description を更新しない", async () => {
+      castFindUniqueMock.mockResolvedValue({
+        id: "cast-6",
+        userId: "cast-user",
+        diagnosisCompleted: false,
+        description: null,
+      });
+
+      const { POST } = await import(
+        "@/app/api/auth/apply-diagnosis-to-cast/route"
+      );
+      const res = await POST(
+        makeRequest({
+          ...validAnswers,
+          strengths: [],
+        }),
+      );
+
+      expect(res.status).toBe(200);
+      const args = castUpdateMock.mock.calls[0][0] as {
+        data: Record<string, unknown>;
+      };
+      expect(args.data.description).toBeUndefined();
+    });
+  });
+
+  // BUG-6 (部分): blob: URL を photos に保存しない
+  describe("BUG-6: blob: URL の拒否", () => {
+    it("photos に blob: URL が含まれていると 400", async () => {
+      authMock.mockResolvedValue({
+        user: { id: "cast-user", role: "CAST" },
+        expires: new Date(Date.now() + 60_000).toISOString(),
+      });
+
+      const { POST } = await import(
+        "@/app/api/auth/apply-diagnosis-to-cast/route"
+      );
+      const res = await POST(
+        makeRequest({
+          ...validAnswers,
+          photos: ["blob:http://localhost/abc-123"],
+        }),
+      );
+
+      expect(res.status).toBe(400);
+      expect(castUpdateMock).not.toHaveBeenCalled();
+    });
+
+    it("photos に blob: と https: が混在しても 400", async () => {
+      authMock.mockResolvedValue({
+        user: { id: "cast-user", role: "CAST" },
+        expires: new Date(Date.now() + 60_000).toISOString(),
+      });
+
+      const { POST } = await import(
+        "@/app/api/auth/apply-diagnosis-to-cast/route"
+      );
+      const res = await POST(
+        makeRequest({
+          ...validAnswers,
+          photos: [
+            "https://example.com/ok.jpg",
+            "blob:http://localhost/bad",
+          ],
+        }),
+      );
+
+      expect(res.status).toBe(400);
+      expect(castUpdateMock).not.toHaveBeenCalled();
+    });
+  });
 });
