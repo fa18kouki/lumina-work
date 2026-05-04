@@ -1,7 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   extractSupabaseImageHost,
   buildSupabaseImageRemotePatterns,
+  assertSupabaseImageEnv,
 } from "@/lib/supabase-image-host";
 
 describe("BUG-4: Supabase host を next.config.ts の remotePatterns に追加するヘルパー", () => {
@@ -67,6 +68,59 @@ describe("BUG-4: Supabase host を next.config.ts の remotePatterns に追加�
       for (const p of patterns) {
         expect(p.hostname).toBe("other-project.supabase.co");
       }
+    });
+  });
+
+  // C-1: env が空のときに警告/エラーを出して気付かせる
+  describe("assertSupabaseImageEnv", () => {
+    let warnSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      warnSpy.mockRestore();
+    });
+
+    it("NODE_ENV=production かつ NEXT_PUBLIC_SUPABASE_URL が空 → throw", () => {
+      expect(() =>
+        assertSupabaseImageEnv({
+          NODE_ENV: "production",
+          NEXT_PUBLIC_SUPABASE_URL: "",
+        } as NodeJS.ProcessEnv),
+      ).toThrow(/NEXT_PUBLIC_SUPABASE_URL/);
+    });
+
+    it("NODE_ENV=production かつ NEXT_PUBLIC_SUPABASE_URL が undefined → throw", () => {
+      expect(() =>
+        assertSupabaseImageEnv({
+          NODE_ENV: "production",
+        } as NodeJS.ProcessEnv),
+      ).toThrow(/NEXT_PUBLIC_SUPABASE_URL/);
+    });
+
+    it("NODE_ENV=development かつ env が空 → warn のみ (throw しない)", () => {
+      expect(() =>
+        assertSupabaseImageEnv({
+          NODE_ENV: "development",
+          NEXT_PUBLIC_SUPABASE_URL: "",
+        } as NodeJS.ProcessEnv),
+      ).not.toThrow();
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(String(warnSpy.mock.calls[0]?.[0] ?? "")).toMatch(
+        /NEXT_PUBLIC_SUPABASE_URL/,
+      );
+    });
+
+    it("env が設定済 → no-op (throw も warn もしない)", () => {
+      expect(() =>
+        assertSupabaseImageEnv({
+          NODE_ENV: "production",
+          NEXT_PUBLIC_SUPABASE_URL: "https://abc-xyz.supabase.co",
+        } as NodeJS.ProcessEnv),
+      ).not.toThrow();
+      expect(warnSpy).not.toHaveBeenCalled();
     });
   });
 });
