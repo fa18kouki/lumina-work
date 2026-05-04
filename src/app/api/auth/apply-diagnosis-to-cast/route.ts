@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import type { Session } from "next-auth";
+import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import {
   getCachedPrismaUserBySupabaseId,
@@ -126,7 +127,11 @@ export async function POST(req: NextRequest) {
   }
 
   const a = parsed.data;
-  const data: Record<string, unknown> = {
+  // H-3: Prisma の生成型 (`Prisma.CastUpdateInput`) を使うことで、
+  //   Cast スキーマ変更 (カラム rename / 型変更) をコンパイル時に検知できる。
+  //   String[] カラムは Prisma 7 でも平配列代入 (= 完全置換) を受け付けるので、
+  //   既存テストの互換性も保ちつつ型安全にする。
+  const data: Prisma.CastUpdateInput = {
     diagnosisCompleted: true,
     diagnosisCompletedAt: new Date(),
   };
