@@ -18,7 +18,7 @@ const useSupabaseAuth = () =>
 
 function LoginContent() {
   const searchParams = useSearchParams();
-  const { session: diagnosisSession, clearSession } = useDiagnosis();
+  const { session: diagnosisSession } = useDiagnosis();
   const [email, setEmail] = useState("");
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -34,9 +34,9 @@ function LoginContent() {
   });
 
   const handleLogin = () => {
-    // 成功遷移の前に localStorage 上の診断セッションをクリアして「消費済み」にする。
-    // これにより、次回 /c/login に来たときは fromDiagnosis=false で /c/dashboard に戻る。
-    clearSession();
+    // BUG-1/2: 診断セッションのクリアは <DiagnosisSync /> が「Cast への反映成功」時に
+    // 実行する。 ここで先にクリアしてしまうと、 LINE 認証から戻った直後に answers が
+    // 空になり、診断データが Cast に反映されないバグが発生する。
     signIn("line", { callbackUrl });
   };
 
@@ -58,16 +58,16 @@ function LoginContent() {
           setEmailError(error.message);
           return;
         }
+        // BUG-1/2: clearSession() は呼ばない (上記 handleLogin 同様の理由)
         setEmailSent(true);
-        clearSession();
       } else {
         await signIn("nodemailer", {
           email,
           callbackUrl,
           redirect: false,
         });
+        // BUG-1/2: clearSession() は呼ばない
         setEmailSent(true);
-        clearSession();
       }
     } catch {
       console.error("Email sign in failed");
