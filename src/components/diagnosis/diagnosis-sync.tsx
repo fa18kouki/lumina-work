@@ -8,10 +8,10 @@ import {
 import { useAppSession } from "@/lib/auth-helpers";
 
 /**
- * 未認証で受けた診断 (sessionStorage に蓄積) を、ログイン直後に Cast へ反映する。
+ * 未認証で受けた診断 (localStorage に蓄積) を、ログイン直後に Cast へ反映する。
  * - role=CAST の認証済 session を検知
- * - sessionStorage に未消費の answers があれば /api/auth/apply-diagnosis-to-cast へ POST
- * - 成功すれば sessionStorage を消費 (clear)
+ * - localStorage に未消費の answers があれば /api/auth/apply-diagnosis-to-cast へ POST
+ * - 成功すれば localStorage を消費 (clear)
  *
  * /c/(app) layout にマウントすることで、 LINE 登録直後に dashboard 等へ遷移したタイミングで自動同期される。
  */
@@ -38,7 +38,8 @@ export function DiagnosisSync() {
       answers.availableDaysPerWeek !== undefined ||
       !!answers.alcoholTolerance ||
       (answers.preferredAtmosphere && answers.preferredAtmosphere.length > 0) ||
-      (answers.photos && answers.photos.length > 0);
+      (answers.photos && answers.photos.length > 0) ||
+      (answers.strengths && answers.strengths.length > 0);
     if (!hasContent) return;
 
     submittedRef.current = true;
@@ -60,8 +61,16 @@ export function DiagnosisSync() {
       answers.preferredAtmosphere.length > 0
     )
       payload.preferredAtmosphere = answers.preferredAtmosphere;
-    if (Array.isArray(answers.photos) && answers.photos.length > 0)
-      payload.photos = answers.photos;
+    // BUG-6: blob: URL は永続化できないので送信しない (デモモードで URL.createObjectURL されたもの)
+    if (Array.isArray(answers.photos) && answers.photos.length > 0) {
+      const persistablePhotos = answers.photos.filter(
+        (u) => typeof u === "string" && !u.startsWith("blob:"),
+      );
+      if (persistablePhotos.length > 0) payload.photos = persistablePhotos;
+    }
+    // BUG-3: strengths は API 側で Cast.description の末尾に追記される
+    if (Array.isArray(answers.strengths) && answers.strengths.length > 0)
+      payload.strengths = answers.strengths;
 
     fetch("/api/auth/apply-diagnosis-to-cast", {
       method: "POST",
@@ -72,7 +81,7 @@ export function DiagnosisSync() {
         if (res.ok) {
           clearDiagnosisSession();
         } else {
-          // 反映に失敗しても次回ログイン時に再試行できるよう sessionStorage は残す
+          // 反映に失敗しても次回ログイン時に再試行できるよう localStorage は残す
           submittedRef.current = false;
           if (process.env.NODE_ENV !== "production") {
             const text = await res.text().catch(() => "");

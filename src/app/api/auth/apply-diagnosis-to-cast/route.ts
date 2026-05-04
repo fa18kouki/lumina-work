@@ -18,7 +18,23 @@ const inputSchema = z.object({
     .enum(["NONE", "WEAK", "MODERATE", "STRONG", "NG"])
     .optional(),
   preferredAtmosphere: z.array(z.string()).max(20).optional(),
-  photos: z.array(z.string().url()).max(10).optional(),
+  // BUG-6: blob: URL は永続化できないので拒否する。
+  // クライアント (DiagnosisSync) 側でも blob: をフィルタリングする想定だが、
+  // サーバ側でも防御層として弾いておく。
+  photos: z
+    .array(
+      z
+        .string()
+        .url()
+        .refine((u) => !u.startsWith("blob:"), {
+          message: "blob: URL は永続化できません",
+        }),
+    )
+    .max(10)
+    .optional(),
+  // BUG-3: 強み (DiagnosisAnswers.strengths) は Cast スキーマに専用カラムが無いので、
+  // Cast.description の末尾に "強み: A、B、C" を追記する形で永続化する。
+  strengths: z.array(z.string()).max(20).optional(),
 });
 
 type CallerIdentity = { userId: string; role: string | null };
@@ -42,8 +58,24 @@ async function resolveCaller(): Promise<CallerIdentity | null> {
   return { userId: prismaUser.id, role: prismaUser.role ?? null };
 }
 
+// BUG-3: 既存 description との重複を避けつつ強みを追記する純粋関数。
+// - 既に "強み:" を含む description の場合は idempotent に何もしない (undefined を返す)
+// - description が空 (null/undefined/空文字) のときは "強み: A、B" を新規セット
+// - 既存 description がある場合は "<existing>\n\n強み: A、B" を返す
+function buildDescriptionWithStrengths(
+  existing: string | null | undefined,
+  strengths: readonly string[],
+): string | undefined {
+  if (strengths.length === 0) return undefined;
+  const trimmed = (existing ?? "").trim();
+  if (trimmed.includes("強み:")) return undefined;
+  const strengthsLine = `強み: ${strengths.join("、")}`;
+  if (trimmed.length === 0) return strengthsLine;
+  return `${trimmed}\n\n${strengthsLine}`;
+}
+
 /**
- * 診断ページの sessionStorage に蓄積された回答 (DiagnosisAnswers) を、
+ * 診断ページの localStorage に蓄積された回答 (DiagnosisAnswers) を、
  * ログイン後の Cast レコードに 1 度だけ反映する。
  *
  * - 認証必須 (NextAuth or Supabase)
@@ -51,7 +83,7 @@ async function resolveCaller(): Promise<CallerIdentity | null> {
  * - Cast row が無ければ 404 (sync-cast-user / NextAuth createUser で作られている前提)
  * - 既に diagnosisCompleted=true なら上書きせず skipped を返す
  *
- * クライアントは反映成功時に sessionStorage をクリアする。
+ * クライアントは反映成功時に localStorage をクリアする。
  */
 export async function POST(req: NextRequest) {
   const caller = await resolveCaller();
@@ -73,7 +105,7 @@ export async function POST(req: NextRequest) {
 
   const cast = await prisma.cast.findUnique({
     where: { userId: caller.userId },
-    select: { id: true, diagnosisCompleted: true },
+    select: { id: true, diagnosisCompleted: true, description: true },
   });
   if (!cast) {
     return NextResponse.json({ error: "Cast not found" }, { status: 404 });
@@ -100,6 +132,16 @@ export async function POST(req: NextRequest) {
   if (a.alcoholTolerance) data.alcoholTolerance = a.alcoholTolerance;
   if (a.preferredAtmosphere) data.preferredAtmosphere = a.preferredAtmosphere;
   if (a.photos && a.photos.length > 0) data.photos = a.photos;
+
+  if (a.strengths && a.strengths.length > 0) {
+    const nextDescription = buildDescriptionWithStrengths(
+      cast.description,
+      a.strengths,
+    );
+    if (nextDescription !== undefined) {
+      data.description = nextDescription;
+    }
+  }
 
   await prisma.cast.update({
     where: { id: cast.id },
