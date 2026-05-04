@@ -19,11 +19,25 @@ export function DiagnosisSync() {
   const { data: session, status } = useAppSession();
   const submittedRef = useRef(false);
 
+  // H-1: deps を [status, session] にすると session 参照が変わる毎に effect が再走り、
+  //   失敗で submittedRef が戻った後の race で多重 fetch する。
+  //   id/role というプリミティブだけを deps に入れて再実行を最小化する。
+  const userId = session?.user?.id;
+  const userRole = session?.user?.role;
+
   useEffect(() => {
     if (submittedRef.current) return;
     if (status !== "authenticated") return;
     if (!session?.user) return;
-    if (session.user.role !== "CAST") return;
+
+    // H-2: 端末共有ケース — OWNER 等が LINE ログインした際、
+    //   前のキャストの診断データが localStorage に残っていると誤マージされる。
+    //   role !== "CAST" の認証済セッションでは localStorage をクリアして抜ける。
+    //   unauthenticated は「これからログインする可能性」があるので消さない。
+    if (session.user.role !== "CAST") {
+      clearDiagnosisSession();
+      return;
+    }
 
     const diag = getDiagnosisSession();
     const answers = diag?.answers;
@@ -61,10 +75,12 @@ export function DiagnosisSync() {
       answers.preferredAtmosphere.length > 0
     )
       payload.preferredAtmosphere = answers.preferredAtmosphere;
-    // BUG-6: blob: URL は永続化できないので送信しない (デモモードで URL.createObjectURL されたもの)
+    // BUG-6 + C-2: photos は https:// 始まりの URL のみ送信する allowlist 方式。
+    //   blob: / Blob: / BLOB: / data: / javascript: / file:// / http:// 等を全て弾く。
+    //   サーバ側 (route.ts) でも同じ allowlist で防御する。
     if (Array.isArray(answers.photos) && answers.photos.length > 0) {
       const persistablePhotos = answers.photos.filter(
-        (u) => typeof u === "string" && !u.startsWith("blob:"),
+        (u): u is string => typeof u === "string" && /^https:\/\//i.test(u),
       );
       if (persistablePhotos.length > 0) payload.photos = persistablePhotos;
     }
@@ -97,7 +113,8 @@ export function DiagnosisSync() {
           console.warn("[diagnosis-sync] network error", e);
         }
       });
-  }, [status, session]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, userId, userRole]);
 
   return null;
 }
