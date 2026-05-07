@@ -115,6 +115,9 @@ function profileToFormData(profile: Record<string, unknown>): ProfileEditFormDat
       exitReason: (w.exitReason as string) ?? "",
       notes: (w.notes as string) ?? "",
     })),
+
+    // カテゴリ7: 写真
+    photos: (profile.photos as string[]) ?? [],
   };
 }
 
@@ -173,7 +176,7 @@ export default function CastProfileEditPage() {
       age: data.age ?? undefined,
       birthDate: profile?.birthDate?.toISOString().split("T")[0],
       description: profile?.description ?? undefined,
-      photos: profile?.photos ?? [],
+      photos: data.photos ?? profile?.photos ?? [],
 
       // カテゴリ1
       fullName: cleanStr(data.fullName),
@@ -299,7 +302,7 @@ export default function CastProfileEditPage() {
     shiftPreferences: { days: "", dayOfWeek: "", workingHours: "" },
     motivation: "", storePreferences: "", customerCount: null, salesTarget: null,
     previousStorePerformance: "", guaranteedHourlyRate: null, guaranteePeriod: "",
-    specialConditions: "", workHistories: [],
+    specialConditions: "", workHistories: [], photos: [],
   };
 
   const initialFormData = profile

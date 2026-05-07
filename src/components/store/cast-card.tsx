@@ -14,13 +14,14 @@ interface CastCardProps {
     description?: string | null;
     totalExperienceYears?: number | null;
     previousHourlyRate?: number | null;
+    user?: { image: string | null } | null;
   };
   onDetail: (castId: string) => void;
   onOffer: (castId: string) => void;
 }
 
 export function CastCard({ cast, onDetail, onOffer }: CastCardProps) {
-  const photo = cast.photos[0] ?? null;
+  const photo = cast.photos[0] ?? cast.user?.image ?? null;
 
   return (
     <Card className="overflow-hidden">

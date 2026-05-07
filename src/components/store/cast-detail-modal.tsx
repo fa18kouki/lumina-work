@@ -43,6 +43,7 @@ interface CastDetailData {
   hasVipClients?: boolean | null;
   vipClientDescription?: string | null;
   birthdayEventWillingness?: boolean | null;
+  user?: { image: string | null } | null;
 }
 
 interface CastDetailModalProps {
@@ -65,7 +66,7 @@ function InfoRow({ label, value }: { label: string; value: string | number | nul
 export function CastDetailModal({ cast, open, onClose, onOffer }: CastDetailModalProps) {
   if (!open || !cast) return null;
 
-  const photo = cast.photos[0] ?? null;
+  const photo = cast.photos[0] ?? cast.user?.image ?? null;
   const bodyInfo = [cast.height && `${cast.height}cm`, cast.cupSize, cast.bust && `B${cast.bust}`, cast.waist && `W${cast.waist}`, cast.hip && `H${cast.hip}`].filter(Boolean).join(" / ");
 
   return (

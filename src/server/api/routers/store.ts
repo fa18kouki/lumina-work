@@ -361,6 +361,7 @@ export const storeRouter = createTRPCRouter({
           photos: true,
           description: true,
           createdAt: true,
+          user: { select: { image: true } },
           totalExperienceYears: true,
           previousHourlyRate: true,
           monthlySales: true,

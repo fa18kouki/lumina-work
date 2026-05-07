@@ -336,11 +336,14 @@ export default function DiagnosisPage() {
           urls.push(publicUrl);
         }
       } else {
-        // デモモード: ローカルプレビューURLを使用
-        urls = faceImages.map((img) => URL.createObjectURL(img.file));
+        // BUG-6 (デモモード): blob: URL は永続化できないため Cast に保存しない。
+        // 写真は登録後にプロフィール画面から改めてアップロードする想定。
+        urls = [];
       }
 
-      addAnswers({ photos: urls });
+      if (urls.length > 0) {
+        addAnswers({ photos: urls });
+      }
 
       const followUp = currentQuestion.followUp?.("");
       if (followUp) {
