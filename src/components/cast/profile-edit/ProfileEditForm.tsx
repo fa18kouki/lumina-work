@@ -8,6 +8,7 @@ import { CareerBodySection } from "./CareerBodySection";
 import { SurveySection } from "./SurveySection";
 import { PreferenceSection } from "./PreferenceSection";
 import { WorkHistorySection } from "./WorkHistorySection";
+import { PhotosSection } from "./PhotosSection";
 import {
   calculateProfileCompleteness,
   type CastProfileData,
@@ -21,6 +22,7 @@ const TABS = [
   { id: 4, label: "アンケート" },
   { id: 5, label: "希望条件" },
   { id: 6, label: "職歴" },
+  { id: 7, label: "写真" },
 ] as const;
 
 interface WorkHistory {
@@ -125,6 +127,9 @@ export interface ProfileEditFormData {
 
   // カテゴリ6
   workHistories: WorkHistory[];
+
+  // カテゴリ7: 写真
+  photos: string[];
 }
 
 interface Props {
@@ -293,6 +298,9 @@ export function ProfileEditForm({
             data={formData.workHistories}
             onChange={handleWorkHistoriesChange}
           />
+        )}
+        {activeTab === 7 && (
+          <PhotosSection data={formData} onChange={handleFieldChange} />
         )}
       </div>
 
