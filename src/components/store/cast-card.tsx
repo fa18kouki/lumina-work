@@ -22,28 +22,40 @@ interface CastCardProps {
 
 export function CastCard({ cast, onDetail, onOffer }: CastCardProps) {
   const photo = cast.photos[0] ?? cast.user?.image ?? null;
+  const extraPhotoCount = Math.max(0, cast.photos.length - 1);
 
   return (
     <Card className="overflow-hidden">
       <div className="flex p-4 gap-4">
         {/* 画像 */}
         <div className="flex-shrink-0">
-          {photo ? (
-            <div className="w-24 h-24 sm:w-[120px] sm:h-[120px] rounded-lg overflow-hidden bg-gray-200">
-              <img
-                src={photo}
+          <div className="relative">
+            {photo ? (
+              <div className="w-24 h-24 sm:w-[120px] sm:h-[120px] rounded-lg overflow-hidden bg-gray-200">
+                <img
+                  src={photo}
+                  alt={cast.nickname}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <Thumbnail
+                src={null}
                 alt={cast.nickname}
-                className="w-full h-full object-cover"
+                fallbackType="user"
+                className="!w-24 !h-24 sm:!w-[120px] sm:!h-[120px]"
               />
-            </div>
-          ) : (
-            <Thumbnail
-              src={null}
-              alt={cast.nickname}
-              fallbackType="user"
-              className="!w-24 !h-24 sm:!w-[120px] sm:!h-[120px]"
-            />
-          )}
+            )}
+            {extraPhotoCount > 0 && (
+              <span
+                data-testid="cast-card-photo-count"
+                aria-label={`他に写真が${extraPhotoCount}枚あります`}
+                className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-md bg-black/65 text-white text-[10px] font-semibold leading-none tracking-wide"
+              >
+                +{extraPhotoCount}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* 情報 */}
