@@ -2,8 +2,8 @@
 
 import { X } from "lucide-react";
 import { RankBadge } from "@/components/ui/rank-badge";
-import { Thumbnail } from "@/components/ui/thumbnail";
 import { Button } from "@/components/ui/button";
+import { CastPhotoGallery } from "@/components/store/cast-photo-gallery";
 
 interface CastDetailData {
   id: string;
@@ -66,7 +66,6 @@ function InfoRow({ label, value }: { label: string; value: string | number | nul
 export function CastDetailModal({ cast, open, onClose, onOffer }: CastDetailModalProps) {
   if (!open || !cast) return null;
 
-  const photo = cast.photos[0] ?? cast.user?.image ?? null;
   const bodyInfo = [cast.height && `${cast.height}cm`, cast.cupSize, cast.bust && `B${cast.bust}`, cast.waist && `W${cast.waist}`, cast.hip && `H${cast.hip}`].filter(Boolean).join(" / ");
 
   return (
@@ -82,46 +81,42 @@ export function CastDetailModal({ cast, open, onClose, onOffer }: CastDetailModa
         </div>
 
         <div className="p-6 space-y-6">
+          {/* 写真ギャラリー */}
+          <CastPhotoGallery
+            photos={cast.photos}
+            fallbackImage={cast.user?.image ?? null}
+            alt={cast.nickname}
+          />
+
           {/* プロフィール概要 */}
-          <div className="flex gap-4">
-            <div className="flex-shrink-0">
-              {photo ? (
-                <div className="w-28 h-28 rounded-xl overflow-hidden bg-gray-200">
-                  <img src={photo} alt={cast.nickname} className="w-full h-full object-cover" />
-                </div>
-              ) : (
-                <Thumbnail src={null} alt={cast.nickname} fallbackType="user" className="!w-28 !h-28" />
+          <div>
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <h4 className="text-xl font-bold text-[var(--text-main)]">{cast.nickname}</h4>
+              {cast.age != null && (
+                <span className="text-sm text-[var(--text-sub)]">{cast.age}歳</span>
               )}
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h4 className="text-xl font-bold text-[var(--text-main)]">{cast.nickname}</h4>
-                {cast.age != null && (
-                  <span className="text-sm text-[var(--text-sub)]">{cast.age}歳</span>
-                )}
-                <RankBadge rank={cast.rank} />
-              </div>
-              <p className="text-sm text-[var(--text-sub)] mb-2">
-                {cast.totalExperienceYears != null && cast.totalExperienceYears > 0
-                  ? `経験 ${cast.totalExperienceYears}年`
-                  : "未経験"}
-                {cast.previousHourlyRate != null && ` / 前店時給 ¥${cast.previousHourlyRate.toLocaleString()}`}
-              </p>
-              {cast.desiredAreas.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {cast.desiredAreas.map((area) => (
-                    <span key={area} className="px-2 py-0.5 bg-slate-50 text-slate-700 text-xs rounded">
-                      {area}
-                    </span>
-                  ))}
-                </div>
-              )}
+              <RankBadge rank={cast.rank} />
               {cast.isAvailableNow && (
-                <span className="inline-block mt-2 px-2 py-0.5 bg-green-50 text-green-700 text-xs rounded font-medium">
+                <span className="px-2 py-0.5 bg-green-50 text-green-700 text-xs rounded font-medium">
                   即日勤務可
                 </span>
               )}
             </div>
+            <p className="text-sm text-[var(--text-sub)] mb-2">
+              {cast.totalExperienceYears != null && cast.totalExperienceYears > 0
+                ? `経験 ${cast.totalExperienceYears}年`
+                : "未経験"}
+              {cast.previousHourlyRate != null && ` / 前店時給 ¥${cast.previousHourlyRate.toLocaleString()}`}
+            </p>
+            {cast.desiredAreas.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {cast.desiredAreas.map((area) => (
+                  <span key={area} className="px-2 py-0.5 bg-slate-50 text-slate-700 text-xs rounded">
+                    {area}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* 自己PR */}
