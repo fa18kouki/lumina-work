@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { adminMiddlewareDecision } from "@/lib/admin-host";
+
 const publicRoutes = [
   "/",
   "/c/login",
@@ -66,6 +68,27 @@ export async function middleware(req: NextRequest) {
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-pathname", pathname);
   const passThrough = NextResponse.next({ request: { headers: requestHeaders } });
+
+  // admin.<host> サブドメインの振り分け。
+  // 認可 (admin-session cookie) は Phase 2 で本ブロック内に追加する。
+  const adminDecision = adminMiddlewareDecision(
+    req.headers.get("host"),
+    pathname,
+  );
+  if (adminDecision.kind === "blocked") {
+    // 素のドメインから /admin/* を覗かれた場合は外部から存在を隠す
+    return new NextResponse(null, { status: 404 });
+  }
+  if (adminDecision.kind === "rewrite") {
+    const rewriteUrl = req.nextUrl.clone();
+    rewriteUrl.pathname = adminDecision.to;
+    return NextResponse.rewrite(rewriteUrl, {
+      request: { headers: requestHeaders },
+    });
+  }
+  if (adminDecision.kind === "passthrough") {
+    return passThrough;
+  }
 
   if (isPublicRoute(pathname)) {
     return passThrough;
