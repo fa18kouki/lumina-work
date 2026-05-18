@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { adminRewritePath, isAdminHost } from "@/lib/admin-host";
+import {
+  adminMiddlewareDecision,
+  adminRewritePath,
+  isAdminHost,
+} from "@/lib/admin-host";
 
 describe("isAdminHost", () => {
   it("returns true for admin subdomain with port (local dev)", () => {
@@ -65,5 +69,88 @@ describe("adminRewritePath", () => {
     expect(adminRewritePath("/_next/static/foo.js")).toBe(
       "/admin/_next/static/foo.js",
     );
+  });
+});
+
+describe("adminMiddlewareDecision", () => {
+  describe("main domain (host = lumina-work.jp)", () => {
+    it("returns 'main' for ordinary paths so existing middleware logic runs", () => {
+      expect(
+        adminMiddlewareDecision("lumina-work.jp", "/o/dashboard"),
+      ).toEqual({ kind: "main" });
+      expect(adminMiddlewareDecision("lumina-work.jp", "/")).toEqual({
+        kind: "main",
+      });
+      expect(adminMiddlewareDecision("lumina-work.jp", "/c/login")).toEqual({
+        kind: "main",
+      });
+    });
+
+    it("blocks /admin and /admin/* from main domain (admin is subdomain-only)", () => {
+      expect(adminMiddlewareDecision("lumina-work.jp", "/admin")).toEqual({
+        kind: "blocked",
+      });
+      expect(
+        adminMiddlewareDecision("lumina-work.jp", "/admin/login"),
+      ).toEqual({ kind: "blocked" });
+      expect(
+        adminMiddlewareDecision("localhost:3000", "/admin/invites/abc"),
+      ).toEqual({ kind: "blocked" });
+    });
+  });
+
+  describe("admin subdomain (host = admin.lumina-work.jp)", () => {
+    it("rewrites UI paths to /admin/*", () => {
+      expect(
+        adminMiddlewareDecision("admin.lumina-work.jp", "/"),
+      ).toEqual({ kind: "rewrite", to: "/admin" });
+      expect(
+        adminMiddlewareDecision("admin.lumina-work.jp", "/login"),
+      ).toEqual({ kind: "rewrite", to: "/admin/login" });
+      expect(
+        adminMiddlewareDecision("admin.localhost:3000", "/invites"),
+      ).toEqual({ kind: "rewrite", to: "/admin/invites" });
+    });
+
+    it("does NOT double-rewrite when the path is already /admin/*", () => {
+      expect(
+        adminMiddlewareDecision("admin.lumina-work.jp", "/admin/login"),
+      ).toEqual({ kind: "rewrite", to: "/admin/login" });
+    });
+
+    it("passes through /api/* unchanged so tRPC and auth handlers still work", () => {
+      expect(
+        adminMiddlewareDecision("admin.lumina-work.jp", "/api/trpc/foo"),
+      ).toEqual({ kind: "passthrough" });
+      expect(
+        adminMiddlewareDecision("admin.localhost:3000", "/api/admin/auth"),
+      ).toEqual({ kind: "passthrough" });
+    });
+
+    it("passes through /_next/* and common static assets unchanged", () => {
+      expect(
+        adminMiddlewareDecision(
+          "admin.lumina-work.jp",
+          "/_next/static/chunks/main.js",
+        ),
+      ).toEqual({ kind: "passthrough" });
+      expect(
+        adminMiddlewareDecision("admin.lumina-work.jp", "/logo.png"),
+      ).toEqual({ kind: "passthrough" });
+      expect(
+        adminMiddlewareDecision("admin.lumina-work.jp", "/favicon.ico"),
+      ).toEqual({ kind: "passthrough" });
+    });
+  });
+
+  describe("edge cases", () => {
+    it("treats null / undefined host as main domain", () => {
+      expect(adminMiddlewareDecision(null, "/o/dashboard")).toEqual({
+        kind: "main",
+      });
+      expect(adminMiddlewareDecision(undefined, "/admin")).toEqual({
+        kind: "blocked",
+      });
+    });
   });
 });
