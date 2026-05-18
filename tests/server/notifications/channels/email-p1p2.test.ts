@@ -10,6 +10,16 @@ vi.mock("nodemailer", () => ({
   },
 }));
 
+// isStoreNotificationEnabled が prisma.owner.findUnique を叩くため最小モック。
+// null を返すと「設定未保存=デフォルトON」のパスに入り、メール送信ロジックを通せる。
+vi.mock("@/server/db", () => ({
+  prisma: {
+    owner: {
+      findUnique: vi.fn().mockResolvedValue(null),
+    },
+  },
+}));
+
 describe("sendEmailNotification - P1/P2イベント", () => {
   beforeEach(() => {
     vi.clearAllMocks();
