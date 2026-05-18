@@ -17,7 +17,9 @@ const listInput = z
 function getInviteRedirectTo(): string | undefined {
   const base = process.env.NEXT_PUBLIC_APP_URL;
   if (!base) return undefined;
-  return `${base.replace(/\/$/, "")}/o/invite/callback`;
+  // 既存のオーナー callback ハンドラを再利用して、PKCE 交換 + Prisma 上の
+  // User / Owner / Subscription provisioning + AdminInvitation 受諾マークまで一気に通す。
+  return `${base.replace(/\/$/, "")}/api/auth/callback?next=/o/dashboard`;
 }
 
 async function sendSupabaseInvite(email: string) {

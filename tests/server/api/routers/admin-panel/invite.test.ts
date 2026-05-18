@@ -171,7 +171,9 @@ describe("adminPanel.invite.create", () => {
     expect(inviteUserByEmail).toHaveBeenCalledWith(
       "new@example.com",
       expect.objectContaining({
-        redirectTo: "https://example.test/o/invite/callback",
+        // 既存のオーナー callback を再利用 (PKCE 交換 + Prisma 上の
+        // User/Owner provisioning + AdminInvitation 受諾マーク まで一気通貫)
+        redirectTo: "https://example.test/api/auth/callback?next=/o/dashboard",
       }),
     );
     expect(adminInvitationCreate).toHaveBeenCalledOnce();

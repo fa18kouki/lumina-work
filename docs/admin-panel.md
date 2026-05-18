@@ -33,7 +33,10 @@ admin.<本番ドメイン> ─►│  Next.js middleware (Node)  │
                                   メール受信 → リンククリック
                                         │
                                         ▼
-                             /o/invite/callback でセッション化
+                  /api/auth/callback?next=/o/dashboard で受け止め:
+                    1. PKCE code を session に交換
+                    2. Prisma User + Owner + Subscription を冪等 provision
+                    3. AdminInvitation を ACCEPTED にマーク (best-effort)
                                         │
                                         ▼
                                   /o/dashboard へ
@@ -119,11 +122,11 @@ Supabase 招待メールの From は Supabase 側 SMTP 設定の Sender Email �
 | 1 | サブドメイン rewrite (`admin.<host>` → `/admin/*`) | ✅ |
 | 2 | `ADMIN_API_KEY` 認証 + cookie セッション | ✅ |
 | 3 | 本ドキュメント (Resend × Supabase SMTP 手順書) | ✅ |
-| 4 | Prisma `AdminInvitation` モデル追加 | ⏳ |
-| 5 | tRPC `adminInvite` router (list / create / resend / revoke) | ⏳ |
-| 6 | 管理画面 UI (一覧 + 招待モーダル) | ⏳ |
-| 7 | `/o/invite/callback` 受諾ページ | ⏳ |
-| 8 | テスト追加 (unit / integration / Playwright E2E) | ⏳ |
+| 4 | Prisma `AdminInvitation` モデル追加 | ✅ |
+| 5 | tRPC `adminInvite` router (list / create / resend / revoke) | ✅ |
+| 6 | 管理画面 UI (一覧 + 招待モーダル) | ✅ |
+| 7 | 招待受諾フロー (既存 `/api/auth/callback` を再利用 + AdminInvitation ACCEPTED マーク) | ✅ |
+| 8 | テスト追加 (unit / integration / Playwright E2E) | ⏳ E2E 未追加 |
 | 9 | Vercel デプロイ手順 (admin サブドメイン追加 + DNS) | ⏳ |
 
 ---

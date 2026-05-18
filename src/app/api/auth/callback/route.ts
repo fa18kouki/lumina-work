@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { prisma } from "@/server/db";
 import { REFERRAL_CONFIG } from "@/lib/constants";
 import { resolveNextUrl } from "@/app/api/auth/callback/resolve-next-url";
+import { markAdminInvitationAccepted } from "@/lib/admin-invitation-acceptance";
 
 const DEFAULT_NEXT = "/o/dashboard";
 
@@ -165,6 +166,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(
       new URL("/o/login?error=user_provisioning_failed", origin),
     );
+  }
+
+  // 管理画面からの招待で来た場合、AdminInvitation を ACCEPTED にマーク (best-effort)。
+  // 失敗してもログイン自体は妨げない。
+  try {
+    await markAdminInvitationAccepted(
+      prisma,
+      supabaseUser.email,
+      supabaseUser.id,
+    );
+  } catch (e) {
+    console.warn("[auth/callback] markAdminInvitationAccepted failed", {
+      email: supabaseUser.email,
+      error: e instanceof Error ? e.message : String(e),
+    });
   }
 
   return response;
