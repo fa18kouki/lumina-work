@@ -144,6 +144,37 @@ describe("CastCard 複数画像", () => {
     expect(onDetail).toHaveBeenCalledWith("cast-1");
   });
 
+  it("cast.id が変わったら mainIndex が先頭に戻る", () => {
+    const { rerender } = render(
+      <CastCard
+        cast={makeCast({ id: "cast-A", photos: [PHOTO(1), PHOTO(2)] })}
+        onDetail={vi.fn()}
+        onOffer={vi.fn()}
+      />
+    );
+
+    // サムネクリックで cast-A のメインを 2 枚目に切り替え
+    const thumbsA = screen.getByTestId("cast-card-thumbnails");
+    fireEvent.click(within(thumbsA).getAllByRole("button")[0]);
+    expect(
+      (screen.getByTestId("cast-card-main-image") as HTMLImageElement).src
+    ).toContain("photo-2.jpg");
+
+    // 別 cast に rerender (同一コンポーネントインスタンス)
+    rerender(
+      <CastCard
+        cast={makeCast({ id: "cast-B", photos: [PHOTO(3), PHOTO(4)] })}
+        onDetail={vi.fn()}
+        onOffer={vi.fn()}
+      />
+    );
+
+    // mainIndex が 0 にリセットされ、新しい photos[0] が表示される
+    expect(
+      (screen.getByTestId("cast-card-main-image") as HTMLImageElement).src
+    ).toContain("photo-3.jpg");
+  });
+
   it("photos が空でも user.image があればメインに使われ、サムネ列は出ない", () => {
     render(
       <CastCard

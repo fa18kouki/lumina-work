@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RankBadge } from "@/components/ui/rank-badge";
@@ -33,6 +33,11 @@ export function CastCard({ cast, onDetail, onOffer }: CastCardProps) {
   }, [cast.photos, cast.user?.image]);
 
   const [mainIndex, setMainIndex] = useState(0);
+  // cast 切り替え時に mainIndex を先頭に戻す (CastDetailModal と振る舞いを揃える)
+  useEffect(() => {
+    setMainIndex(0);
+  }, [cast.id]);
+
   const safeMainIndex = mainIndex < photos.length ? mainIndex : 0;
   const mainPhoto = photos[safeMainIndex] ?? null;
 
