@@ -126,8 +126,8 @@ Supabase 招待メールの From は Supabase 側 SMTP 設定の Sender Email �
 | 5 | tRPC `adminInvite` router (list / create / resend / revoke) | ✅ |
 | 6 | 管理画面 UI (一覧 + 招待モーダル) | ✅ |
 | 7 | 招待受諾フロー (既存 `/api/auth/callback` を再利用 + AdminInvitation ACCEPTED マーク) | ✅ |
-| 8 | テスト追加 (unit / integration / Playwright E2E) | ⏳ E2E 未追加 |
-| 9 | Vercel デプロイ手順 (admin サブドメイン追加 + DNS) | ⏳ |
+| 8 | テスト追加 (unit / integration) | ✅ (Playwright E2E は別タスク) |
+| 9 | Vercel デプロイ手順 (admin サブドメイン追加 + DNS) | ✅ §9 を参照 |
 
 ---
 
@@ -219,7 +219,55 @@ Liquid テンプレートでは表現に限界がある / 送達状態を細か�
 
 ---
 
-## 9. インシデント対応との関係
+## 9. Vercel デプロイ手順
+
+### 9.1 サブドメイン追加
+
+1. Vercel Dashboard → 本プロジェクト → **Settings → Domains**
+2. **Add** で `admin.<本番ドメイン>` を入力 (例: `admin.lumina-work.jp`)
+3. Vercel が表示する DNS 設定をコピー (通常は CNAME `cname.vercel-dns.com`)
+4. ドメイン管理 (Cloudflare / Route53 / Value Domain) で CNAME を追加
+   ```
+   admin.lumina-work.jp.   CNAME   cname.vercel-dns.com.
+   ```
+5. Vercel 側で **Verified** になるまで待つ (TLS 証明書も自動発行)
+6. 同 Settings → Domains で **Production Branch** に紐付け (通常 main)
+
+### 9.2 環境変数 (Vercel)
+
+| Key | Scope | 値の作り方 / 出典 |
+|-----|-------|------------------|
+| `ADMIN_API_KEY` | Production / Preview | `openssl rand -base64 48`。Preview と Production で別の値を入れる |
+| `NEXT_PUBLIC_APP_URL` | Production | `https://<本番ドメイン>` (`admin.` ではなく素のドメイン)。招待リンクの redirectTo に使う |
+| `NEXT_PUBLIC_SUPABASE_URL` | (既存) | 環境ごとの Supabase プロジェクト URL |
+| `SUPABASE_ROLE_KEY` | (既存) | Supabase Dashboard → Settings → API → service_role |
+| `DATABASE_URL` / `DIRECT_URL` | (既存) | Production は本番 DB、Preview は dev DB を厳密に分離 (CLAUDE.md §2) |
+
+設定後、Production deployment を 1 度走らせて環境変数が読み込まれるようにする。
+
+### 9.3 Supabase SMTP の有効化
+
+§3〜§4 の手順で Resend を Supabase の SMTP に挑す。本番 Supabase プロジェクトと
+開発 Supabase プロジェクトで **別の Resend API キーを使う** (本番 API キーを開発に流用しない)。
+
+### 9.4 デプロイ後の動作確認
+
+1. `https://admin.<本番ドメイン>/` を開く → `/login` にリダイレクトされる
+2. `ADMIN_API_KEY` で入力 → `/invites` に遷移する
+3. テスト用 email (受信できる自分のアドレス) で招待を 1 件送信
+4. メールが届く (件名・本文・差出人ドメインを確認)
+5. 受信側からリンクをクリック → `/o/dashboard` に到達
+6. 管理画面の招待行が **受諾済み** に変わっていることを確認
+
+### 9.5 ロールバック手順
+
+- ドメインだけ取り戻す: Vercel Domains で `admin.<host>` を **Remove**
+- フォールバック: 直近の動いている commit を `git revert` または Vercel の **Promote to Production**
+- 招待を全失効: 管理画面の各行で「失効」ボタン (受諾済みは対象外)、または `prisma/_safety.ts` ガードに従って手動で `UPDATE admin_invitations SET status = 'REVOKED' WHERE status = 'PENDING';` を Supabase Dashboard SQL Editor から (本番では必ずバックアップを取ってから)
+
+---
+
+## 10. インシデント対応との関係
 
 本機能は **書き込み系のスクリプトを一切持たない** (CLAUDE.md §3 「破壊的スクリプト」の定義に該当しない)。
 ただし以下の点で本番影響があり得る:
