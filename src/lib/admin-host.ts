@@ -44,3 +44,54 @@ export function adminRewritePath(pathname: string): string {
   if (pathname === "/") return ADMIN_PATH_PREFIX;
   return `${ADMIN_PATH_PREFIX}${pathname}`;
 }
+
+/**
+ * middleware が host × pathname を見て何をすべきかを決める純粋関数。
+ *
+ * - `rewrite`     : admin サブドメインからの UI リクエスト。内部的に `/admin/*` を読む
+ * - `passthrough` : admin サブドメインからの /api や /_next 等の素通し対象
+ * - `blocked`     : 素のドメインで /admin/* を叩かれた。404 を返す
+ * - `main`        : それ以外。既存の認可・リダイレクトロジックに委譲
+ *
+ * 認可 (admin-session cookie の有無) は本関数では判定しない。
+ * 「どこに振り分けるか」だけを返し、認可は middleware 本体で行う。
+ */
+export type AdminMiddlewareDecision =
+  | { kind: "rewrite"; to: string }
+  | { kind: "passthrough" }
+  | { kind: "blocked" }
+  | { kind: "main" };
+
+const STATIC_ASSET_EXT = /\.(ico|png|jpg|jpeg|svg|css|js|woff2?|map)$/i;
+
+function isSystemPath(pathname: string): boolean {
+  if (pathname.startsWith("/api/")) return true;
+  if (pathname.startsWith("/_next/")) return true;
+  if (STATIC_ASSET_EXT.test(pathname)) return true;
+  return false;
+}
+
+export function adminMiddlewareDecision(
+  host: string | null | undefined,
+  pathname: string,
+): AdminMiddlewareDecision {
+  const isAdmin = isAdminHost(host);
+
+  // 素のドメインからの /admin/* は外部に見せない (404)
+  if (!isAdmin) {
+    if (
+      pathname === ADMIN_PATH_PREFIX ||
+      pathname.startsWith(`${ADMIN_PATH_PREFIX}/`)
+    ) {
+      return { kind: "blocked" };
+    }
+    return { kind: "main" };
+  }
+
+  // admin サブドメインからの system path はそのまま透過
+  if (isSystemPath(pathname)) {
+    return { kind: "passthrough" };
+  }
+
+  return { kind: "rewrite", to: adminRewritePath(pathname) };
+}
