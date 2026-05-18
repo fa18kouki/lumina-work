@@ -10,20 +10,17 @@ const { mockMutateAsync, mockInvalidate } = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/trpc", () => ({
   trpc: {
-    store: {
-      upsertProfile: {
+    owner: {
+      createStore: {
         useMutation: () => ({
           mutateAsync: mockMutateAsync,
           isPending: false,
         }),
       },
-      getProfile: {
-        invalidate: mockInvalidate,
-      },
     },
     useUtils: () => ({
-      store: {
-        getProfile: {
+      owner: {
+        listStores: {
           invalidate: mockInvalidate,
         },
       },

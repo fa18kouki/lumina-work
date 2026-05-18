@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { RankBadge } from "@/components/ui/rank-badge";
 import { Thumbnail } from "@/components/ui/thumbnail";
@@ -64,9 +65,24 @@ function InfoRow({ label, value }: { label: string; value: string | number | nul
 }
 
 export function CastDetailModal({ cast, open, onClose, onOffer }: CastDetailModalProps) {
+  const photos = useMemo(() => {
+    if (!cast) return [];
+    if (cast.photos.length > 0) return cast.photos;
+    if (cast.user?.image) return [cast.user.image];
+    return [];
+  }, [cast]);
+
+  const [mainIndex, setMainIndex] = useState(0);
+  // cast 切り替え時に main を先頭に戻す
+  useEffect(() => {
+    setMainIndex(0);
+  }, [cast?.id]);
+
   if (!open || !cast) return null;
 
-  const photo = cast.photos[0] ?? cast.user?.image ?? null;
+  const safeMainIndex = mainIndex < photos.length ? mainIndex : 0;
+  const mainPhoto = photos[safeMainIndex] ?? null;
+  const showThumbnails = photos.length > 1;
   const bodyInfo = [cast.height && `${cast.height}cm`, cast.cupSize, cast.bust && `B${cast.bust}`, cast.waist && `W${cast.waist}`, cast.hip && `H${cast.hip}`].filter(Boolean).join(" / ");
 
   return (
@@ -84,13 +100,44 @@ export function CastDetailModal({ cast, open, onClose, onOffer }: CastDetailModa
         <div className="p-6 space-y-6">
           {/* プロフィール概要 */}
           <div className="flex gap-4">
-            <div className="flex-shrink-0">
-              {photo ? (
+            <div className="flex-shrink-0 flex flex-col gap-2">
+              {mainPhoto ? (
                 <div className="w-28 h-28 rounded-xl overflow-hidden bg-gray-200">
-                  <img src={photo} alt={cast.nickname} className="w-full h-full object-cover" />
+                  <img
+                    data-testid="cast-detail-main-image"
+                    src={mainPhoto}
+                    alt={cast.nickname}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               ) : (
                 <Thumbnail src={null} alt={cast.nickname} fallbackType="user" className="!w-28 !h-28" />
+              )}
+              {showThumbnails && (
+                <div
+                  data-testid="cast-detail-thumbnails"
+                  className="flex gap-1.5 overflow-x-auto w-28 pb-1"
+                >
+                  {photos.map((p, i) => {
+                    const isActive = i === safeMainIndex;
+                    return (
+                      <button
+                        key={`${p}-${i}`}
+                        type="button"
+                        onClick={() => setMainIndex(i)}
+                        aria-current={isActive ? "true" : undefined}
+                        aria-label={`${cast.nickname}の写真 ${i + 1} 枚目`}
+                        className={`flex-shrink-0 w-10 h-10 rounded-md overflow-hidden bg-gray-200 transition focus:outline-none focus:ring-2 focus:ring-slate-300 ${
+                          isActive
+                            ? "ring-2 ring-slate-900"
+                            : "opacity-70 hover:opacity-100"
+                        }`}
+                      >
+                        <img src={p} alt="" className="w-full h-full object-cover" />
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
             <div className="flex-1">

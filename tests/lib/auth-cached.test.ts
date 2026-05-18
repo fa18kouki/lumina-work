@@ -67,7 +67,7 @@ describe("auth-cached", () => {
     expect(result?.id).toBe("prisma-key1");
     expect(prismaUserFindUniqueMock).toHaveBeenCalledWith({
       where: { supabaseAuthId: "auth-key1" },
-      select: { id: true, email: true, image: true, role: true },
+      select: { id: true, email: true, image: true, role: true, deletedAt: true },
     });
   });
 
