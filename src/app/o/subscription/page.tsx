@@ -1,7 +1,22 @@
 "use client";
 
 import { trpc } from "@/lib/trpc";
-import { SUBSCRIPTION_PLANS } from "@/lib/constants";
+import {
+  VISIBLE_SUBSCRIPTION_PLANS,
+  SUBSCRIPTION_CONTACT_EMAIL,
+} from "@/lib/constants";
+
+const CONTACT_MAIL_SUBJECT = "プロプランに関するお問い合わせ";
+const CONTACT_MAIL_BODY =
+  "プロプランに興味があります。下記情報をお知らせいただけますと幸いです。\n\n- 運営店舗数:\n- 想定利用人数:\n- ご希望の契約形態:\n- ご質問・ご要望:";
+
+function buildContactMailto(): string {
+  const params = new URLSearchParams({
+    subject: CONTACT_MAIL_SUBJECT,
+    body: CONTACT_MAIL_BODY,
+  });
+  return `mailto:${SUBSCRIPTION_CONTACT_EMAIL}?${params.toString()}`;
+}
 
 export default function OwnerSubscriptionPage() {
   const { data: subscription, isLoading } =
@@ -38,7 +53,7 @@ export default function OwnerSubscriptionPage() {
     );
   }
 
-  const currentPlan = subscription?.plan ?? "CASUAL";
+  const currentPlan = subscription?.plan ?? "FREE";
 
   return (
     <div className="max-w-4xl">
@@ -50,8 +65,9 @@ export default function OwnerSubscriptionPage() {
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {SUBSCRIPTION_PLANS.map((plan) => {
+        {VISIBLE_SUBSCRIPTION_PLANS.map((plan) => {
           const isCurrent = currentPlan === plan.id;
+          const isContactPlan = plan.ctaType === "contact";
           return (
             <div
               key={plan.id}
@@ -77,27 +93,35 @@ export default function OwnerSubscriptionPage() {
                 )}
               </div>
 
-              <p className="text-2xl font-bold text-[var(--text-main)] mb-1">
-                {plan.priceLabel}
-                <span className="text-sm font-normal text-[var(--text-sub)]">
-                  /店舗/月
-                </span>
-              </p>
+              {isContactPlan && "contactPriceLabel" in plan ? (
+                <p className="text-sm font-medium text-[var(--text-main)] mb-4 leading-relaxed">
+                  {plan.contactPriceLabel}
+                </p>
+              ) : (
+                <p className="text-2xl font-bold text-[var(--text-main)] mb-1">
+                  {plan.priceLabel}
+                  <span className="text-sm font-normal text-[var(--text-sub)]">
+                    /店舗/月
+                  </span>
+                </p>
+              )}
 
-              {"storeRange" in plan && plan.storeRange && (
+              {!isContactPlan && "storeRange" in plan && plan.storeRange && (
                 <p className="text-sm text-[var(--text-sub)] mb-1">
                   {plan.storeRange}
                 </p>
               )}
-              {"discount" in plan && plan.discount && (
+              {!isContactPlan && "discount" in plan && plan.discount && (
                 <p className="text-sm text-green-600 font-medium mb-3">
                   {plan.discount}
                 </p>
               )}
 
-              <p className="text-sm text-[var(--text-sub)] mb-4">
-                {plan.description}
-              </p>
+              {!isContactPlan && (
+                <p className="text-sm text-[var(--text-sub)] mb-4">
+                  {plan.description}
+                </p>
+              )}
 
               <ul className="space-y-1.5 mb-5">
                 {plan.features.map((f) => (
@@ -111,9 +135,22 @@ export default function OwnerSubscriptionPage() {
                 ))}
               </ul>
 
-              {!isCurrent && plan.id !== "FREE" && (
+              {!isCurrent && isContactPlan && (
+                <a
+                  href={buildContactMailto()}
+                  className="block w-full text-center py-2.5 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors"
+                >
+                  お問い合わせ
+                </a>
+              )}
+
+              {!isCurrent && !isContactPlan && plan.id !== "FREE" && (
                 <button
-                  onClick={() => createCheckout.mutate({ plan: plan.id as Exclude<typeof plan.id, "FREE"> })}
+                  onClick={() =>
+                    createCheckout.mutate({
+                      plan: plan.id as Exclude<typeof plan.id, "FREE">,
+                    })
+                  }
                   disabled={createCheckout.isPending}
                   className="w-full py-2.5 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-50"
                 >
@@ -121,15 +158,18 @@ export default function OwnerSubscriptionPage() {
                 </button>
               )}
 
-              {isCurrent && subscription && "stripeCustomerId" in subscription && subscription.stripeCustomerId && (
-                <button
-                  onClick={() => createPortal.mutate()}
-                  disabled={createPortal.isPending}
-                  className="w-full py-2.5 border border-gray-200 text-[var(--text-main)] rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
-                >
-                  契約を管理
-                </button>
-              )}
+              {isCurrent &&
+                subscription &&
+                "stripeCustomerId" in subscription &&
+                subscription.stripeCustomerId && (
+                  <button
+                    onClick={() => createPortal.mutate()}
+                    disabled={createPortal.isPending}
+                    className="w-full py-2.5 border border-gray-200 text-[var(--text-main)] rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    契約を管理
+                  </button>
+                )}
             </div>
           );
         })}

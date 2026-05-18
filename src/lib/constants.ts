@@ -123,9 +123,8 @@ export const SUBSCRIPTION_PLANS = [
 export type SubscriptionPlanId = (typeof SUBSCRIPTION_PLANS)[number]["id"];
 
 /** UI に表示するプランのみ */
-export const VISIBLE_SUBSCRIPTION_PLANS = SUBSCRIPTION_PLANS.filter(
-  (p) => p.isVisible
-);
+export const VISIBLE_SUBSCRIPTION_PLANS: readonly (typeof SUBSCRIPTION_PLANS)[number][] =
+  SUBSCRIPTION_PLANS.filter((p) => p.isVisible);
 
 /** プラン変更や問い合わせの誘導先メールアドレス */
 export const SUBSCRIPTION_CONTACT_EMAIL = "support@lumina-work.jp";
