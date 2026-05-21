@@ -1,6 +1,9 @@
 import { createTRPCRouter } from "@/server/api/trpc";
 
 import { adminInviteRouter } from "./invite";
+import { adminOffersPanelRouter } from "./offers";
+import { adminStoresPanelRouter } from "./stores";
+import { adminUsersPanelRouter } from "./users";
 
 /**
  * 管理画面 (admin.<host>) 専用ルーター。
@@ -8,4 +11,7 @@ import { adminInviteRouter } from "./invite";
  */
 export const adminPanelRouter = createTRPCRouter({
   invite: adminInviteRouter,
+  users: adminUsersPanelRouter,
+  offers: adminOffersPanelRouter,
+  stores: adminStoresPanelRouter,
 });
