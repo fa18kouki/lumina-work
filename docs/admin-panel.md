@@ -247,7 +247,7 @@ Liquid テンプレートでは表現に限界がある / 送達状態を細か�
 
 ### 9.3 Supabase SMTP の有効化
 
-§3〜§4 の手順で Resend を Supabase の SMTP に挑す。本番 Supabase プロジェクトと
+§3〜§4 の手順で Resend を Supabase の SMTP に設定する。本番 Supabase プロジェクトと
 開発 Supabase プロジェクトで **別の Resend API キーを使う** (本番 API キーを開発に流用しない)。
 
 ### 9.4 デプロイ後の動作確認

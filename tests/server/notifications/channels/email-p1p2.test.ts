@@ -1,7 +1,8 @@
-import { render } from "@react-email/components";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { NotificationEvent } from "@/server/notifications/types";
+
+import { getEmailCallArgs } from "../../../__helpers__/email";
 
 const mockSend = vi.fn();
 vi.mock("resend", () => ({
@@ -20,16 +21,9 @@ vi.mock("@/server/db", () => ({
   },
 }));
 
+// p1p2 は idempotencyKey を見ないので default オプションで OK。
 async function getCallArgs(call = 0) {
-  const [emailArgs] = mockSend.mock.calls[call] as [
-    { from: string; to: string; subject: string; react: React.ReactElement },
-  ];
-  const html = await render(emailArgs.react);
-  return {
-    to: emailArgs.to,
-    subject: emailArgs.subject,
-    html,
-  };
+  return getEmailCallArgs(mockSend, { call });
 }
 
 describe("sendEmailNotification - P1/P2イベント", () => {
@@ -37,6 +31,8 @@ describe("sendEmailNotification - P1/P2イベント", () => {
     vi.clearAllMocks();
     vi.resetModules();
     vi.unstubAllEnvs();
+    // EMAIL_FROM は getEmailFrom() で env 必須化されたため、全テスト共通で stub する。
+    vi.stubEnv("EMAIL_FROM", "LUMINA <noreply@lumina.app>");
     mockSend.mockResolvedValue({ data: { id: "msg" }, error: null });
   });
 
