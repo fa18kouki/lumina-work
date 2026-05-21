@@ -24,6 +24,8 @@ const mockUserFindFirst = vi.fn();
 const mockUserUpdate = vi.fn();
 const mockUserCreate = vi.fn();
 const mockOwnerCreate = vi.fn();
+const mockAdminInvitationFindUnique = vi.fn();
+const mockAdminInvitationUpdateMany = vi.fn();
 
 vi.mock("@/server/db", () => ({
   prisma: {
@@ -35,6 +37,12 @@ vi.mock("@/server/db", () => ({
     },
     owner: {
       create: (...args: unknown[]) => mockOwnerCreate(...args),
+    },
+    adminInvitation: {
+      findUnique: (...args: unknown[]) =>
+        mockAdminInvitationFindUnique(...args),
+      updateMany: (...args: unknown[]) =>
+        mockAdminInvitationUpdateMany(...args),
     },
   },
 }));
@@ -54,6 +62,8 @@ describe("POST /api/auth/sync-owner-user - soft delete 対応", () => {
       },
       error: null,
     });
+    // 招待が無いケースをデフォルトに (markAdminInvitationAccepted は no-op)
+    mockAdminInvitationFindUnique.mockResolvedValue(null);
   });
 
   it("既存メールの重複チェックで deletedAt: null を条件に含める", async () => {

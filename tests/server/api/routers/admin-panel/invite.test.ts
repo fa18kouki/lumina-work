@@ -187,9 +187,10 @@ describe("adminPanel.invite.create", () => {
     expect(inviteUserByEmail).toHaveBeenCalledWith(
       "new@example.com",
       expect.objectContaining({
-        // 既存のオーナー callback を再利用 (PKCE 交換 + Prisma 上の
-        // User/Owner provisioning + AdminInvitation 受諾マーク まで一気通貫)
-        redirectTo: "https://example.test/api/auth/callback?next=/o/dashboard",
+        // implicit flow の hash fragment を読める /o/login に直接着地させる。
+        // /o/login 側で setSession + /api/auth/sync-owner-user を呼んで
+        // User/Owner provisioning + AdminInvitation 受諾マーク を行う。
+        redirectTo: "https://example.test/o/login",
       }),
     );
     expect(adminInvitationUpsert).toHaveBeenCalledOnce();
