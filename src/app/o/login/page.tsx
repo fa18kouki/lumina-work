@@ -153,8 +153,12 @@ function OwnerLoginForm() {
       if (!syncRes.ok) {
         // 取得した Supabase セッションは「中途半端な認証状態」になるため破棄する。
         // 残しておくと middleware は通すのに /o/layout がリダイレクトに回す状態が続く。
-        await supabase.auth.signOut().catch(() => {
-          // sign-out 失敗は表示エラーで観測されるので無視する
+        // sign-out 自体の失敗で UI フローを止めはしないが、観測点は残す。
+        await supabase.auth.signOut().catch((signOutErr: unknown) => {
+          console.error(
+            "[o/login] supabase signOut failed during incomplete session cleanup",
+            signOutErr instanceof Error ? signOutErr.message : signOutErr,
+          );
         });
 
         if (syncRes.status === 404) {
