@@ -27,23 +27,23 @@ vi.mock("next-auth/providers/twitter", () => ({
   default: vi.fn((config) => ({ id: "twitter", name: "Twitter", ...config })),
 }));
 
-vi.mock("next-auth/providers/nodemailer", () => ({
-  default: vi.fn((config) => ({ id: "nodemailer", name: "Nodemailer", ...config })),
+// Resend は src/lib/auth-resend-provider 経由で使われる。テストでは
+// import 時に実 API を呼ばないよう Resend モジュール自体を no-op に置く。
+vi.mock("resend", () => ({
+  Resend: class {
+    emails = { send: vi.fn() };
+  },
 }));
 
 describe("Auth Configuration", () => {
   beforeEach(() => {
     vi.resetModules();
-    // 環境変数のモック
     process.env.AUTH_LINE_ID = "line-id";
     process.env.AUTH_LINE_SECRET = "line-secret";
     process.env.AUTH_TWITTER_ID = "twitter-id";
     process.env.AUTH_TWITTER_SECRET = "twitter-secret";
-    process.env.EMAIL_SERVER_HOST = "smtp.example.com";
-    process.env.EMAIL_SERVER_PORT = "587";
-    process.env.EMAIL_SERVER_USER = "user";
-    process.env.EMAIL_SERVER_PASSWORD = "password";
-    process.env.EMAIL_FROM = "noreply@example.com";
+    process.env.RESEND_API_KEY = "re_test_key";
+    process.env.EMAIL_FROM = "LUMINA <noreply@example.com>";
   });
 
   it("should export auth handlers", async () => {
