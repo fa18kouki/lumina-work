@@ -22,8 +22,11 @@ export async function markAdminInvitationAccepted(
   if (!invitation) return;
   if (invitation.status !== "PENDING") return;
 
-  await prisma.adminInvitation.update({
-    where: { id: invitation.id },
+  // TOCTOU 対策: findUnique と update の間に他プロセスが status を
+  // REVOKED に変えていた場合は、updateMany の where 句で弾く。
+  // result.count === 0 なら既に他で書き換わったので no-op で安全に終わる。
+  await prisma.adminInvitation.updateMany({
+    where: { id: invitation.id, status: "PENDING" },
     data: {
       status: "ACCEPTED",
       acceptedAt: new Date(),

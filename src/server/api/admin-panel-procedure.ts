@@ -30,6 +30,14 @@ export const adminPanelProcedure = publicProcedure.use(async ({ ctx, next }) => 
   const cookieValue = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
   const session = verifyAdminSessionCookie(cookieValue, expected);
   if (!session.ok) {
+    // 不正アクセス試行の検出のため失敗を構造化ログに残す。
+    // IP は middleware が x-forwarded-for を保持していれば取得可能だが、
+    // edge cases に依存しすぎないよう reason だけは確実に出す。
+    console.warn("[admin-panel-procedure] auth failed", {
+      timestamp: new Date().toISOString(),
+      reason: session.reason,
+      hasCookie: cookieValue !== undefined,
+    });
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "admin login required",

@@ -39,10 +39,15 @@ export function AdminInviteCreateForm() {
     >
       <h3 className="text-sm font-semibold text-slate-800">新規招待</h3>
       <div className="flex flex-col gap-3 sm:flex-row">
+        <label htmlFor="admin-invite-email" className="sr-only">
+          招待する email アドレス
+        </label>
         <input
+          id="admin-invite-email"
           type="email"
           required
           autoComplete="off"
+          aria-label="招待する email アドレス"
           placeholder="invitee@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}

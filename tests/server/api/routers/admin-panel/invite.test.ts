@@ -13,16 +13,23 @@ const adminInvitationFindUnique = vi.fn();
 const adminInvitationFindMany = vi.fn();
 const adminInvitationCreate = vi.fn();
 const adminInvitationUpdate = vi.fn();
+const adminInvitationUpsert = vi.fn();
+
+const prismaMock = {
+  adminInvitation: {
+    findUnique: (...args: unknown[]) => adminInvitationFindUnique(...args),
+    findMany: (...args: unknown[]) => adminInvitationFindMany(...args),
+    create: (...args: unknown[]) => adminInvitationCreate(...args),
+    update: (...args: unknown[]) => adminInvitationUpdate(...args),
+    upsert: (...args: unknown[]) => adminInvitationUpsert(...args),
+  },
+  // $transaction はコールバックに同じ prisma 形状を渡すことで、
+  // tx.adminInvitation.X 呼び出しがそのまま個別 mock に届くようにする。
+  $transaction: vi.fn(async (cb: (tx: unknown) => unknown) => cb(prismaMock)),
+};
 
 vi.mock("@/server/db", () => ({
-  prisma: {
-    adminInvitation: {
-      findUnique: (...args: unknown[]) => adminInvitationFindUnique(...args),
-      findMany: (...args: unknown[]) => adminInvitationFindMany(...args),
-      create: (...args: unknown[]) => adminInvitationCreate(...args),
-      update: (...args: unknown[]) => adminInvitationUpdate(...args),
-    },
-  },
+  prisma: prismaMock,
 }));
 
 // ---- Supabase admin client mock
@@ -161,9 +168,18 @@ describe("adminPanel.invite.create", () => {
       status: data.status ?? "PENDING",
       createdAt: new Date(),
     }));
+    adminInvitationUpsert.mockImplementation(({ where, create, update }) => ({
+      id: "inv-new",
+      email: where.email,
+      status: "PENDING",
+      createdAt: new Date(),
+      supabaseUserId: null,
+      ...(create ?? {}),
+      ...(update ?? {}),
+    }));
   });
 
-  it("Supabase inviteUserByEmail と Prisma create を呼ぶ", async () => {
+  it("Supabase inviteUserByEmail と Prisma upsert を呼ぶ", async () => {
     const caller = await createCaller();
     const result = await caller.adminPanel.invite.create({
       email: "new@example.com",
@@ -176,7 +192,7 @@ describe("adminPanel.invite.create", () => {
         redirectTo: "https://example.test/api/auth/callback?next=/o/dashboard",
       }),
     );
-    expect(adminInvitationCreate).toHaveBeenCalledOnce();
+    expect(adminInvitationUpsert).toHaveBeenCalledOnce();
     expect(result.email).toBe("new@example.com");
     expect(result.status).toBe("PENDING");
   });
@@ -200,25 +216,26 @@ describe("adminPanel.invite.create", () => {
       email: "revoked@example.com",
       status: "REVOKED",
     });
-    adminInvitationUpdate.mockImplementation(({ where, data }) => ({
-      id: where.id ?? "inv-old",
-      email: "revoked@example.com",
-      ...data,
+    adminInvitationUpsert.mockImplementation(({ where, update }) => ({
+      id: "inv-old",
+      email: where.email,
+      status: "PENDING",
+      ...update,
     }));
     const caller = await createCaller();
     const result = await caller.adminPanel.invite.create({
       email: "revoked@example.com",
     });
     expect(inviteUserByEmail).toHaveBeenCalledOnce();
-    expect(adminInvitationUpdate).toHaveBeenCalledWith(
+    expect(adminInvitationUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ status: "PENDING" }),
+        update: expect.objectContaining({ status: "PENDING" }),
       }),
     );
     expect(result.status).toBe("PENDING");
   });
 
-  it("Supabase がエラーを返したら INTERNAL_SERVER_ERROR", async () => {
+  it("Supabase がエラーを返したら INTERNAL_SERVER_ERROR、claim 行は REVOKED にロールバック", async () => {
     inviteUserByEmail.mockResolvedValue({
       data: { user: null },
       error: { message: "rate limited" },
@@ -227,7 +244,14 @@ describe("adminPanel.invite.create", () => {
     await expect(
       caller.adminPanel.invite.create({ email: "err@example.com" }),
     ).rejects.toMatchObject({ code: "INTERNAL_SERVER_ERROR" });
-    expect(adminInvitationCreate).not.toHaveBeenCalled();
+    // upsert で claim はされた (Supabase 呼ぶ前)
+    expect(adminInvitationUpsert).toHaveBeenCalledOnce();
+    // 失敗ロールバックで update が REVOKED に呼ばれた
+    expect(adminInvitationUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: "REVOKED" }),
+      }),
+    );
   });
 });
 

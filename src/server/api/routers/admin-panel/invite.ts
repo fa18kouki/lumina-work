@@ -43,10 +43,40 @@ export const adminInviteRouter = createTRPCRouter({
   create: adminPanelProcedure
     .input(z.object({ email: emailSchema }))
     .mutation(async ({ input, ctx }) => {
-      const existing = await ctx.prisma.adminInvitation.findUnique({
-        where: { email: input.email },
+      // ① まず DB を原子的に "PENDING" でクレーム。
+      //   同 email への並列リクエストが来ても、$transaction 内で findUnique → upsert を
+      //   完結させることで Supabase API を 1 度しか叩かない (= 重複メール送信防止)。
+      //   既に PENDING/ACCEPTED の行があれば claim 失敗扱いで CONFLICT を返す。
+      const claim = await ctx.prisma.$transaction(async (tx) => {
+        const existing = await tx.adminInvitation.findUnique({
+          where: { email: input.email },
+        });
+        if (existing && existing.status !== "REVOKED") {
+          return { kind: "conflict" as const };
+        }
+        const now = new Date();
+        const claimed = await tx.adminInvitation.upsert({
+          where: { email: input.email },
+          // 監査ログとしての一貫性のため createdAt は維持。
+          update: {
+            status: "PENDING",
+            invitedByLabel: "admin",
+            lastSentAt: now,
+            acceptedAt: null,
+            revokedAt: null,
+            supabaseUserId: null,
+          },
+          create: {
+            email: input.email,
+            status: "PENDING",
+            invitedByLabel: "admin",
+            lastSentAt: now,
+          },
+        });
+        return { kind: "claimed" as const, invitation: claimed };
       });
-      if (existing && existing.status !== "REVOKED") {
+
+      if (claim.kind === "conflict") {
         throw new TRPCError({
           code: "CONFLICT",
           message:
@@ -54,41 +84,31 @@ export const adminInviteRouter = createTRPCRouter({
         });
       }
 
+      // ② Supabase 招待 (外部 API なので transaction 外で呼ぶ)。
       const { data, error } = await sendSupabaseInvite(input.email);
       if (error) {
+        // ロールバック: 失敗した招待は REVOKED にして「実体無し」状態に戻す。
+        await ctx.prisma.adminInvitation.update({
+          where: { id: claim.invitation.id },
+          data: { status: "REVOKED", revokedAt: new Date() },
+        });
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: `Supabase invite failed: ${error.message}`,
         });
       }
-      const supabaseUserId = data.user?.id ?? null;
-      const now = new Date();
 
-      if (existing) {
-        // CodeRabbit 指摘: 監査ログとしての一貫性を保つため createdAt は **更新しない**。
-        // 「いつ初めて招いたか」は元の値を保つ。
-        return ctx.prisma.adminInvitation.update({
-          where: { email: input.email },
-          data: {
-            status: "PENDING",
-            invitedByLabel: "admin",
-            supabaseUserId,
-            lastSentAt: now,
-            acceptedAt: null,
-            revokedAt: null,
-          },
+      // ③ supabaseUserId を紐付け。
+      const supabaseUserId = data.user?.id ?? null;
+      if (supabaseUserId && supabaseUserId !== claim.invitation.supabaseUserId) {
+        await ctx.prisma.adminInvitation.update({
+          where: { id: claim.invitation.id },
+          data: { supabaseUserId },
         });
       }
-
-      return ctx.prisma.adminInvitation.create({
-        data: {
-          email: input.email,
-          status: "PENDING",
-          invitedByLabel: "admin",
-          supabaseUserId,
-          lastSentAt: now,
-        },
-      });
+      // 戻り値は claim 時点の行 + 紐付け済の supabaseUserId を merge して返す
+      // (update の戻り値に依存せず、テストとプロダクションで挙動を統一)
+      return { ...claim.invitation, supabaseUserId };
     }),
 
   resend: adminPanelProcedure
