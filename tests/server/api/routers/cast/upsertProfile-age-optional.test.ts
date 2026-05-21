@@ -83,6 +83,8 @@ describe("cast.upsertProfile - age optional / nickname required", () => {
     await caller.cast.upsertProfile({
       nickname: "さくら",
       // age を省略
+      // 連絡先必須化 (電話/SNS/メールのいずれか) を満たす最小入力
+      phoneNumber: "09012345678",
     });
 
     expect(castUpsertMock).toHaveBeenCalledTimes(1);
@@ -100,6 +102,7 @@ describe("cast.upsertProfile - age optional / nickname required", () => {
       caller.cast.upsertProfile({
         nickname: "",
         age: 25,
+        phoneNumber: "09012345678",
       })
     ).rejects.toBeInstanceOf(TRPCError);
     expect(castUpsertMock).not.toHaveBeenCalled();

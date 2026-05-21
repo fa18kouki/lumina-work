@@ -13,7 +13,14 @@ export const BUSINESS_TYPES = [
 
 export type BusinessType = (typeof BUSINESS_TYPES)[number]["value"];
 
-/** サブスクリプションプラン定義 */
+/**
+ * サブスクリプションプラン定義
+ *
+ * - `isVisible: false` のプランは UI（料金表 / 変更画面）には表示しない。
+ *   既存契約者の表示や Stripe webhook 等の内部参照は引き続き enum で動作する。
+ * - `ctaType: "contact"` のプランは Stripe Checkout ではなく問い合わせ動線
+ *   （mailto / フォーム）に誘導する。`contactPriceLabel` を価格欄に表示。
+ */
 export const SUBSCRIPTION_PLANS = [
   {
     id: "FREE" as const,
@@ -30,6 +37,8 @@ export const SUBSCRIPTION_PLANS = [
       "キャスト検索",
       "メッセージ機能",
     ],
+    isVisible: true,
+    ctaType: "checkout" as const,
   },
   {
     id: "CASUAL" as const,
@@ -45,6 +54,8 @@ export const SUBSCRIPTION_PLANS = [
       "メッセージ機能",
       "面接管理機能",
     ],
+    isVisible: false,
+    ctaType: "checkout" as const,
   },
   {
     id: "PRO_TRIAL" as const,
@@ -52,9 +63,10 @@ export const SUBSCRIPTION_PLANS = [
     tier: "pro" as const,
     pricePerStore: 90000,
     priceLabel: "¥90,000",
+    contactPriceLabel: "店舗規模・契約形態に応じて個別見積もり",
     offerLimit: null as number | null,
     storeRange: "1〜4店舗",
-    description: "1〜4店舗を運営する企業向け",
+    description: "店舗規模・契約形態に応じて個別見積もり",
     features: [
       "オファー送信無制限",
       "全キャスト検索・フィルター",
@@ -63,6 +75,8 @@ export const SUBSCRIPTION_PLANS = [
       "優先サポート",
     ],
     recommended: true,
+    isVisible: true,
+    ctaType: "contact" as const,
   },
   {
     id: "PRO_BUSINESS" as const,
@@ -81,6 +95,8 @@ export const SUBSCRIPTION_PLANS = [
       "面接管理機能",
       "優先サポート",
     ],
+    isVisible: false,
+    ctaType: "checkout" as const,
   },
   {
     id: "PRO_ENTERPRISE" as const,
@@ -99,10 +115,19 @@ export const SUBSCRIPTION_PLANS = [
       "面接管理機能",
       "優先サポート",
     ],
+    isVisible: false,
+    ctaType: "checkout" as const,
   },
 ] as const;
 
 export type SubscriptionPlanId = (typeof SUBSCRIPTION_PLANS)[number]["id"];
+
+/** UI に表示するプランのみ */
+export const VISIBLE_SUBSCRIPTION_PLANS: readonly (typeof SUBSCRIPTION_PLANS)[number][] =
+  SUBSCRIPTION_PLANS.filter((p) => p.isVisible);
+
+/** プラン変更や問い合わせの誘導先メールアドレス */
+export const SUBSCRIPTION_CONTACT_EMAIL = "support@lumina-work.jp";
 
 /** プランに応じたオファー上限を返す（null = 無制限） */
 export function getOfferLimitForPlan(plan: SubscriptionPlanId): number | null {

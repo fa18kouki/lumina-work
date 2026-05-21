@@ -1,8 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Store, Users, FileText, CalendarCheck, Plus, TrendingUp, CheckCircle, Clock, XCircle, AlertCircle } from "lucide-react";
+import { Store, Users, FileText, CalendarCheck, Plus, TrendingUp, CheckCircle, Clock, XCircle, AlertCircle, Send, Ticket } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+
+const MONTHLY_OFFER_USAGE_PLACEHOLDER = {
+  sentThisMonth: 0,
+  monthlyLimit: 50,
+  ticketsRemaining: 0,
+  ticketsTotal: 0,
+  yearMonthLabel: "—",
+} as const;
 
 export default function OwnerDashboardPage() {
   const { data: dashboard, isLoading } = trpc.owner.getDashboard.useQuery();
@@ -61,6 +69,71 @@ export default function OwnerDashboardPage() {
           </div>
           <p className="text-3xl font-bold text-[var(--text-main)]">
             {stores.reduce((sum, s) => sum + s._count.interviews, 0)}
+          </p>
+        </div>
+      </div>
+
+      {/*
+        オファー月次集計セクション (UI 仮実装 / ダミー数値)
+        TODO(RUN-499 follow-up): owner.getMonthlyOfferUsage tRPC 追加 + チケット制 (Ticket model)
+        本実装は本稼働後の別 issue で対応。現状はステークホルダー確認用のレイアウトのみ。
+      */}
+      <h2 className="text-lg font-bold text-[var(--text-main)] mb-4 flex items-center gap-2">
+        <Send className="w-5 h-5 text-slate-500" />
+        オファー利用状況
+        <span className="text-xs font-normal text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
+          UI 仮表示 / 本実装は本稼働後
+        </span>
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+        <div className="bg-white rounded-xl p-5 border border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Send className="w-4 h-4 text-slate-500" />
+              <span className="text-sm text-[var(--text-sub)]">
+                今月のオファー送信数
+              </span>
+            </div>
+            <span className="text-xs text-[var(--text-sub)]">
+              {MONTHLY_OFFER_USAGE_PLACEHOLDER.yearMonthLabel}
+            </span>
+          </div>
+          <p className="text-3xl font-bold text-[var(--text-main)]">
+            {MONTHLY_OFFER_USAGE_PLACEHOLDER.sentThisMonth}
+            <span className="text-sm font-normal text-[var(--text-sub)] ml-1">
+              / {MONTHLY_OFFER_USAGE_PLACEHOLDER.monthlyLimit} 件
+            </span>
+          </p>
+          <div className="mt-3 h-2 rounded-full bg-gray-100 overflow-hidden">
+            <div
+              className="bg-slate-900 h-full"
+              style={{
+                width: `${Math.min(
+                  100,
+                  (MONTHLY_OFFER_USAGE_PLACEHOLDER.sentThisMonth /
+                    MONTHLY_OFFER_USAGE_PLACEHOLDER.monthlyLimit) *
+                    100
+                )}%`,
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-5 border border-gray-100">
+          <div className="flex items-center gap-2 mb-2">
+            <Ticket className="w-4 h-4 text-slate-500" />
+            <span className="text-sm text-[var(--text-sub)]">
+              オファーチケット残数
+            </span>
+          </div>
+          <p className="text-3xl font-bold text-[var(--text-main)]">
+            {MONTHLY_OFFER_USAGE_PLACEHOLDER.ticketsRemaining}
+            <span className="text-sm font-normal text-[var(--text-sub)] ml-1">
+              / {MONTHLY_OFFER_USAGE_PLACEHOLDER.ticketsTotal} 枚
+            </span>
+          </p>
+          <p className="mt-3 text-xs text-[var(--text-sub)] leading-relaxed">
+            チケット制は次フェーズで導入予定。チャージや繰越ルールの詳細は別途定義します。
           </p>
         </div>
       </div>

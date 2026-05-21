@@ -138,6 +138,19 @@ export default function CastProfileEditPage() {
     },
   });
 
+  const upsertErrorMessage = (() => {
+    const err = upsertProfile.error;
+    if (!err) return null;
+    const zodErr = err.data?.zodError;
+    if (zodErr) {
+      const fieldErrors = zodErr.fieldErrors as Record<string, string[] | undefined>;
+      const formErrors = zodErr.formErrors as string[] | undefined;
+      const contactErr = fieldErrors?.contact?.[0] ?? formErrors?.[0];
+      if (contactErr) return contactErr;
+    }
+    return err.message;
+  })();
+
   const handleSubmit = async (data: ProfileEditFormData) => {
 
 
@@ -339,6 +352,12 @@ export default function CastProfileEditPage() {
         {upsertProfile.isSuccess && (
           <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg text-sm font-medium z-50 animate-fade-in">
             保存しました
+          </div>
+        )}
+
+        {upsertProfile.isError && upsertErrorMessage && (
+          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 max-w-[90%] bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg text-sm font-medium z-50 animate-fade-in text-center">
+            {upsertErrorMessage}
           </div>
         )}
       </div>

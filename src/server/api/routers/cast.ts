@@ -163,7 +163,26 @@ export const castRouter = createTRPCRouter({
         // MUST/WANT条件
         mustConditions: z.record(z.string(), z.unknown()).optional(),
         wantConditions: z.record(z.string(), z.unknown()).optional(),
-      })
+      }).refine(
+        (data) => {
+          const hasPhone = !!data.phoneNumber?.trim();
+          const hasEmail =
+            !!data.email?.trim() || !!data.pcEmail?.trim();
+          const hasSns = !!(
+            data.instagramId?.trim() ||
+            data.lineId?.trim() ||
+            data.twitterId?.trim() ||
+            data.tiktokId?.trim() ||
+            data.facebookId?.trim()
+          );
+          return hasPhone || hasEmail || hasSns;
+        },
+        {
+          message:
+            "電話番号・SNS・メールアドレスのいずれか1つ以上の入力が必要です",
+          path: ["contact"],
+        }
+      )
     )
     .mutation(async ({ ctx, input }) => {
       const mustConditions = input.mustConditions as
