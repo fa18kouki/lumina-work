@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/invites", label: "招待" },
   { href: "/users", label: "ユーザー" },
+  { href: "/subscriptions", label: "プラン" },
   { href: "/offers", label: "オファー" },
   { href: "/stores", label: "店舗" },
 ];
