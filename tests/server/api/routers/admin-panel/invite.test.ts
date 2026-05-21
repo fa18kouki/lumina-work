@@ -10,17 +10,22 @@ const SECRET = "test-secret-aaaaaaaaaaaaaaaaaaaaaaaa";
 
 // ---- Prisma mocks
 const adminInvitationFindUnique = vi.fn();
+const adminInvitationFindUniqueOrThrow = vi.fn();
 const adminInvitationFindMany = vi.fn();
 const adminInvitationCreate = vi.fn();
 const adminInvitationUpdate = vi.fn();
+const adminInvitationUpdateMany = vi.fn();
 const adminInvitationUpsert = vi.fn();
 
 const prismaMock = {
   adminInvitation: {
     findUnique: (...args: unknown[]) => adminInvitationFindUnique(...args),
+    findUniqueOrThrow: (...args: unknown[]) =>
+      adminInvitationFindUniqueOrThrow(...args),
     findMany: (...args: unknown[]) => adminInvitationFindMany(...args),
     create: (...args: unknown[]) => adminInvitationCreate(...args),
     update: (...args: unknown[]) => adminInvitationUpdate(...args),
+    updateMany: (...args: unknown[]) => adminInvitationUpdateMany(...args),
     upsert: (...args: unknown[]) => adminInvitationUpsert(...args),
   },
   // $transaction はコールバックに同じ prisma 形状を渡すことで、
@@ -327,34 +332,57 @@ describe("adminPanel.invite.revoke", () => {
   it("Supabase deleteUser を呼んで REVOKED にする", async () => {
     adminInvitationFindUnique.mockResolvedValue({
       id: "inv-1",
-      email: "x@example.com",
       status: "PENDING",
       supabaseUserId: "sb-1",
     });
+    adminInvitationUpdateMany.mockResolvedValue({ count: 1 });
     deleteUser.mockResolvedValue({ data: null, error: null });
-    adminInvitationUpdate.mockImplementation(({ where, data }) => ({
-      id: where.id,
-      ...data,
-    }));
+    adminInvitationFindUniqueOrThrow.mockResolvedValue({
+      id: "inv-1",
+      status: "REVOKED",
+      supabaseUserId: "sb-1",
+    });
     const caller = await createCaller();
     await caller.adminPanel.invite.revoke({ id: "inv-1" });
-    expect(deleteUser).toHaveBeenCalledWith("sb-1");
-    expect(adminInvitationUpdate).toHaveBeenCalledWith(
+    expect(adminInvitationUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
+        where: { id: "inv-1", status: { not: "ACCEPTED" } },
         data: expect.objectContaining({ status: "REVOKED" }),
       }),
     );
+    expect(deleteUser).toHaveBeenCalledWith("sb-1");
   });
 
-  it("ACCEPTED 招待は失効拒否 BAD_REQUEST", async () => {
+  it("ACCEPTED 招待は pre-check で BAD_REQUEST (updateMany 呼ばず)", async () => {
     adminInvitationFindUnique.mockResolvedValue({
       id: "inv-1",
       status: "ACCEPTED",
+      supabaseUserId: "sb-1",
     });
     const caller = await createCaller();
     await expect(
       caller.adminPanel.invite.revoke({ id: "inv-1" }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(adminInvitationUpdateMany).not.toHaveBeenCalled();
+    expect(deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("pre-check 通過後に accept が走り込んでも (updateMany count=0) BAD_REQUEST で deleteUser 呼ばない (TOCTOU)", async () => {
+    adminInvitationFindUnique.mockResolvedValue({
+      id: "inv-1",
+      status: "PENDING",
+      supabaseUserId: "sb-1",
+    });
+    // 直前に accept が走って status=ACCEPTED になったため updateMany は 0 件
+    adminInvitationUpdateMany.mockResolvedValue({ count: 0 });
+    const caller = await createCaller();
+    await expect(
+      caller.adminPanel.invite.revoke({ id: "inv-1" }),
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: expect.stringContaining("受諾"),
+    });
+    // 受諾済みユーザーを誤って削除しないこと
     expect(deleteUser).not.toHaveBeenCalled();
   });
 
@@ -364,13 +392,54 @@ describe("adminPanel.invite.revoke", () => {
       status: "PENDING",
       supabaseUserId: null,
     });
-    adminInvitationUpdate.mockImplementation(({ where, data }) => ({
-      id: where.id,
-      ...data,
-    }));
+    adminInvitationUpdateMany.mockResolvedValue({ count: 1 });
+    adminInvitationFindUniqueOrThrow.mockResolvedValue({
+      id: "inv-1",
+      status: "REVOKED",
+      supabaseUserId: null,
+    });
     const caller = await createCaller();
     await caller.adminPanel.invite.revoke({ id: "inv-1" });
     expect(deleteUser).not.toHaveBeenCalled();
-    expect(adminInvitationUpdate).toHaveBeenCalled();
+    expect(adminInvitationUpdateMany).toHaveBeenCalled();
+  });
+
+  it("Supabase deleteUser が失敗しても DB の REVOKED は戻さない", async () => {
+    adminInvitationFindUnique.mockResolvedValue({
+      id: "inv-1",
+      status: "PENDING",
+      supabaseUserId: "sb-1",
+    });
+    adminInvitationUpdateMany.mockResolvedValue({ count: 1 });
+    deleteUser.mockResolvedValue({
+      data: null,
+      error: { status: 500, message: "supabase 500" },
+    });
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    try {
+      const caller = await createCaller();
+      await expect(
+        caller.adminPanel.invite.revoke({ id: "inv-1" }),
+      ).rejects.toMatchObject({
+        code: "INTERNAL_SERVER_ERROR",
+        message: expect.stringContaining("manual cleanup"),
+      });
+      // updateMany は走ったので DB は REVOKED のまま
+      expect(adminInvitationUpdateMany).toHaveBeenCalled();
+      // update (戻し) は呼ばれない
+      expect(adminInvitationUpdate).not.toHaveBeenCalled();
+      expect(consoleError).toHaveBeenCalledWith(
+        "[admin-panel.invite.revoke] supabase deleteUser failed",
+        expect.objectContaining({
+          invitationId: "inv-1",
+          supabaseUserId: "sb-1",
+          supabaseError: "supabase 500",
+        }),
+      );
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 });
