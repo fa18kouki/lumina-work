@@ -12,10 +12,10 @@ describe("Email channel branding - regression", () => {
     expect(source).not.toContain("マッチング");
   });
 
-  it("src/lib/auth-email-template.ts に「マッチング」を含まない", async () => {
+  it("src/lib/auth-resend-provider.ts に「マッチング」を含まない", async () => {
     const file = path.resolve(
       __dirname,
-      "../../../../src/lib/auth-email-template.ts"
+      "../../../../src/lib/auth-resend-provider.ts"
     );
     const source = await readFile(file, "utf8");
     expect(source).not.toContain("マッチング");
