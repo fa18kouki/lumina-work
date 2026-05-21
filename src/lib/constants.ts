@@ -126,6 +126,33 @@ export type SubscriptionPlanId = (typeof SUBSCRIPTION_PLANS)[number]["id"];
 export const VISIBLE_SUBSCRIPTION_PLANS: readonly (typeof SUBSCRIPTION_PLANS)[number][] =
   SUBSCRIPTION_PLANS.filter((p) => p.isVisible);
 
+/**
+ * 設計 invariant: 「可視 + 非 FREE」のプランは必ず ctaType="contact" であること。
+ *
+ * 業態上 (キャバクラ・クラブ運営者向け) のプラン契約には本人確認・契約形態の
+ * 個別調整が必要で、これは自動化できない。FREE 以外のプランは必ず「問い合わせ」
+ * 経由で手動承認するフローに統一する。Stripe Checkout 自動課金は許可しない。
+ *
+ * 将来 `isVisible: true` を別のプランに付けるときに ctaType を直し忘れると、
+ * UI 上に Stripe Checkout ボタンが復活してしまうので、モジュールロード時に
+ * fail-fast で検出する。
+ */
+for (const plan of VISIBLE_SUBSCRIPTION_PLANS) {
+  if (plan.id !== "FREE" && plan.ctaType !== "contact") {
+    throw new Error(
+      `[constants] Subscription invariant violation: visible paid plan "${plan.id}" must have ctaType="contact" (got "${plan.ctaType}"). 業態上の認証が必要なため、有料プランの契約は問い合わせ動線にしてください。`,
+    );
+  }
+}
+
+/** Stripe Checkout 自動課金を許可しているプラン (= 非 contact のもの)。 */
+export function isSelfServeCheckoutAllowed(
+  planId: SubscriptionPlanId,
+): boolean {
+  const plan = SUBSCRIPTION_PLANS.find((p) => p.id === planId);
+  return plan?.ctaType === "checkout" && plan.id !== "FREE";
+}
+
 /** プラン変更や問い合わせの誘導先メールアドレス */
 export const SUBSCRIPTION_CONTACT_EMAIL = "support@lumina-work.jp";
 

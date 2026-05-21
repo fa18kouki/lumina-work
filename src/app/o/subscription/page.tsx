@@ -1,5 +1,6 @@
 "use client";
 
+import { Mail } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import {
   VISIBLE_SUBSCRIPTION_PLANS,
@@ -22,19 +23,6 @@ export default function OwnerSubscriptionPage() {
   const { data: subscription, isLoading } =
     trpc.subscription.getSubscription.useQuery();
   const { data: storeCount } = trpc.owner.getStoreCount.useQuery();
-
-  const createCheckout = trpc.subscription.createCheckoutSession.useMutation({
-    onSuccess: (data) => {
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        alert("チェックアウト URL の取得に失敗しました");
-      }
-    },
-    onError: (err) => {
-      alert(`プラン変更に失敗しました: ${err.message}`);
-    },
-  });
 
   const createPortal = trpc.subscription.createPortalSession.useMutation({
     onSuccess: (data) => {
@@ -60,9 +48,31 @@ export default function OwnerSubscriptionPage() {
       <h1 className="text-2xl font-bold text-[var(--text-main)] mb-2">
         契約・プラン
       </h1>
-      <p className="text-sm text-[var(--text-sub)] mb-8">
+      <p className="text-sm text-[var(--text-sub)] mb-6">
         現在 {storeCount?.current ?? 0} 店舗を管理中
       </p>
+
+      {/*
+        業態上の本人確認 / 契約形態の個別調整が必要なため、
+        有料プランへの変更は自動課金ではなくお問い合わせ経由で受け付ける。
+      */}
+      <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 mb-6 flex items-start gap-3">
+        <Mail className="w-5 h-5 text-slate-700 mt-0.5 flex-shrink-0" />
+        <div className="text-sm text-[var(--text-main)] leading-relaxed">
+          <p className="font-medium mb-1">プラン変更について</p>
+          <p className="text-[var(--text-sub)]">
+            有料プランへの切り替えには本人確認・契約形態のご相談が必要です。
+            下記の「お問い合わせ」からご連絡いただくか、
+            <a
+              href={buildContactMailto()}
+              className="text-slate-900 underline underline-offset-2 hover:no-underline"
+            >
+              {SUBSCRIPTION_CONTACT_EMAIL}
+            </a>
+            まで直接ご連絡ください。
+          </p>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {VISIBLE_SUBSCRIPTION_PLANS.map((plan) => {
@@ -144,19 +154,11 @@ export default function OwnerSubscriptionPage() {
                 </a>
               )}
 
-              {!isCurrent && !isContactPlan && plan.id !== "FREE" && (
-                <button
-                  onClick={() =>
-                    createCheckout.mutate({
-                      plan: plan.id as Exclude<typeof plan.id, "FREE">,
-                    })
-                  }
-                  disabled={createCheckout.isPending}
-                  className="w-full py-2.5 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-50"
-                >
-                  {createCheckout.isPending ? "処理中..." : "このプランに変更"}
-                </button>
-              )}
+              {/*
+                可視 + 非 FREE のプランは constants.ts の invariant で必ず
+                ctaType="contact" になる (= 上の isContactPlan 分岐に流れる)。
+                旧 Stripe Checkout ボタン分岐は到達不能なため削除した。
+              */}
 
               {isCurrent &&
                 subscription &&

@@ -2,7 +2,10 @@ import { z } from "zod";
 import { createTRPCRouter, ownerProcedure } from "@/server/api/trpc";
 import { TRPCError } from "@trpc/server";
 import { getStripe } from "@/lib/stripe";
-import { getOfferLimitForPlan } from "@/lib/constants";
+import {
+  getOfferLimitForPlan,
+  isSelfServeCheckoutAllowed,
+} from "@/lib/constants";
 import type { SubscriptionPlanId } from "@/lib/constants";
 
 /** プランIDからStripe Price IDを取得 */
@@ -60,6 +63,18 @@ export const subscriptionRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // 業態上、有料プランの契約は本人確認 / 契約形態の個別調整が必須で
+      // 自動化できない。ctaType="contact" のプランは Stripe Checkout を弾き、
+      // 問い合わせ経由で手動承認するフローに強制する。UI 側で誤って起動しても
+      // ここで止まる。
+      if (!isSelfServeCheckoutAllowed(input.plan)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "このプランの契約は自動化されていません。お問い合わせください。",
+        });
+      }
+
       const owner = await ctx.prisma.owner.findUnique({
         where: { userId: ctx.session.user.id },
         include: {
