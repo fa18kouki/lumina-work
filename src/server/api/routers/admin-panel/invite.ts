@@ -4,6 +4,10 @@ import { z } from "zod";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { adminPanelProcedure } from "@/server/api/admin-panel-procedure";
 import { createTRPCRouter } from "@/server/api/trpc";
+import {
+  issueOwnerInviteLink,
+  sendOwnerInviteEmail,
+} from "@/server/auth/owner-email";
 
 const emailSchema = z.string().email().max(320);
 
@@ -13,27 +17,6 @@ const listInput = z
     take: z.number().int().min(1).max(200).default(100),
   })
   .default({ take: 100 });
-
-function getInviteRedirectTo(): string | undefined {
-  const base = process.env.NEXT_PUBLIC_APP_URL;
-  if (!base) return undefined;
-  // Supabase の招待リンクは implicit flow なので access_token を URL fragment
-  // (#access_token=...&type=invite) に載せて戻ってくる。サーバ側の
-  // /api/auth/callback は ?code= (PKCE) しか拾えず一度 missing_code に弾かれるため、
-  // hash を読めるクライアントページである /o/login に直接着地させ、そこで
-  // supabase.auth.setSession → /api/auth/sync-owner-user で Prisma 上の
-  // User / Owner / Subscription provisioning + AdminInvitation 受諾マークを実行する。
-  return `${base.replace(/\/$/, "")}/o/login`;
-}
-
-async function sendSupabaseInvite(email: string) {
-  const supabase = getSupabaseAdminClient();
-  const redirectTo = getInviteRedirectTo();
-  return supabase.auth.admin.inviteUserByEmail(
-    email,
-    redirectTo ? { redirectTo } : undefined,
-  );
-}
 
 export const adminInviteRouter = createTRPCRouter({
   list: adminPanelProcedure.input(listInput).query(async ({ input, ctx }) => {
@@ -88,55 +71,49 @@ export const adminInviteRouter = createTRPCRouter({
         });
       }
 
-      // ② Supabase 招待 (外部 API なので transaction 外で呼ぶ)。
-      const { data, error } = await sendSupabaseInvite(input.email);
-      if (error) {
-        // ロールバック: 失敗した招待は REVOKED にして「実体無し」状態に戻す。
-        // ロールバック自体が失敗すると "Supabase は失敗したが Prisma 上は PENDING"
-        // という不整合が残り、再招待が CONFLICT で詰まるので、両方の error を
-        // 構造化ログに残した上で TRPCError のメッセージにも両方の文脈を含める。
-        let rollbackFailure: unknown = null;
-        try {
-          await ctx.prisma.adminInvitation.update({
-            where: { id: claim.invitation.id },
-            data: { status: "REVOKED", revokedAt: new Date() },
-          });
-        } catch (rollbackError) {
-          rollbackFailure = rollbackError;
-          console.error("[admin-panel.invite.create] rollback failed", {
-            timestamp: new Date().toISOString(),
-            invitationId: claim.invitation.id,
-            email: input.email,
-            supabaseError: error.message,
-            rollbackError:
-              rollbackError instanceof Error
-                ? rollbackError.message
-                : String(rollbackError),
-          });
-        }
-        const rollbackSuffix = rollbackFailure
-          ? ` (rollback also failed: ${
-              rollbackFailure instanceof Error
-                ? rollbackFailure.message
-                : String(rollbackFailure)
-            }; invitation id=${claim.invitation.id} may be left PENDING — manual cleanup required)`
-          : "";
+      // ② Supabase で invite link を発行 (外部 API なので transaction 外)。
+      //   `issueOwnerInviteLink` は `generateLink({ type: 'invite' })` 経由で、新規/既存
+      //   どちらの email でも link を返す (`inviteUserByEmail` と違って既存 user で落ちない)。
+      const linkResult = await issueOwnerInviteLink(input.email);
+      if (!linkResult.ok) {
+        await rollbackClaimToRevoked({
+          ctx,
+          claim,
+          email: input.email,
+          errorMessage: linkResult.error.message,
+          phase: "generateLink",
+        });
+      }
+      if (!linkResult.ok) {
+        // rollbackClaimToRevoked は throw するので unreachable だが TS narrowing 用
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Supabase invite failed: ${error.message}${rollbackSuffix}`,
+          message: "unreachable: rollback should have thrown",
+        });
+      }
+      const { actionLink, supabaseUserId } = linkResult.value;
+
+      // ③ 招待メールを Resend SDK 経由で送る。失敗したら claim を REVOKED に戻す。
+      //   Supabase 側に auth user 行は既に作られているが、resend で次に再発行できるため
+      //   整合は取れる。
+      const sendResult = await sendOwnerInviteEmail(input.email, actionLink);
+      if (!sendResult.ok) {
+        await rollbackClaimToRevoked({
+          ctx,
+          claim,
+          email: input.email,
+          errorMessage: sendResult.errorMessage ?? "unknown resend error",
+          phase: "resend.send",
         });
       }
 
-      // ③ supabaseUserId を紐付け。
-      const supabaseUserId = data.user?.id ?? null;
+      // ④ supabaseUserId を紐付け。
       if (supabaseUserId && supabaseUserId !== claim.invitation.supabaseUserId) {
         await ctx.prisma.adminInvitation.update({
           where: { id: claim.invitation.id },
           data: { supabaseUserId },
         });
       }
-      // 戻り値は claim 時点の行 + 紐付け済の supabaseUserId を merge して返す
-      // (update の戻り値に依存せず、テストとプロダクションで挙動を統一)
       return { ...claim.invitation, supabaseUserId };
     }),
 
@@ -145,10 +122,10 @@ export const adminInviteRouter = createTRPCRouter({
     .mutation(async ({ input, ctx }) => {
       // ① pre-check: NOT_FOUND の早期検出と email 取得用。
       //   status は updateMany の条件で再評価するので、ここでの ACCEPTED チェックは
-      //   早期エラー UX のためのものに留める (権威は updateMany の count)。
+      //   早期エラー UX のためのもの (権威は updateMany の count)。
       const pre = await ctx.prisma.adminInvitation.findUnique({
         where: { id: input.id },
-        select: { id: true, status: true, email: true },
+        select: { id: true, status: true, email: true, supabaseUserId: true },
       });
       if (!pre) {
         throw new TRPCError({ code: "NOT_FOUND" });
@@ -160,29 +137,40 @@ export const adminInviteRouter = createTRPCRouter({
         });
       }
 
-      // ② 外部 API (Supabase 再招待) を transaction 外で発火。
-      //   revoke と違って、ここで先に Supabase を叩くと「accept が走り込んで
-      //   ACCEPTED 行に対して inviteUserByEmail を呼ぶ」race が残るが、
-      //   Supabase 側は既に存在する user に対する invite を冪等に扱う
-      //   (resend 用途のため)。問題は DB の status を ACCEPTED → PENDING に
-      //   戻してしまうケース。これは updateMany の条件で防ぐ。
-      const { error } = await sendSupabaseInvite(pre.email);
-      if (error) {
+      // ② Supabase で invite link を再発行。
+      //   既存 user (= 未受諾) でも `generateLink({ type: 'invite' })` は link を返す。
+      const linkResult = await issueOwnerInviteLink(pre.email);
+      if (!linkResult.ok) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Supabase resend failed: ${error.message}`,
+          message: `Supabase resend failed: ${linkResult.error.message}`,
+        });
+      }
+      const { actionLink, supabaseUserId: newSupabaseUserId } = linkResult.value;
+
+      // ③ Resend で送信。失敗したら DB は更新しない (現状の lastSentAt 維持)。
+      const sendResult = await sendOwnerInviteEmail(pre.email, actionLink);
+      if (!sendResult.ok) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Resend send failed: ${sendResult.errorMessage}`,
         });
       }
 
-      // ③ TOCTOU 対策: pre-check と DB 更新の間に accept が走り込んでも
-      //   status を ACCEPTED → PENDING に上書きしないよう、condition 付き
-      //   update を 1 クエリで投げる。count === 0 は accept が先勝ちした証拠。
+      // ④ TOCTOU 対策: pre-check と DB 更新の間に accept が走り込んでも
+      //   status を ACCEPTED → PENDING に上書きしないよう、condition 付き update を
+      //   1 クエリで投げる。count === 0 は accept が先勝ちした証拠。
+      const shouldUpdateSupabaseUserId =
+        newSupabaseUserId !== null && newSupabaseUserId !== pre.supabaseUserId;
       const updated = await ctx.prisma.adminInvitation.updateMany({
         where: { id: input.id, status: { not: "ACCEPTED" } },
         data: {
           status: "PENDING",
           lastSentAt: new Date(),
           revokedAt: null,
+          ...(shouldUpdateSupabaseUserId
+            ? { supabaseUserId: newSupabaseUserId }
+            : {}),
         },
       });
       if (updated.count === 0) {
@@ -266,3 +254,57 @@ export const adminInviteRouter = createTRPCRouter({
       });
     }),
 });
+
+// ---- create 用 rollback ヘルパ ---------------------------------------------
+
+interface RollbackArgs {
+  ctx: { prisma: typeof import("@/server/db").prisma };
+  claim: {
+    kind: "claimed";
+    invitation: { id: string; supabaseUserId: string | null };
+  };
+  email: string;
+  errorMessage: string;
+  phase: "generateLink" | "resend.send";
+}
+
+/**
+ * create のフロー中で claim を上書きした後に Supabase or Resend が失敗した場合の
+ * 共通ロールバック。常に TRPCError を throw する (戻り値は型上 never)。
+ */
+async function rollbackClaimToRevoked(args: RollbackArgs): Promise<never> {
+  const { ctx, claim, email, errorMessage, phase } = args;
+  let rollbackFailure: unknown = null;
+  try {
+    await ctx.prisma.adminInvitation.update({
+      where: { id: claim.invitation.id },
+      data: { status: "REVOKED", revokedAt: new Date() },
+    });
+  } catch (rollbackError) {
+    rollbackFailure = rollbackError;
+    console.error("[admin-panel.invite.create] rollback failed", {
+      timestamp: new Date().toISOString(),
+      invitationId: claim.invitation.id,
+      email,
+      phase,
+      supabaseError: errorMessage,
+      rollbackError:
+        rollbackError instanceof Error
+          ? rollbackError.message
+          : String(rollbackError),
+    });
+  }
+  const rollbackSuffix = rollbackFailure
+    ? ` (rollback also failed: ${
+        rollbackFailure instanceof Error
+          ? rollbackFailure.message
+          : String(rollbackFailure)
+      }; invitation id=${claim.invitation.id} may be left PENDING — manual cleanup required)`
+    : "";
+  const prefix =
+    phase === "generateLink" ? "Supabase invite failed" : "Resend send failed";
+  throw new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: `${prefix}: ${errorMessage}${rollbackSuffix}`,
+  });
+}
