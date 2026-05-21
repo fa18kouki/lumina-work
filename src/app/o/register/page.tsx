@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Gift } from "lucide-react";
-import { createBrowserClient } from "@/lib/supabase-auth";
+import { trpc } from "@/lib/trpc";
 import { useToast } from "@/lib/toast-provider";
 
 export default function OwnerRegisterPage() {
@@ -23,10 +23,14 @@ function OwnerRegisterForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [referralCode, setReferralCode] = useState(searchParams.get("ref") ?? "");
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState("");
   const { addToast } = useToast();
+
+  // signup フローはサーバで Supabase Auth リンク発行 + Resend SDK 送信を行う。
+  // テンプレ管理 / Supabase Email Templates 依存の排除のため client から
+  // supabase.auth.signUp() を直接叩かない。詳細: docs/email-architecture.md。
+  const requestSignup = trpc.ownerAuth.requestSignup.useMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,49 +45,29 @@ function OwnerRegisterForm() {
       return;
     }
 
-    setIsLoading(true);
     try {
-      const supabase = createBrowserClient();
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      await requestSignup.mutateAsync({
         email,
         password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/o/dashboard${referralCode ? `&ref=${encodeURIComponent(referralCode.toUpperCase())}` : ""}`,
-        },
+        referralCode: referralCode.trim() || undefined,
       });
-
-      if (signUpError) {
-        addToast("error", signUpError.message);
-        return;
-      }
-
-      if (data.user?.identities?.length === 0) {
+      setEmailSent(true);
+    } catch (err) {
+      // tRPC mutation の TRPCError は err.data.code に乗ってくる
+      const code = (err as { data?: { code?: string } } | undefined)?.data?.code;
+      const message =
+        err instanceof Error
+          ? err.message
+          : "登録に失敗しました。もう一度お試しください";
+      if (code === "CONFLICT") {
         setError("このメールアドレスは既に登録されています");
         return;
       }
-
-      // メール確認がOFFの場合、sessionが即座に返る → 直接ダッシュボードへ。
-      // mode=register: /o/register からの新規登録なので User+Owner+Subscription を作成する。
-      if (data.session) {
-        const syncRes = await fetch("/api/auth/sync-owner-user", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: "register" }),
-        });
-        if (syncRes.ok) {
-          window.location.href = `/o/dashboard`;
-          return;
-        }
-      }
-
-      // メール確認がONの場合（従来通り）
-      setEmailSent(true);
-    } catch {
-      addToast("error", "登録に失敗しました。もう一度お試しください");
-    } finally {
-      setIsLoading(false);
+      addToast("error", message);
     }
   };
+
+  const isLoading = requestSignup.isPending;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
