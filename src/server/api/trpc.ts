@@ -43,7 +43,8 @@ async function getSupabaseSession(): Promise<Session | null> {
     const prismaUser = await getCachedPrismaUserBySupabaseId(user.id);
 
     // Prisma ユーザーが存在しない場合は null を返す。
-    // ユーザー作成は正規フロー（/api/auth/callback または /api/auth/sync-cast-user）に任せる。
+    // ユーザー作成は正規フロー (Owner: /api/auth/callback or /api/auth/sync-owner-user、
+    // Cast: NextAuth adapter の createUser) に任せる。
     if (!prismaUser) {
       return null;
     }

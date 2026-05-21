@@ -5,6 +5,9 @@
  * 直後の DiagnosisSync が空の answers を見てしまい、 Cast への診断データ反映が失われる。
  * clearSession は DiagnosisSync が反映成功時に呼ぶべきで、ログインボタンの onClick では
  * 呼び出してはならない。
+ *
+ * RUN-506: Cast のメールログインは NextAuth Email Provider (`signIn("nodemailer", ...)`)
+ * 一本に統一。Supabase signInWithOtp 分岐は廃止。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
@@ -12,7 +15,6 @@ import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/re
 
 const signInMock = vi.fn();
 const clearSessionMock = vi.fn();
-const signInWithOtpMock = vi.fn();
 
 vi.mock("next-auth/react", () => ({
   signIn: signInMock,
@@ -26,14 +28,6 @@ vi.mock("@/lib/diagnosis-provider", () => ({
   useDiagnosis: () => ({
     session: null,
     clearSession: clearSessionMock,
-  }),
-}));
-
-vi.mock("@/lib/supabase-auth", () => ({
-  createBrowserClient: () => ({
-    auth: {
-      signInWithOtp: signInWithOtpMock,
-    },
   }),
 }));
 
@@ -55,17 +49,11 @@ describe("/c/login handleLogin (BUG-1/2)", () => {
   beforeEach(() => {
     signInMock.mockReset();
     clearSessionMock.mockReset();
-    signInWithOtpMock.mockReset();
-    // Supabase 経路を有効化
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
   });
 
   afterEach(() => {
     cleanup();
     vi.resetModules();
-    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   });
 
   it("LINE ログインボタン押下時に clearSession() を呼ばない", async () => {
@@ -82,35 +70,7 @@ describe("/c/login handleLogin (BUG-1/2)", () => {
     expect(clearSessionMock).not.toHaveBeenCalled();
   });
 
-  it("メール (Supabase 経路) 送信成功後も clearSession() を呼ばない", async () => {
-    signInWithOtpMock.mockResolvedValue({ error: null });
-
-    const mod = await import("@/app/c/(auth)/login/page");
-    const LoginPage = mod.default;
-
-    render(React.createElement(LoginPage));
-
-    // メールフォームを開く
-    const showFormBtn = await screen.findByRole("button", {
-      name: /メールアドレス.*ログイン/i,
-    });
-    fireEvent.click(showFormBtn);
-
-    const input = await screen.findByLabelText(/メールアドレス/i);
-    fireEvent.change(input, { target: { value: "test@example.com" } });
-
-    const submitBtn = screen.getByRole("button", { name: /メールでログイン/i });
-    fireEvent.click(submitBtn);
-
-    await waitFor(() => {
-      expect(signInWithOtpMock).toHaveBeenCalledTimes(1);
-    });
-    expect(clearSessionMock).not.toHaveBeenCalled();
-  });
-
-  it("メール (Nodemailer フォールバック経路) 送信成功後も clearSession() を呼ばない", async () => {
-    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  it("メール (NextAuth Email Provider) 送信成功後も clearSession() を呼ばない", async () => {
     signInMock.mockResolvedValue({ ok: true });
 
     const mod = await import("@/app/c/(auth)/login/page");

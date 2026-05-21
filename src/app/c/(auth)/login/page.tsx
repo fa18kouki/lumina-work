@@ -7,14 +7,6 @@ import { signIn } from "next-auth/react";
 import { Suspense, useState } from "react";
 import { useDiagnosis } from "@/lib/diagnosis-provider";
 import { resolveLoginCallback } from "@/lib/login-callback";
-import { createBrowserClient } from "@/lib/supabase-auth";
-
-const useSupabaseAuth = () =>
-  Boolean(
-    typeof window !== "undefined" &&
-      process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
 
 function LoginContent() {
   const searchParams = useSearchParams();
@@ -24,7 +16,6 @@ function LoginContent() {
   const [emailSent, setEmailSent] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [showEmailForm, setShowEmailForm] = useState(false);
-  const useSupabase = useSupabaseAuth();
 
   // RUN-248: 診断結果が未消費 (session.result あり) の時のみ fromDiagnosis とみなす
   const { fromDiagnosis, callbackUrl } = resolveLoginCallback({
@@ -40,35 +31,23 @@ function LoginContent() {
     signIn("line", { callbackUrl });
   };
 
+  // RUN-506: Cast の認証経路は NextAuth (LINE / Twitter / Email Provider) に一本化。
+  // メールログインも NextAuth Email Provider (`src/lib/auth-resend-provider.ts`) 経由で
+  // Resend SDK 送信する。Supabase signInWithOtp 経路はここからは使わない。
+  // 詳細: docs/email-architecture.md
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
     setEmailError("");
     setIsEmailLoading(true);
     try {
-      if (useSupabase) {
-        const supabase = createBrowserClient();
-        const next = encodeURIComponent(callbackUrl);
-        const redirectTo = `${window.location.origin}/c/login/callback?next=${next}`;
-        const { error } = await supabase.auth.signInWithOtp({
-          email,
-          options: { emailRedirectTo: redirectTo },
-        });
-        if (error) {
-          setEmailError(error.message);
-          return;
-        }
-        // BUG-1/2: clearSession() は呼ばない (上記 handleLogin 同様の理由)
-        setEmailSent(true);
-      } else {
-        await signIn("nodemailer", {
-          email,
-          callbackUrl,
-          redirect: false,
-        });
-        // BUG-1/2: clearSession() は呼ばない
-        setEmailSent(true);
-      }
+      await signIn("nodemailer", {
+        email,
+        callbackUrl,
+        redirect: false,
+      });
+      // BUG-1/2: clearSession() は呼ばない (上記 handleLogin 同様の理由)
+      setEmailSent(true);
     } catch {
       console.error("Email sign in failed");
       setEmailError("送信に失敗しました。しばらく経ってからお試しください。");
