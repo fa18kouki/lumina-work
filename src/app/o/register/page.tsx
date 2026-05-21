@@ -62,9 +62,14 @@ function OwnerRegisterForm() {
         return;
       }
 
-      // メール確認がOFFの場合、sessionが即座に返る → 直接ダッシュボードへ
+      // メール確認がOFFの場合、sessionが即座に返る → 直接ダッシュボードへ。
+      // mode=register: /o/register からの新規登録なので User+Owner+Subscription を作成する。
       if (data.session) {
-        const syncRes = await fetch("/api/auth/sync-owner-user", { method: "POST" });
+        const syncRes = await fetch("/api/auth/sync-owner-user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: "register" }),
+        });
         if (syncRes.ok) {
           window.location.href = `/o/dashboard`;
           return;

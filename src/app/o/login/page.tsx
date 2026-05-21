@@ -83,15 +83,22 @@ function OwnerLoginForm() {
           return;
         }
 
-        // 通常の invite / signup / magiclink は owner provisioning を回して dashboard へ
+        // 通常の invite / signup / magiclink は owner provisioning を回して dashboard へ。
+        // mode=invite で「未存在なら新規作成」を許可する (招待リンクは admin が許諾済の意図表明)。
         const syncRes = await fetch("/api/auth/sync-owner-user", {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: "invite" }),
         });
         if (!syncRes.ok) {
           if (!cancelled) {
             if (syncRes.status === 409) {
               setError(
                 "このメールアドレスは既に別のアカウントに紐付いています。サポートにお問い合わせください",
+              );
+            } else if (syncRes.status === 410) {
+              setError(
+                "このアカウントは退会済みです。再度ご利用される場合は新規登録をお願いします",
               );
             } else {
               setError("ログインに失敗しました。もう一度お試しください");
@@ -136,11 +143,32 @@ function OwnerLoginForm() {
         return;
       }
 
-      const syncRes = await fetch("/api/auth/sync-owner-user", { method: "POST" });
+      // mode=login: 未登録メールでの auto-create を許可しない (security)。
+      const syncRes = await fetch("/api/auth/sync-owner-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "login" }),
+      });
 
       if (!syncRes.ok) {
-        if (syncRes.status === 409) {
-          setError("このメールアドレスは既に別のアカウントに紐付いています。サポートにお問い合わせください");
+        // 取得した Supabase セッションは「中途半端な認証状態」になるため破棄する。
+        // 残しておくと middleware は通すのに /o/layout がリダイレクトに回す状態が続く。
+        await supabase.auth.signOut().catch(() => {
+          // sign-out 失敗は表示エラーで観測されるので無視する
+        });
+
+        if (syncRes.status === 404) {
+          setError(
+            "このメールアドレスは登録されていません。新規登録から始めてください",
+          );
+        } else if (syncRes.status === 409) {
+          setError(
+            "このメールアドレスは既に別のアカウントに紐付いています。サポートにお問い合わせください",
+          );
+        } else if (syncRes.status === 410) {
+          setError(
+            "このアカウントは退会済みです。再度ご利用される場合は新規登録をお願いします",
+          );
         } else {
           setError("ログインに失敗しました。もう一度お試しください");
         }
