@@ -158,4 +158,36 @@ describe("cast.upsertProfile - 連絡先必須化 (電話/SNS/メール のい�
     });
     expect(castUpsertMock).toHaveBeenCalledTimes(1);
   });
+
+  it.each([
+    ["phoneNumber", "　　　"],
+    ["email", "　"],
+    ["instagramId", "　"],
+    ["lineId", " 　 "],
+  ] as const)(
+    "全角空白のみの %s は連絡先未入力扱いで BAD_REQUEST",
+    async (field, value) => {
+      const caller = await createCastCaller();
+      await expect(
+        caller.cast.upsertProfile({
+          nickname: "さくら",
+          [field]: value,
+        })
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+      expect(castUpsertMock).not.toHaveBeenCalled();
+    }
+  );
+
+  it("半角/全角空白を混ぜた phoneNumber も BAD_REQUEST", async () => {
+    const caller = await createCastCaller();
+    await expect(
+      caller.cast.upsertProfile({
+        nickname: "さくら",
+        phoneNumber: " 　\t　 ",
+        email: "",
+        instagramId: "  ",
+      })
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(castUpsertMock).not.toHaveBeenCalled();
+  });
 });
