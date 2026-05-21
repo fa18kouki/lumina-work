@@ -20,7 +20,7 @@ export function NoShowReportedEmail({
         {storeName}との面接に無断欠席が報告されました。
       </Text>
       <Text style={{ color: "#dc3545" }}>
-        ペナルティ: {penaltyCount}回目/3回
+        {`ペナルティ: ${penaltyCount}回目/3回`}
       </Text>
       {penaltyCount === 2 ? (
         <Text style={{ color: "#dc3545", fontWeight: "bold" }}>

@@ -1,17 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render } from "@react-email/components";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import type { NotificationEvent } from "@/server/notifications/types";
 
-const mockSendMail = vi.fn();
-vi.mock("nodemailer", () => ({
-  default: {
-    createTransport: () => ({
-      sendMail: mockSendMail,
-    }),
+const mockSend = vi.fn();
+vi.mock("resend", () => ({
+  Resend: class {
+    emails = {
+      send: (...args: unknown[]) => mockSend(...args),
+    };
   },
 }));
 
-// isStoreNotificationEnabled が prisma.owner.findUnique を叩くため最小モック。
-// null を返すと「設定未保存=デフォルトON」のパスに入り、メール送信ロジックを通せる。
 vi.mock("@/server/db", () => ({
   prisma: {
     owner: {
@@ -20,17 +20,29 @@ vi.mock("@/server/db", () => ({
   },
 }));
 
+async function getCallArgs(call = 0) {
+  const [emailArgs] = mockSend.mock.calls[call] as [
+    { from: string; to: string; subject: string; react: React.ReactElement },
+  ];
+  const html = await render(emailArgs.react);
+  return {
+    to: emailArgs.to,
+    subject: emailArgs.subject,
+    html,
+  };
+}
+
 describe("sendEmailNotification - P1/P2イベント", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
     vi.unstubAllEnvs();
+    mockSend.mockResolvedValue({ data: { id: "msg" }, error: null });
   });
 
   describe("MESSAGE_RECEIVED_STORE", () => {
     it("店舗にメッセージ通知メールを送信する", async () => {
-      vi.stubEnv("EMAIL_SERVER_HOST", "smtp.example.com");
-      vi.stubEnv("EMAIL_FROM", "noreply@lumina.app");
+      vi.stubEnv("RESEND_API_KEY", "re_test");
 
       const { sendEmailNotification } = await import(
         "@/server/notifications/channels/email"
@@ -47,11 +59,10 @@ describe("sendEmailNotification - P1/P2イベント", () => {
         },
       };
 
-      mockSendMail.mockResolvedValueOnce({});
       await sendEmailNotification(event);
 
-      expect(mockSendMail).toHaveBeenCalledOnce();
-      const callArgs = mockSendMail.mock.calls[0][0];
+      expect(mockSend).toHaveBeenCalledOnce();
+      const callArgs = await getCallArgs();
       expect(callArgs.to).toBe("store@example.com");
       expect(callArgs.subject).toContain("みさき");
     });
@@ -59,7 +70,7 @@ describe("sendEmailNotification - P1/P2イベント", () => {
 
   describe("NO_SHOW_REPORTED", () => {
     it("キャストにノーショーメールを送信する", async () => {
-      vi.stubEnv("EMAIL_SERVER_HOST", "smtp.example.com");
+      vi.stubEnv("RESEND_API_KEY", "re_test");
 
       const { sendEmailNotification } = await import(
         "@/server/notifications/channels/email"
@@ -77,11 +88,10 @@ describe("sendEmailNotification - P1/P2イベント", () => {
         },
       };
 
-      mockSendMail.mockResolvedValueOnce({});
       await sendEmailNotification(event);
 
-      expect(mockSendMail).toHaveBeenCalledOnce();
-      const callArgs = mockSendMail.mock.calls[0][0];
+      expect(mockSend).toHaveBeenCalledOnce();
+      const callArgs = await getCallArgs();
       expect(callArgs.to).toBe("cast@example.com");
       expect(callArgs.html).toContain("1回目/3回");
     });
@@ -89,7 +99,7 @@ describe("sendEmailNotification - P1/P2イベント", () => {
 
   describe("ACCOUNT_SUSPENDED", () => {
     it("キャストにアカウント停止メールを送信する", async () => {
-      vi.stubEnv("EMAIL_SERVER_HOST", "smtp.example.com");
+      vi.stubEnv("RESEND_API_KEY", "re_test");
 
       const { sendEmailNotification } = await import(
         "@/server/notifications/channels/email"
@@ -103,11 +113,10 @@ describe("sendEmailNotification - P1/P2イベント", () => {
         },
       };
 
-      mockSendMail.mockResolvedValueOnce({});
       await sendEmailNotification(event);
 
-      expect(mockSendMail).toHaveBeenCalledOnce();
-      const callArgs = mockSendMail.mock.calls[0][0];
+      expect(mockSend).toHaveBeenCalledOnce();
+      const callArgs = await getCallArgs();
       expect(callArgs.to).toBe("cast@example.com");
       expect(callArgs.subject).toContain("停止");
     });
@@ -115,7 +124,7 @@ describe("sendEmailNotification - P1/P2イベント", () => {
 
   describe("OFFER_EXPIRED", () => {
     it("店舗にオファー期限切れメールを送信する", async () => {
-      vi.stubEnv("EMAIL_SERVER_HOST", "smtp.example.com");
+      vi.stubEnv("RESEND_API_KEY", "re_test");
 
       const { sendEmailNotification } = await import(
         "@/server/notifications/channels/email"
@@ -131,11 +140,10 @@ describe("sendEmailNotification - P1/P2イベント", () => {
         },
       };
 
-      mockSendMail.mockResolvedValueOnce({});
       await sendEmailNotification(event);
 
-      expect(mockSendMail).toHaveBeenCalledOnce();
-      const callArgs = mockSendMail.mock.calls[0][0];
+      expect(mockSend).toHaveBeenCalledOnce();
+      const callArgs = await getCallArgs();
       expect(callArgs.to).toBe("store@example.com");
       expect(callArgs.subject).toContain("期限");
       expect(callArgs.html).toContain("みさき");
