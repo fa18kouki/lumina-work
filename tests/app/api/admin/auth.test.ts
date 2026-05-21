@@ -30,6 +30,27 @@ interface CapturedResponse extends Response {
   };
 }
 
+/**
+ * tests/__mocks__/next-server.ts が `cookies._captured()` を生やしているはずだが、
+ * future の mock 改変で消えても気付けるよう、cast 前に runtime guard で確認する。
+ *
+ * `unknown` cast → 型 narrowing → assert の順で書くと、最終的な NextResponse 由来の
+ * res.cookies は通常 `ResponseCookies` 型なので two-step cast が必要。
+ */
+function assertCapturedResponse(res: Response): asserts res is CapturedResponse {
+  const captured = (res as { cookies?: { _captured?: unknown } }).cookies;
+  if (
+    typeof captured !== "object" ||
+    captured === null ||
+    typeof (captured as { _captured?: unknown })._captured !== "function"
+  ) {
+    throw new Error(
+      "Response does not expose cookies._captured(). " +
+        "Check tests/__mocks__/next-server.ts — the cookie capture shim may have changed.",
+    );
+  }
+}
+
 describe("POST /api/admin/auth", () => {
   beforeEach(() => {
     process.env.ADMIN_API_KEY = SECRET;
@@ -51,13 +72,15 @@ describe("POST /api/admin/auth", () => {
   });
 
   it("401 for wrong API key (and no cookie is set)", async () => {
-    const res = (await POST(makeRequest({ apiKey: "wrong-key" }))) as CapturedResponse;
+    const res = await POST(makeRequest({ apiKey: "wrong-key" }));
+    assertCapturedResponse(res);
     expect(res.status).toBe(401);
     expect(res.cookies._captured()).toHaveLength(0);
   });
 
   it("200 + HttpOnly admin-session cookie for valid API key", async () => {
-    const res = (await POST(makeRequest({ apiKey: SECRET }))) as CapturedResponse;
+    const res = await POST(makeRequest({ apiKey: SECRET }));
+    assertCapturedResponse(res);
     expect(res.status).toBe(200);
     const captured = res.cookies._captured();
     expect(captured).toHaveLength(1);
@@ -74,7 +97,8 @@ describe("POST /api/admin/auth", () => {
 
 describe("DELETE /api/admin/auth (logout)", () => {
   it("200 + clears admin-session cookie (maxAge=0)", async () => {
-    const res = (await DELETE()) as CapturedResponse;
+    const res = await DELETE();
+    assertCapturedResponse(res);
     expect(res.status).toBe(200);
     const captured = res.cookies._captured();
     expect(captured).toHaveLength(1);
