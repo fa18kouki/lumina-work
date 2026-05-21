@@ -12,7 +12,7 @@ import { OfferExpiredEmail } from "@/emails/offer-expired";
 import { OfferReceivedEmail } from "@/emails/offer-received";
 import { OfferRejectedEmail } from "@/emails/offer-rejected";
 import { getAppUrl } from "@/lib/app-url";
-import { EMAIL_FROM, IDEMPOTENCY_NAMESPACE, getResend } from "@/lib/resend";
+import { IDEMPOTENCY_NAMESPACE, getEmailFrom, getResend } from "@/lib/resend";
 import { prisma } from "@/server/db";
 
 import type { NotificationEvent } from "../types";
@@ -270,7 +270,7 @@ async function send(payload: EmailPayload): Promise<void> {
   const resend = getResend();
   const { error } = await resend.emails.send(
     {
-      from: EMAIL_FROM,
+      from: getEmailFrom(),
       to: payload.to,
       subject: payload.subject,
       react: payload.react,
