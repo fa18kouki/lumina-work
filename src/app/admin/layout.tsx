@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 
 import { AdminLogoutButton } from "@/components/admin/admin-logout-button";
+import { AdminNav } from "@/components/admin/admin-nav";
 import {
   ADMIN_SESSION_COOKIE,
   verifyAdminSessionCookie,
@@ -30,17 +31,20 @@ export default async function AdminLayout({
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-semibold tracking-tight">
               LUMINA Admin
             </h1>
             <span className="text-xs text-slate-500">internal use only</span>
           </div>
-          {authed ? <AdminLogoutButton /> : null}
+          <div className="flex flex-wrap items-center gap-4">
+            {authed ? <AdminNav /> : null}
+            {authed ? <AdminLogoutButton /> : null}
+          </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
+      <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
     </div>
   );
 }
