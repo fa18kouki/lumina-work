@@ -88,13 +88,38 @@ export const adminInviteRouter = createTRPCRouter({
       const { data, error } = await sendSupabaseInvite(input.email);
       if (error) {
         // ロールバック: 失敗した招待は REVOKED にして「実体無し」状態に戻す。
-        await ctx.prisma.adminInvitation.update({
-          where: { id: claim.invitation.id },
-          data: { status: "REVOKED", revokedAt: new Date() },
-        });
+        // ロールバック自体が失敗すると "Supabase は失敗したが Prisma 上は PENDING"
+        // という不整合が残り、再招待が CONFLICT で詰まるので、両方の error を
+        // 構造化ログに残した上で TRPCError のメッセージにも両方の文脈を含める。
+        let rollbackFailure: unknown = null;
+        try {
+          await ctx.prisma.adminInvitation.update({
+            where: { id: claim.invitation.id },
+            data: { status: "REVOKED", revokedAt: new Date() },
+          });
+        } catch (rollbackError) {
+          rollbackFailure = rollbackError;
+          console.error("[admin-panel.invite.create] rollback failed", {
+            timestamp: new Date().toISOString(),
+            invitationId: claim.invitation.id,
+            email: input.email,
+            supabaseError: error.message,
+            rollbackError:
+              rollbackError instanceof Error
+                ? rollbackError.message
+                : String(rollbackError),
+          });
+        }
+        const rollbackSuffix = rollbackFailure
+          ? ` (rollback also failed: ${
+              rollbackFailure instanceof Error
+                ? rollbackFailure.message
+                : String(rollbackFailure)
+            }; invitation id=${claim.invitation.id} may be left PENDING — manual cleanup required)`
+          : "";
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Supabase invite failed: ${error.message}`,
+          message: `Supabase invite failed: ${error.message}${rollbackSuffix}`,
         });
       }
 

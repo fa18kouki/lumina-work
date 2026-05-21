@@ -253,6 +253,41 @@ describe("adminPanel.invite.create", () => {
       }),
     );
   });
+
+  it("Supabase + ロールバック両方失敗時もエラーを投げ、両方の文脈を含める", async () => {
+    inviteUserByEmail.mockResolvedValue({
+      data: { user: null },
+      error: { message: "rate limited" },
+    });
+    adminInvitationUpdate.mockRejectedValueOnce(
+      new Error("db connection lost"),
+    );
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    try {
+      const caller = await createCaller();
+      await expect(
+        caller.adminPanel.invite.create({ email: "double-fail@example.com" }),
+      ).rejects.toMatchObject({
+        code: "INTERNAL_SERVER_ERROR",
+        // Supabase 由来 + rollback 由来の両方の文字列を含むこと
+        message: expect.stringMatching(
+          /Supabase invite failed.*rate limited.*rollback also failed.*db connection lost/s,
+        ),
+      });
+      // 構造化ログにも両方の情報が出ること
+      expect(consoleError).toHaveBeenCalledWith(
+        "[admin-panel.invite.create] rollback failed",
+        expect.objectContaining({
+          supabaseError: "rate limited",
+          rollbackError: "db connection lost",
+        }),
+      );
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
 });
 
 describe("adminPanel.invite.resend", () => {
