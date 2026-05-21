@@ -38,18 +38,26 @@ vi.mock("@/server/db", () => ({
 }));
 
 // ---- Supabase admin client mock
-const inviteUserByEmail = vi.fn();
 const deleteUser = vi.fn();
+const generateLink = vi.fn();
 
 vi.mock("@/lib/supabase-admin", () => ({
   getSupabaseAdminClient: () => ({
     auth: {
       admin: {
-        inviteUserByEmail: (...args: unknown[]) =>
-          inviteUserByEmail(...args),
         deleteUser: (...args: unknown[]) => deleteUser(...args),
+        generateLink: (...args: unknown[]) => generateLink(...args),
       },
     },
+  }),
+}));
+
+// ---- Resend mock
+const resendEmailsSend = vi.fn();
+vi.mock("@/lib/resend", () => ({
+  EMAIL_FROM: "LUMINA <noreply@lumina-work.jp>",
+  getResend: () => ({
+    emails: { send: (...args: unknown[]) => resendEmailsSend(...args) },
   }),
 }));
 
@@ -82,6 +90,32 @@ function loginWithValidCookie() {
 
 function clearCookie() {
   cookieValueForTest = undefined;
+}
+
+const FAKE_ACTION_LINK =
+  "https://lsjilrrydfpzeaafwwqk.supabase.co/auth/v1/verify?token=abc&type=invite&redirect_to=https://example.test/o/login";
+
+function mockGenerateLinkSuccess(userId: string = "sb-uuid-1") {
+  generateLink.mockResolvedValue({
+    data: {
+      properties: {
+        action_link: FAKE_ACTION_LINK,
+        email_otp: "000000",
+        hashed_token: "h",
+        redirect_to: "https://example.test/o/login",
+        verification_type: "invite",
+      },
+      user: { id: userId, email: "x@example.com" },
+    },
+    error: null,
+  });
+}
+
+function mockResendSuccess() {
+  resendEmailsSend.mockResolvedValue({
+    data: { id: "resend-id-1" },
+    error: null,
+  });
 }
 
 describe("adminPanel.invite — 認可", () => {
@@ -162,10 +196,8 @@ describe("adminPanel.invite.create", () => {
     process.env.ADMIN_API_KEY = SECRET;
     process.env.NEXT_PUBLIC_APP_URL = "https://example.test";
     loginWithValidCookie();
-    inviteUserByEmail.mockResolvedValue({
-      data: { user: { id: "sb-uuid-1", email: "new@example.com" } },
-      error: null,
-    });
+    mockGenerateLinkSuccess();
+    mockResendSuccess();
     adminInvitationFindUnique.mockResolvedValue(null);
     adminInvitationCreate.mockImplementation(({ data }) => ({
       id: "inv-new",
@@ -184,26 +216,41 @@ describe("adminPanel.invite.create", () => {
     }));
   });
 
-  it("Supabase inviteUserByEmail と Prisma upsert を呼ぶ", async () => {
+  it("generateLink で invite link を発行し Resend で送信、Prisma upsert する", async () => {
     const caller = await createCaller();
     const result = await caller.adminPanel.invite.create({
       email: "new@example.com",
     });
-    expect(inviteUserByEmail).toHaveBeenCalledWith(
-      "new@example.com",
+    expect(generateLink).toHaveBeenCalledWith(
       expect.objectContaining({
-        // implicit flow の hash fragment を読める /o/login に直接着地させる。
-        // /o/login 側で setSession + /api/auth/sync-owner-user を呼んで
-        // User/Owner provisioning + AdminInvitation 受諾マーク を行う。
-        redirectTo: "https://example.test/o/login",
+        type: "invite",
+        email: "new@example.com",
+        options: expect.objectContaining({
+          // implicit flow の hash fragment を読める /o/login に直接着地させる。
+          // /o/login 側で setSession + /api/auth/sync-owner-user を呼んで
+          // User/Owner provisioning + AdminInvitation 受諾マーク を行う。
+          redirectTo: "https://example.test/o/login",
+        }),
       }),
     );
+    expect(resendEmailsSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: "LUMINA <noreply@lumina-work.jp>",
+        to: "new@example.com",
+        subject: "LUMINA オーナー招待のお知らせ",
+      }),
+    );
+    // Resend に渡すペイロードに action_link が含まれること (react & text)
+    const sendPayload = resendEmailsSend.mock.calls[0]?.[0] as {
+      text: string;
+    };
+    expect(sendPayload.text).toContain(FAKE_ACTION_LINK);
     expect(adminInvitationUpsert).toHaveBeenCalledOnce();
     expect(result.email).toBe("new@example.com");
     expect(result.status).toBe("PENDING");
   });
 
-  it("既存の PENDING 招待がある email は CONFLICT", async () => {
+  it("既存の PENDING 招待がある email は CONFLICT (Supabase API は呼ばない)", async () => {
     adminInvitationFindUnique.mockResolvedValue({
       id: "inv-existing",
       email: "dup@example.com",
@@ -213,7 +260,8 @@ describe("adminPanel.invite.create", () => {
     await expect(
       caller.adminPanel.invite.create({ email: "dup@example.com" }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
-    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(generateLink).not.toHaveBeenCalled();
+    expect(resendEmailsSend).not.toHaveBeenCalled();
   });
 
   it("REVOKED 状態の email は再招待でき、PENDING に戻す", async () => {
@@ -232,7 +280,8 @@ describe("adminPanel.invite.create", () => {
     const result = await caller.adminPanel.invite.create({
       email: "revoked@example.com",
     });
-    expect(inviteUserByEmail).toHaveBeenCalledOnce();
+    expect(generateLink).toHaveBeenCalledOnce();
+    expect(resendEmailsSend).toHaveBeenCalledOnce();
     expect(adminInvitationUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
         update: expect.objectContaining({ status: "PENDING" }),
@@ -241,18 +290,42 @@ describe("adminPanel.invite.create", () => {
     expect(result.status).toBe("PENDING");
   });
 
-  it("Supabase がエラーを返したら INTERNAL_SERVER_ERROR、claim 行は REVOKED にロールバック", async () => {
-    inviteUserByEmail.mockResolvedValue({
-      data: { user: null },
+  it("generateLink がエラー → INTERNAL_SERVER_ERROR、claim 行を REVOKED にロールバック", async () => {
+    generateLink.mockResolvedValue({
+      data: { user: null, properties: null },
       error: { message: "rate limited" },
     });
     const caller = await createCaller();
     await expect(
       caller.adminPanel.invite.create({ email: "err@example.com" }),
-    ).rejects.toMatchObject({ code: "INTERNAL_SERVER_ERROR" });
-    // upsert で claim はされた (Supabase 呼ぶ前)
+    ).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      message: expect.stringContaining("Supabase invite failed"),
+    });
     expect(adminInvitationUpsert).toHaveBeenCalledOnce();
-    // 失敗ロールバックで update が REVOKED に呼ばれた
+    expect(adminInvitationUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: "REVOKED" }),
+      }),
+    );
+    // generateLink で失敗した時点で Resend は呼ばれない
+    expect(resendEmailsSend).not.toHaveBeenCalled();
+  });
+
+  it("generateLink 成功 → Resend 失敗 → INTERNAL_SERVER_ERROR、claim 行を REVOKED にロールバック", async () => {
+    resendEmailsSend.mockResolvedValue({
+      data: null,
+      error: { message: "resend api down" },
+    });
+    const caller = await createCaller();
+    await expect(
+      caller.adminPanel.invite.create({ email: "resend-fail@example.com" }),
+    ).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      message: expect.stringContaining("Resend send failed"),
+    });
+    expect(generateLink).toHaveBeenCalledOnce();
+    expect(resendEmailsSend).toHaveBeenCalledOnce();
     expect(adminInvitationUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: "REVOKED" }),
@@ -260,9 +333,9 @@ describe("adminPanel.invite.create", () => {
     );
   });
 
-  it("Supabase + ロールバック両方失敗時もエラーを投げ、両方の文脈を含める", async () => {
-    inviteUserByEmail.mockResolvedValue({
-      data: { user: null },
+  it("generateLink + ロールバック両方失敗時もエラーを投げ、両方の文脈を含める", async () => {
+    generateLink.mockResolvedValue({
+      data: { user: null, properties: null },
       error: { message: "rate limited" },
     });
     adminInvitationUpdate.mockRejectedValueOnce(
@@ -277,17 +350,16 @@ describe("adminPanel.invite.create", () => {
         caller.adminPanel.invite.create({ email: "double-fail@example.com" }),
       ).rejects.toMatchObject({
         code: "INTERNAL_SERVER_ERROR",
-        // Supabase 由来 + rollback 由来の両方の文字列を含むこと
         message: expect.stringMatching(
           /Supabase invite failed.*rate limited.*rollback also failed.*db connection lost/s,
         ),
       });
-      // 構造化ログにも両方の情報が出ること
       expect(consoleError).toHaveBeenCalledWith(
         "[admin-panel.invite.create] rollback failed",
         expect.objectContaining({
           supabaseError: "rate limited",
           rollbackError: "db connection lost",
+          phase: "generateLink",
         }),
       );
     } finally {
@@ -300,19 +372,18 @@ describe("adminPanel.invite.resend", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.ADMIN_API_KEY = SECRET;
+    process.env.NEXT_PUBLIC_APP_URL = "https://example.test";
     loginWithValidCookie();
+    mockGenerateLinkSuccess();
+    mockResendSuccess();
   });
 
-  it("PENDING 招待を再送し lastSentAt を更新", async () => {
+  it("PENDING 招待は generateLink で再発行 → Resend で送信 → lastSentAt 更新", async () => {
     adminInvitationFindUnique.mockResolvedValue({
       id: "inv-1",
       email: "x@example.com",
       status: "PENDING",
-      supabaseUserId: "sb-1",
-    });
-    inviteUserByEmail.mockResolvedValue({
-      data: { user: { id: "sb-1" } },
-      error: null,
+      supabaseUserId: "sb-uuid-1",
     });
     adminInvitationUpdate.mockImplementation(({ where, data }) => ({
       id: where.id,
@@ -321,18 +392,113 @@ describe("adminPanel.invite.resend", () => {
     }));
     const caller = await createCaller();
     await caller.adminPanel.invite.resend({ id: "inv-1" });
-    expect(inviteUserByEmail).toHaveBeenCalledWith(
-      "x@example.com",
-      expect.any(Object),
+    expect(generateLink).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "invite",
+        email: "x@example.com",
+        options: expect.objectContaining({
+          redirectTo: "https://example.test/o/login",
+        }),
+      }),
+    );
+    expect(resendEmailsSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "x@example.com",
+        subject: "LUMINA オーナー招待のお知らせ",
+      }),
     );
     expect(adminInvitationUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "inv-1" },
+        data: expect.objectContaining({ status: "PENDING" }),
+      }),
+    );
+  });
+
+  it("generateLink の戻り user.id が DB と異なれば supabaseUserId を更新", async () => {
+    adminInvitationFindUnique.mockResolvedValue({
+      id: "inv-1",
+      email: "x@example.com",
+      status: "PENDING",
+      supabaseUserId: null,
+    });
+    mockGenerateLinkSuccess("sb-new");
+    adminInvitationUpdate.mockImplementation(({ where, data }) => ({
+      id: where.id,
+      ...data,
+    }));
+    const caller = await createCaller();
+    await caller.adminPanel.invite.resend({ id: "inv-1" });
+    expect(adminInvitationUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
         data: expect.objectContaining({
           status: "PENDING",
+          supabaseUserId: "sb-new",
         }),
       }),
     );
+  });
+
+  it("supabaseUserId が一致しているなら update payload に含めない", async () => {
+    adminInvitationFindUnique.mockResolvedValue({
+      id: "inv-1",
+      email: "x@example.com",
+      status: "PENDING",
+      supabaseUserId: "sb-uuid-1",
+    });
+    adminInvitationUpdate.mockImplementation(({ where, data }) => ({
+      id: where.id,
+      ...data,
+    }));
+    const caller = await createCaller();
+    await caller.adminPanel.invite.resend({ id: "inv-1" });
+    const updateArg = adminInvitationUpdate.mock.calls[0]?.[0] as {
+      data: Record<string, unknown>;
+    };
+    expect(updateArg.data).not.toHaveProperty("supabaseUserId");
+  });
+
+  it("generateLink がエラーを返したら INTERNAL_SERVER_ERROR (Resend は呼ばない)", async () => {
+    adminInvitationFindUnique.mockResolvedValue({
+      id: "inv-1",
+      email: "x@example.com",
+      status: "PENDING",
+      supabaseUserId: "sb-uuid-1",
+    });
+    generateLink.mockResolvedValue({
+      data: { user: null, properties: null },
+      error: { message: "rate limited" },
+    });
+    const caller = await createCaller();
+    await expect(
+      caller.adminPanel.invite.resend({ id: "inv-1" }),
+    ).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      message: expect.stringContaining("Supabase resend failed"),
+    });
+    expect(resendEmailsSend).not.toHaveBeenCalled();
+    expect(adminInvitationUpdate).not.toHaveBeenCalled();
+  });
+
+  it("Resend send がエラーを返したら INTERNAL_SERVER_ERROR、DB 更新しない", async () => {
+    adminInvitationFindUnique.mockResolvedValue({
+      id: "inv-1",
+      email: "x@example.com",
+      status: "PENDING",
+      supabaseUserId: "sb-uuid-1",
+    });
+    resendEmailsSend.mockResolvedValue({
+      data: null,
+      error: { message: "resend api down" },
+    });
+    const caller = await createCaller();
+    await expect(
+      caller.adminPanel.invite.resend({ id: "inv-1" }),
+    ).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      message: expect.stringContaining("Resend send failed"),
+    });
+    expect(adminInvitationUpdate).not.toHaveBeenCalled();
   });
 
   it("ACCEPTED 招待は再送拒否 BAD_REQUEST", async () => {
@@ -345,7 +511,8 @@ describe("adminPanel.invite.resend", () => {
     await expect(
       caller.adminPanel.invite.resend({ id: "inv-1" }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
-    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(generateLink).not.toHaveBeenCalled();
+    expect(resendEmailsSend).not.toHaveBeenCalled();
   });
 
   it("存在しない id は NOT_FOUND", async () => {
