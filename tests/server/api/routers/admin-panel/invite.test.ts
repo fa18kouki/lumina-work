@@ -1,4 +1,3 @@
-import { TRPCError } from "@trpc/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -84,6 +83,13 @@ function clearCookie() {
   cookieValueForTest = undefined;
 }
 
+// top-level beforeEach: テスト間で `cookieValueForTest` のリークを防ぐ。
+// 各 describe の beforeEach が loginWithValidCookie() / clearCookie() を呼ぶより
+// 先にここで undefined に戻すことで、テストの実行順に依存しない安全な初期状態を保証。
+beforeEach(() => {
+  clearCookie();
+});
+
 describe("adminPanel.invite — 認可", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -92,7 +98,7 @@ describe("adminPanel.invite — 認可", () => {
   });
 
   it("admin-session cookie が無いと UNAUTHORIZED", async () => {
-    clearCookie();
+    // top-level beforeEach で clearCookie 済み
     const caller = await createCaller();
     await expect(
       caller.adminPanel.invite.list({}),
@@ -102,9 +108,11 @@ describe("adminPanel.invite — 認可", () => {
   it("改ざんされた cookie は UNAUTHORIZED", async () => {
     cookieValueForTest = "garbage.value";
     const caller = await createCaller();
+    // class だけでなく error code も assert する (UNAUTHORIZED 以外の TRPCError も
+    // class マッチしてしまうため、コード固定の方が回帰検出力が高い)
     await expect(
       caller.adminPanel.invite.list({}),
-    ).rejects.toBeInstanceOf(TRPCError);
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 
   it("ADMIN_API_KEY 未設定なら INTERNAL_SERVER_ERROR", async () => {
@@ -303,36 +311,60 @@ describe("adminPanel.invite.resend", () => {
     loginWithValidCookie();
   });
 
-  it("PENDING 招待を再送し lastSentAt を更新", async () => {
+  it("PENDING 招待を再送し lastSentAt を更新 (atomic updateMany 経由)", async () => {
     adminInvitationFindUnique.mockResolvedValue({
       id: "inv-1",
       email: "x@example.com",
       status: "PENDING",
-      supabaseUserId: "sb-1",
     });
     inviteUserByEmail.mockResolvedValue({
       data: { user: { id: "sb-1" } },
       error: null,
     });
-    adminInvitationUpdate.mockImplementation(({ where, data }) => ({
-      id: where.id,
+    adminInvitationUpdateMany.mockResolvedValue({ count: 1 });
+    adminInvitationFindUniqueOrThrow.mockResolvedValue({
+      id: "inv-1",
       email: "x@example.com",
-      ...data,
-    }));
+      status: "PENDING",
+      supabaseUserId: "sb-1",
+    });
     const caller = await createCaller();
     await caller.adminPanel.invite.resend({ id: "inv-1" });
     expect(inviteUserByEmail).toHaveBeenCalledWith(
       "x@example.com",
       expect.any(Object),
     );
-    expect(adminInvitationUpdate).toHaveBeenCalledWith(
+    expect(adminInvitationUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "inv-1" },
+        where: { id: "inv-1", status: { not: "ACCEPTED" } },
         data: expect.objectContaining({
           status: "PENDING",
         }),
       }),
     );
+  });
+
+  it("pre-check 通過後に accept が走り込んでも (updateMany count=0) BAD_REQUEST にする (TOCTOU)", async () => {
+    adminInvitationFindUnique.mockResolvedValue({
+      id: "inv-1",
+      email: "x@example.com",
+      status: "PENDING",
+    });
+    inviteUserByEmail.mockResolvedValue({
+      data: { user: { id: "sb-1" } },
+      error: null,
+    });
+    // 直前に accept が走って status=ACCEPTED になったため updateMany は 0 件
+    adminInvitationUpdateMany.mockResolvedValue({ count: 0 });
+    const caller = await createCaller();
+    await expect(
+      caller.adminPanel.invite.resend({ id: "inv-1" }),
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: expect.stringContaining("受諾"),
+    });
+    // 受諾済の行を ACCEPTED → PENDING に上書きしないこと
+    expect(adminInvitationUpdate).not.toHaveBeenCalled();
   });
 
   it("ACCEPTED 招待は再送拒否 BAD_REQUEST", async () => {

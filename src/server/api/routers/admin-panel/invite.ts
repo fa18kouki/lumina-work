@@ -143,20 +143,30 @@ export const adminInviteRouter = createTRPCRouter({
   resend: adminPanelProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
-      const invitation = await ctx.prisma.adminInvitation.findUnique({
+      // ① pre-check: NOT_FOUND の早期検出と email 取得用。
+      //   status は updateMany の条件で再評価するので、ここでの ACCEPTED チェックは
+      //   早期エラー UX のためのものに留める (権威は updateMany の count)。
+      const pre = await ctx.prisma.adminInvitation.findUnique({
         where: { id: input.id },
+        select: { id: true, status: true, email: true },
       });
-      if (!invitation) {
+      if (!pre) {
         throw new TRPCError({ code: "NOT_FOUND" });
       }
-      if (invitation.status === "ACCEPTED") {
+      if (pre.status === "ACCEPTED") {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "受諾済みの招待は再送できません",
         });
       }
 
-      const { error } = await sendSupabaseInvite(invitation.email);
+      // ② 外部 API (Supabase 再招待) を transaction 外で発火。
+      //   revoke と違って、ここで先に Supabase を叩くと「accept が走り込んで
+      //   ACCEPTED 行に対して inviteUserByEmail を呼ぶ」race が残るが、
+      //   Supabase 側は既に存在する user に対する invite を冪等に扱う
+      //   (resend 用途のため)。問題は DB の status を ACCEPTED → PENDING に
+      //   戻してしまうケース。これは updateMany の条件で防ぐ。
+      const { error } = await sendSupabaseInvite(pre.email);
       if (error) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -164,13 +174,27 @@ export const adminInviteRouter = createTRPCRouter({
         });
       }
 
-      return ctx.prisma.adminInvitation.update({
-        where: { id: input.id },
+      // ③ TOCTOU 対策: pre-check と DB 更新の間に accept が走り込んでも
+      //   status を ACCEPTED → PENDING に上書きしないよう、condition 付き
+      //   update を 1 クエリで投げる。count === 0 は accept が先勝ちした証拠。
+      const updated = await ctx.prisma.adminInvitation.updateMany({
+        where: { id: input.id, status: { not: "ACCEPTED" } },
         data: {
           status: "PENDING",
           lastSentAt: new Date(),
           revokedAt: null,
         },
+      });
+      if (updated.count === 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "受諾済みの招待は再送できません (再送試行中に承諾されました)",
+        });
+      }
+
+      return ctx.prisma.adminInvitation.findUniqueOrThrow({
+        where: { id: input.id },
       });
     }),
 
