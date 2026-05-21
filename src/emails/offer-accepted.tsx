@@ -30,8 +30,8 @@ export function OfferAcceptedEmail({
       preview={`${castNickname}さんがオファーを承諾しました`}
     >
       <Text style={{ color: "#333", lineHeight: 1.6 }}>
-        <strong>{castNickname}</strong>
-        さんがオファーを承諾しました。下記の連絡先から直接ご連絡ください。
+        <strong>{castNickname}</strong>さんがオファーを承諾しました。
+        {hasContact ? "下記の連絡先から直接ご連絡ください。" : "詳細はマイページでご確認ください。"}
       </Text>
       {hasContact ? (
         <Section

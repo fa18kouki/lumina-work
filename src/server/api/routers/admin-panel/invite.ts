@@ -177,36 +177,68 @@ export const adminInviteRouter = createTRPCRouter({
   revoke: adminPanelProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
-      const invitation = await ctx.prisma.adminInvitation.findUnique({
+      // ① 早期 NOT_FOUND と supabaseUserId の取得を兼ねた pre-check。
+      //   ここで status === ACCEPTED でも以下の updateMany が条件で弾くので
+      //   主たる権威は updateMany の count にする。
+      const pre = await ctx.prisma.adminInvitation.findUnique({
         where: { id: input.id },
+        select: { id: true, status: true, supabaseUserId: true },
       });
-      if (!invitation) {
+      if (!pre) {
         throw new TRPCError({ code: "NOT_FOUND" });
       }
-      if (invitation.status === "ACCEPTED") {
+      if (pre.status === "ACCEPTED") {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "受諾済みの招待は失効できません",
         });
       }
 
-      if (invitation.supabaseUserId) {
+      // ② TOCTOU 対策: pre-check と本更新の間に accept が走り込んでも
+      //   レースで負けるよう「status != ACCEPTED の場合のみ REVOKED」を
+      //   1 クエリで atomic に行う。count === 0 は accept が先勝ちした証拠。
+      //   この場合 Supabase 側 deleteUser を呼ばない (= 受諾済みユーザーを
+      //   誤って削除しない安全側に倒す)。
+      const updated = await ctx.prisma.adminInvitation.updateMany({
+        where: { id: input.id, status: { not: "ACCEPTED" } },
+        data: { status: "REVOKED", revokedAt: new Date() },
+      });
+      if (updated.count === 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "受諾済みの招待は失効できません (revoke 試行中に承諾されました)",
+        });
+      }
+
+      // ③ DB は REVOKED でコミット済なので、Supabase 側 user を消す。
+      //   ここでの失敗は DB を戻さない: 戻すと「revoke 試行 → 失敗 →
+      //   invitation 復活 → user が再ログイン可」と整合が崩れる。
+      //   構造化ログを残してオペレーターが手動清掃する運用にする。
+      if (pre.supabaseUserId) {
         const supabase = getSupabaseAdminClient();
         const { error } = await supabase.auth.admin.deleteUser(
-          invitation.supabaseUserId,
+          pre.supabaseUserId,
         );
-        // 404 (すでに無い) は無視。それ以外は失敗扱い。
         if (error && error.status !== 404) {
+          console.error(
+            "[admin-panel.invite.revoke] supabase deleteUser failed",
+            {
+              timestamp: new Date().toISOString(),
+              invitationId: input.id,
+              supabaseUserId: pre.supabaseUserId,
+              supabaseError: error.message,
+            },
+          );
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: `Supabase deleteUser failed: ${error.message}`,
+            message: `Supabase deleteUser failed: ${error.message} (invitation is already REVOKED in DB; supabase user may need manual cleanup)`,
           });
         }
       }
 
-      return ctx.prisma.adminInvitation.update({
+      return ctx.prisma.adminInvitation.findUniqueOrThrow({
         where: { id: input.id },
-        data: { status: "REVOKED", revokedAt: new Date() },
       });
     }),
 });

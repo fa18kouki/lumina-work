@@ -27,6 +27,11 @@ export function NoShowReportedEmail({
           次回の無断欠席でアカウントが停止されます。
         </Text>
       ) : null}
+      {penaltyCount >= 3 ? (
+        <Text style={{ color: "#dc3545", fontWeight: "bold" }}>
+          無断欠席が規定回数 (3 回) に達したため、アカウントが停止されました。
+        </Text>
+      ) : null}
     </NotificationLayout>
   );
 }
