@@ -17,9 +17,13 @@ const listInput = z
 function getInviteRedirectTo(): string | undefined {
   const base = process.env.NEXT_PUBLIC_APP_URL;
   if (!base) return undefined;
-  // 既存のオーナー callback ハンドラを再利用して、PKCE 交換 + Prisma 上の
-  // User / Owner / Subscription provisioning + AdminInvitation 受諾マークまで一気に通す。
-  return `${base.replace(/\/$/, "")}/api/auth/callback?next=/o/dashboard`;
+  // Supabase の招待リンクは implicit flow なので access_token を URL fragment
+  // (#access_token=...&type=invite) に載せて戻ってくる。サーバ側の
+  // /api/auth/callback は ?code= (PKCE) しか拾えず一度 missing_code に弾かれるため、
+  // hash を読めるクライアントページである /o/login に直接着地させ、そこで
+  // supabase.auth.setSession → /api/auth/sync-owner-user で Prisma 上の
+  // User / Owner / Subscription provisioning + AdminInvitation 受諾マークを実行する。
+  return `${base.replace(/\/$/, "")}/o/login`;
 }
 
 async function sendSupabaseInvite(email: string) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@/lib/supabase-auth";
 import { prisma } from "@/server/db";
+import { markAdminInvitationAccepted } from "@/lib/admin-invitation-acceptance";
 
 /**
  * オーナーがメール/パスワードでログインしたあと、
@@ -83,6 +84,22 @@ export async function POST() {
             create: { plan: "FREE", status: "ACTIVE", offerLimit: 3 },
           },
         },
+      });
+    }
+
+    // 管理画面からの招待で来た場合、AdminInvitation を ACCEPTED にマーク (best-effort)。
+    // /api/auth/callback (PKCE) を経由しない implicit flow (招待メール直リンク) でも
+    // 受諾マークが付くようにする。失敗してもログイン自体は妨げない。
+    try {
+      await markAdminInvitationAccepted(
+        prisma,
+        supabaseUser.email,
+        supabaseUser.id,
+      );
+    } catch (e) {
+      console.warn("[sync-owner-user] markAdminInvitationAccepted failed", {
+        email: supabaseUser.email,
+        error: e instanceof Error ? e.message : String(e),
       });
     }
 

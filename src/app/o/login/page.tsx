@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -31,6 +31,91 @@ function OwnerLoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(ownerLoginErrorMessage(urlError));
+  const [recovering, setRecovering] = useState(false);
+
+  // Supabase の招待 / マジックリンク / パスワード復旧リンクは implicit flow で
+  // access_token を URL fragment (#access_token=...&type=invite) に載せて戻ってくる。
+  // サーバ側 /api/auth/callback は ?code= (PKCE) しか読めないため一度 missing_code
+  // に弾かれ、30x リダイレクトでこのページに hash 付きで辿り着くケースを救う。
+  // 同じ仕組みで Supabase から直接 /o/login に着地したケースも処理する。
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const rawHash = window.location.hash;
+    if (!rawHash.includes("access_token")) return;
+
+    const params = new URLSearchParams(
+      rawHash.startsWith("#") ? rawHash.slice(1) : rawHash,
+    );
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+    const linkType = params.get("type");
+
+    if (!accessToken || !refreshToken) return;
+
+    let cancelled = false;
+    setError("");
+    setRecovering(true);
+
+    (async () => {
+      try {
+        const supabase = createBrowserClient();
+        const { error: setErr } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (setErr) {
+          if (!cancelled) {
+            setError(
+              "認証リンクの有効期限が切れているか、無効です。もう一度お試しください",
+            );
+            setRecovering(false);
+          }
+          return;
+        }
+
+        // hash と error= クエリを履歴から消す (戻る / リロードでの再処理防止)
+        window.history.replaceState(null, "", window.location.pathname);
+
+        // type=recovery (パスワード再設定) は専用画面へ。
+        // session は setSession 済なので reset-password で updateUser が通る。
+        if (linkType === "recovery") {
+          if (!cancelled) router.push("/o/reset-password");
+          return;
+        }
+
+        // 通常の invite / signup / magiclink は owner provisioning を回して dashboard へ
+        const syncRes = await fetch("/api/auth/sync-owner-user", {
+          method: "POST",
+        });
+        if (!syncRes.ok) {
+          if (!cancelled) {
+            if (syncRes.status === 409) {
+              setError(
+                "このメールアドレスは既に別のアカウントに紐付いています。サポートにお問い合わせください",
+              );
+            } else {
+              setError("ログインに失敗しました。もう一度お試しください");
+            }
+            setRecovering(false);
+          }
+          return;
+        }
+
+        if (cancelled) return;
+        router.push(callbackUrl);
+        router.refresh();
+      } catch {
+        if (!cancelled) {
+          setError("認証に失敗しました。もう一度お試しください");
+          setRecovering(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [callbackUrl, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,6 +170,11 @@ function OwnerLoginForm() {
         </div>
 
         <div className="mt-8">
+          {recovering ? (
+            <div className="text-center py-12">
+              <p className="text-gray-700">招待を確認しています...</p>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -143,6 +233,7 @@ function OwnerLoginForm() {
               {isLoading ? "ログイン中..." : "ログイン"}
             </button>
           </form>
+          )}
         </div>
 
         <div className="text-center space-y-2">
