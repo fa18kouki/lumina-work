@@ -1,4 +1,7 @@
 import { messagingApi } from "@line/bot-sdk";
+
+import { getAppUrl } from "@/lib/app-url";
+
 import type { NotificationEvent } from "../types";
 
 let client: messagingApi.MessagingApiClient | null = null;
@@ -11,10 +14,6 @@ function getLineClient(): messagingApi.MessagingApiClient | null {
     });
   }
   return client;
-}
-
-function getAppUrl(): string {
-  return process.env.AUTH_URL ?? "https://lumina.app";
 }
 
 function formatDateTime(iso: string): string {

@@ -5,6 +5,7 @@ import {
   Head,
   Heading,
   Html,
+  Preview,
   Section,
   Text,
 } from "@react-email/components";
@@ -83,15 +84,8 @@ export function NotificationLayout({
 }: NotificationLayoutProps) {
   return (
     <Html lang="ja">
-      <Head>
-        {preview ? (
-          <meta
-            data-react-email-preview=""
-            content={preview}
-            name="x-preview"
-          />
-        ) : null}
-      </Head>
+      <Head />
+      {preview ? <Preview>{preview}</Preview> : null}
       <Body style={styles.body}>
         <Container style={styles.container}>
           <Section style={styles.header}>

@@ -11,14 +11,11 @@ import { OfferAcceptedEmail } from "@/emails/offer-accepted";
 import { OfferExpiredEmail } from "@/emails/offer-expired";
 import { OfferReceivedEmail } from "@/emails/offer-received";
 import { OfferRejectedEmail } from "@/emails/offer-rejected";
+import { getAppUrl } from "@/lib/app-url";
 import { EMAIL_FROM, IDEMPOTENCY_NAMESPACE, getResend } from "@/lib/resend";
 import { prisma } from "@/server/db";
 
 import type { NotificationEvent } from "../types";
-
-function getAppUrl(): string {
-  return process.env.AUTH_URL ?? "https://lumina.app";
-}
 
 function formatDateTime(iso: string): string {
   const date = new Date(iso);
