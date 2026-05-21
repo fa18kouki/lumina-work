@@ -1,5 +1,7 @@
 "use client";
 
+import { useId, useState } from "react";
+
 import { trpc } from "@/lib/trpc";
 
 interface AdminInvitation {
@@ -40,6 +42,11 @@ export function AdminInviteRow({
   invitation: AdminInvitation;
 }) {
   const utils = trpc.useUtils();
+  const resendErrorId = useId();
+  const revokeErrorId = useId();
+  const confirmDialogId = useId();
+  const confirmTitleId = useId();
+  const [confirming, setConfirming] = useState(false);
 
   const resend = trpc.adminPanel.invite.resend.useMutation({
     onSuccess: async () => {
@@ -49,12 +56,17 @@ export function AdminInviteRow({
 
   const revoke = trpc.adminPanel.invite.revoke.useMutation({
     onSuccess: async () => {
+      setConfirming(false);
       await utils.adminPanel.invite.list.invalidate();
     },
   });
 
   const isBusy = resend.isPending || revoke.isPending;
   const canMutate = invitation.status !== "ACCEPTED";
+
+  function onConfirmRevoke() {
+    revoke.mutate({ id: invitation.id });
+  }
 
   return (
     <tr className="text-slate-700">
@@ -80,32 +92,75 @@ export function AdminInviteRow({
             type="button"
             onClick={() => resend.mutate({ id: invitation.id })}
             disabled={!canMutate || isBusy}
+            aria-describedby={resend.error ? resendErrorId : undefined}
             className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {resend.isPending ? "..." : "再送"}
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (
-                window.confirm(
-                  `${invitation.email} の招待を失効しますか?\nSupabase 側のユーザーも削除されます (受諾済みの場合は失効できません)`,
-                )
-              ) {
-                revoke.mutate({ id: invitation.id });
-              }
-            }}
+            onClick={() => setConfirming(true)}
             disabled={!canMutate || isBusy}
+            aria-describedby={revoke.error ? revokeErrorId : undefined}
             className="rounded-md border border-red-200 px-3 py-1 text-xs font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {revoke.isPending ? "..." : "失効"}
           </button>
         </div>
-        {(resend.error || revoke.error) && (
-          <p className="mt-1 text-xs text-red-600">
-            {resend.error?.message ?? revoke.error?.message}
+
+        {/* inline alertdialog — window.confirm の置き換え */}
+        {confirming ? (
+          <div
+            role="alertdialog"
+            id={confirmDialogId}
+            aria-labelledby={confirmTitleId}
+            className="mt-2 rounded-md border border-red-200 bg-red-50 p-3 text-left"
+          >
+            <p id={confirmTitleId} className="text-xs text-red-800">
+              <strong>{invitation.email}</strong> の招待を失効しますか?
+              <br />
+              Supabase 側のユーザーも削除されます (受諾済みは失効不可)。
+            </p>
+            <div className="mt-2 inline-flex gap-2">
+              <button
+                type="button"
+                autoFocus
+                onClick={onConfirmRevoke}
+                disabled={revoke.isPending}
+                className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {revoke.isPending ? "失効中..." : "はい、失効する"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirming(false)}
+                disabled={revoke.isPending}
+                className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {resend.error ? (
+          <p
+            id={resendErrorId}
+            role="alert"
+            className="mt-1 text-xs text-red-600"
+          >
+            {resend.error.message}
           </p>
-        )}
+        ) : null}
+        {revoke.error ? (
+          <p
+            id={revokeErrorId}
+            role="alert"
+            className="mt-1 text-xs text-red-600"
+          >
+            {revoke.error.message}
+          </p>
+        ) : null}
       </td>
     </tr>
   );

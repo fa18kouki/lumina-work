@@ -60,7 +60,7 @@ export function AdminInviteCreateForm() {
       {feedback ? (
         <p
           className={`text-sm ${feedback.kind === "success" ? "text-emerald-700" : "text-red-600"}`}
-          role="status"
+          role={feedback.kind === "error" ? "alert" : "status"}
         >
           {feedback.message}
         </p>

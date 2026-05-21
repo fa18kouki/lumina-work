@@ -65,13 +65,14 @@ export const adminInviteRouter = createTRPCRouter({
       const now = new Date();
 
       if (existing) {
+        // CodeRabbit 指摘: 監査ログとしての一貫性を保つため createdAt は **更新しない**。
+        // 「いつ初めて招いたか」は元の値を保つ。
         return ctx.prisma.adminInvitation.update({
           where: { email: input.email },
           data: {
             status: "PENDING",
             invitedByLabel: "admin",
             supabaseUserId,
-            createdAt: now,
             lastSentAt: now,
             acceptedAt: null,
             revokedAt: null,
