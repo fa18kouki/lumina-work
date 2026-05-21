@@ -3,10 +3,10 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import type { AdapterUser } from "@auth/core/adapters";
 import Line from "next-auth/providers/line";
 import Twitter from "next-auth/providers/twitter";
-import Nodemailer from "next-auth/providers/nodemailer";
 import { prisma } from "@/server/db";
 import type { UserRole } from "@prisma/client";
-import { buildVerificationEmail } from "@/lib/auth-email-template";
+
+import { ResendEmailProvider } from "@/lib/auth-resend-provider";
 
 // Prisma 7 + PrismaPg 使用時、API ルートで account の findUnique/findFirst が
 // Invalid invocation になるため、getUserByAccount / unlinkAccount のみ $queryRaw / $executeRaw で実装
@@ -90,38 +90,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       clientId: process.env.AUTH_TWITTER_ID,
       clientSecret: process.env.AUTH_TWITTER_SECRET,
     }),
-    Nodemailer({
-      server: {
-        host: process.env.EMAIL_SERVER_HOST,
-        port: Number(process.env.EMAIL_SERVER_PORT) || 587,
-        auth: {
-          user: process.env.EMAIL_SERVER_USER,
-          pass: process.env.EMAIL_SERVER_PASSWORD,
-        },
-      },
-      from: process.env.EMAIL_FROM,
-      sendVerificationRequest: async ({ identifier, url, provider }) => {
-        const nodemailer = (await import("nodemailer")).default;
-        const transport = nodemailer.createTransport(provider.server);
-        const { host } = new URL(url);
-        const { subject, html, text } = buildVerificationEmail({ url, host });
-        const result = await transport.sendMail({
-          to: identifier,
-          from: provider.from,
-          subject,
-          text,
-          html,
-        });
-        const failed = (result?.rejected ?? [])
-          .concat(result?.pending ?? [])
-          .filter(Boolean);
-        if (failed.length > 0) {
-          throw new Error(
-            `Email(s) (${failed.join(", ")}) could not be sent`
-          );
-        }
-      },
-    }),
+    ResendEmailProvider(),
   ],
   callbacks: {
     signIn: async ({ user, account }) => {

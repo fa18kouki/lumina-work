@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import {
+  ADMIN_SESSION_COOKIE,
+  verifyAdminSessionCookie,
+} from "@/lib/admin-auth";
+import { adminMiddlewareDecision } from "@/lib/admin-host";
+
+// admin-auth が node:crypto を使うため Node.js runtime で動かす。
+// Vercel の Fluid Compute / middleware Node.js サポート前提 (2026 時点デフォルト)。
+export const runtime = "nodejs";
+
 const publicRoutes = [
   "/",
   "/c/login",
@@ -66,6 +76,48 @@ export async function middleware(req: NextRequest) {
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-pathname", pathname);
   const passThrough = NextResponse.next({ request: { headers: requestHeaders } });
+
+  // admin.<host> サブドメインの振り分け。
+  // 認可 (admin-session cookie) は Phase 2 で本ブロック内に追加する。
+  const adminDecision = adminMiddlewareDecision(
+    req.headers.get("host"),
+    pathname,
+  );
+  if (adminDecision.kind === "blocked") {
+    // 素のドメインから /admin/* を覗かれた場合は外部から存在を隠す
+    return new NextResponse(null, { status: 404 });
+  }
+  if (adminDecision.kind === "rewrite") {
+    // /admin/login と /admin (= "/") はログイン前に到達可能。それ以外は cookie 検証。
+    const isAdminLogin = adminDecision.to === "/admin/login";
+    const isAdminRoot = adminDecision.to === "/admin";
+    if (!isAdminLogin) {
+      const expectedKey = process.env.ADMIN_API_KEY ?? "";
+      const cookieValue = req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+      const session = verifyAdminSessionCookie(cookieValue, expectedKey);
+      if (!session.ok) {
+        const loginUrl = req.nextUrl.clone();
+        loginUrl.pathname = "/login";
+        loginUrl.search = "";
+        return NextResponse.redirect(loginUrl);
+      }
+      // /admin のルートに認証済みで来た場合は /invites に送る
+      if (isAdminRoot) {
+        const invitesUrl = req.nextUrl.clone();
+        invitesUrl.pathname = "/invites";
+        invitesUrl.search = "";
+        return NextResponse.redirect(invitesUrl);
+      }
+    }
+    const rewriteUrl = req.nextUrl.clone();
+    rewriteUrl.pathname = adminDecision.to;
+    return NextResponse.rewrite(rewriteUrl, {
+      request: { headers: requestHeaders },
+    });
+  }
+  if (adminDecision.kind === "passthrough") {
+    return passThrough;
+  }
 
   if (isPublicRoute(pathname)) {
     return passThrough;

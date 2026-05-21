@@ -34,8 +34,10 @@ vi.mock("next-auth/providers/line", () => ({
 vi.mock("next-auth/providers/twitter", () => ({
   default: vi.fn((config) => ({ id: "twitter", name: "Twitter", ...config })),
 }));
-vi.mock("next-auth/providers/nodemailer", () => ({
-  default: vi.fn((config) => ({ id: "nodemailer", name: "Nodemailer", ...config })),
+vi.mock("resend", () => ({
+  Resend: class {
+    emails = { send: vi.fn() };
+  },
 }));
 
 type AdapterCreateUser = (user: {

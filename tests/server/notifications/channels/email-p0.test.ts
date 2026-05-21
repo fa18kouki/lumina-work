@@ -1,12 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render } from "@react-email/components";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import type { NotificationEvent } from "@/server/notifications/types";
 
-const mockSendMail = vi.fn();
-vi.mock("nodemailer", () => ({
-  default: {
-    createTransport: () => ({
-      sendMail: mockSendMail,
-    }),
+const mockSend = vi.fn();
+vi.mock("resend", () => ({
+  Resend: class {
+    emails = {
+      send: (...args: unknown[]) => mockSend(...args),
+    };
   },
 }));
 
@@ -20,17 +22,33 @@ vi.mock("@/server/db", () => ({
   },
 }));
 
+async function getCallArgs(call = 0) {
+  const [emailArgs, options] = mockSend.mock.calls[call] as [
+    { from: string; to: string; subject: string; react: React.ReactElement },
+    { idempotencyKey?: string } | undefined,
+  ];
+  const html = await render(emailArgs.react);
+  return {
+    from: emailArgs.from,
+    to: emailArgs.to,
+    subject: emailArgs.subject,
+    html,
+    idempotencyKey: options?.idempotencyKey,
+  };
+}
+
 describe("sendEmailNotification - P0イベント", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
     vi.unstubAllEnvs();
+    mockSend.mockResolvedValue({ data: { id: "msg" }, error: null });
   });
 
   describe("OFFER_ACCEPTED", () => {
     it("店舗にオファー承諾のメールを送信する", async () => {
-      vi.stubEnv("EMAIL_SERVER_HOST", "smtp.example.com");
-      vi.stubEnv("EMAIL_FROM", "noreply@lumina.app");
+      vi.stubEnv("RESEND_API_KEY", "re_test_key");
+      vi.stubEnv("EMAIL_FROM", "LUMINA <noreply@lumina.app>");
 
       const { sendEmailNotification } = await import(
         "@/server/notifications/channels/email"
@@ -46,19 +64,19 @@ describe("sendEmailNotification - P0イベント", () => {
         },
       };
 
-      mockSendMail.mockResolvedValueOnce({});
       await sendEmailNotification(event);
 
-      expect(mockSendMail).toHaveBeenCalledOnce();
-      const callArgs = mockSendMail.mock.calls[0][0];
+      expect(mockSend).toHaveBeenCalledOnce();
+      const callArgs = await getCallArgs();
       expect(callArgs.to).toBe("store@example.com");
       expect(callArgs.subject).toContain("みさき");
       expect(callArgs.subject).toContain("承諾");
       expect(callArgs.html).toContain("連絡先");
+      expect(callArgs.idempotencyKey).toBe("lumina:OFFER_ACCEPTED:offer-1");
     });
 
     it("storeEmail が null の場合はスキップする", async () => {
-      vi.stubEnv("EMAIL_SERVER_HOST", "smtp.example.com");
+      vi.stubEnv("RESEND_API_KEY", "re_test_key");
 
       const { sendEmailNotification } = await import(
         "@/server/notifications/channels/email"
@@ -75,14 +93,13 @@ describe("sendEmailNotification - P0イベント", () => {
       };
 
       await sendEmailNotification(event);
-      expect(mockSendMail).not.toHaveBeenCalled();
+      expect(mockSend).not.toHaveBeenCalled();
     });
   });
 
   describe("OFFER_REJECTED", () => {
     it("店舗にオファー辞退のメールを送信する", async () => {
-      vi.stubEnv("EMAIL_SERVER_HOST", "smtp.example.com");
-      vi.stubEnv("EMAIL_FROM", "noreply@lumina.app");
+      vi.stubEnv("RESEND_API_KEY", "re_test_key");
 
       const { sendEmailNotification } = await import(
         "@/server/notifications/channels/email"
@@ -98,11 +115,10 @@ describe("sendEmailNotification - P0イベント", () => {
         },
       };
 
-      mockSendMail.mockResolvedValueOnce({});
       await sendEmailNotification(event);
 
-      expect(mockSendMail).toHaveBeenCalledOnce();
-      const callArgs = mockSendMail.mock.calls[0][0];
+      expect(mockSend).toHaveBeenCalledOnce();
+      const callArgs = await getCallArgs();
       expect(callArgs.to).toBe("store@example.com");
       expect(callArgs.subject).toContain("回答");
       expect(callArgs.html).toContain("他のキャスト");
@@ -110,8 +126,8 @@ describe("sendEmailNotification - P0イベント", () => {
   });
 
   describe("INTERVIEW_SCHEDULED_CAST", () => {
-    it("キャスト向けなのでEmail送信しない（LINE優先）", async () => {
-      vi.stubEnv("EMAIL_SERVER_HOST", "smtp.example.com");
+    it("キャスト向けにEmail送信する", async () => {
+      vi.stubEnv("RESEND_API_KEY", "re_test_key");
 
       const { sendEmailNotification } = await import(
         "@/server/notifications/channels/email"
@@ -131,9 +147,9 @@ describe("sendEmailNotification - P0イベント", () => {
       };
 
       await sendEmailNotification(event);
-      // キャスト向け面接通知はLINE優先、Emailも送る
-      expect(mockSendMail).toHaveBeenCalledOnce();
-      const callArgs = mockSendMail.mock.calls[0][0];
+
+      expect(mockSend).toHaveBeenCalledOnce();
+      const callArgs = await getCallArgs();
       expect(callArgs.to).toBe("cast@example.com");
       expect(callArgs.subject).toContain("面接");
     });
@@ -141,8 +157,7 @@ describe("sendEmailNotification - P0イベント", () => {
 
   describe("INTERVIEW_SCHEDULED_STORE", () => {
     it("店舗に面接確定のメールを送信する", async () => {
-      vi.stubEnv("EMAIL_SERVER_HOST", "smtp.example.com");
-      vi.stubEnv("EMAIL_FROM", "noreply@lumina.app");
+      vi.stubEnv("RESEND_API_KEY", "re_test_key");
 
       const { sendEmailNotification } = await import(
         "@/server/notifications/channels/email"
@@ -159,11 +174,10 @@ describe("sendEmailNotification - P0イベント", () => {
         },
       };
 
-      mockSendMail.mockResolvedValueOnce({});
       await sendEmailNotification(event);
 
-      expect(mockSendMail).toHaveBeenCalledOnce();
-      const callArgs = mockSendMail.mock.calls[0][0];
+      expect(mockSend).toHaveBeenCalledOnce();
+      const callArgs = await getCallArgs();
       expect(callArgs.to).toBe("store@example.com");
       expect(callArgs.subject).toContain("面接");
       expect(callArgs.html).toContain("みさき");
@@ -172,8 +186,7 @@ describe("sendEmailNotification - P0イベント", () => {
 
   describe("INTERVIEW_CANCELLED_CAST", () => {
     it("キャストにキャンセルメールを送信する", async () => {
-      vi.stubEnv("EMAIL_SERVER_HOST", "smtp.example.com");
-      vi.stubEnv("EMAIL_FROM", "noreply@lumina.app");
+      vi.stubEnv("RESEND_API_KEY", "re_test_key");
 
       const { sendEmailNotification } = await import(
         "@/server/notifications/channels/email"
@@ -191,11 +204,10 @@ describe("sendEmailNotification - P0イベント", () => {
         },
       };
 
-      mockSendMail.mockResolvedValueOnce({});
       await sendEmailNotification(event);
 
-      expect(mockSendMail).toHaveBeenCalledOnce();
-      const callArgs = mockSendMail.mock.calls[0][0];
+      expect(mockSend).toHaveBeenCalledOnce();
+      const callArgs = await getCallArgs();
       expect(callArgs.to).toBe("cast@example.com");
       expect(callArgs.subject).toContain("キャンセル");
     });
@@ -203,8 +215,7 @@ describe("sendEmailNotification - P0イベント", () => {
 
   describe("INTERVIEW_CANCELLED_STORE", () => {
     it("店舗にキャンセルメールを送信する", async () => {
-      vi.stubEnv("EMAIL_SERVER_HOST", "smtp.example.com");
-      vi.stubEnv("EMAIL_FROM", "noreply@lumina.app");
+      vi.stubEnv("RESEND_API_KEY", "re_test_key");
 
       const { sendEmailNotification } = await import(
         "@/server/notifications/channels/email"
@@ -221,11 +232,10 @@ describe("sendEmailNotification - P0イベント", () => {
         },
       };
 
-      mockSendMail.mockResolvedValueOnce({});
       await sendEmailNotification(event);
 
-      expect(mockSendMail).toHaveBeenCalledOnce();
-      const callArgs = mockSendMail.mock.calls[0][0];
+      expect(mockSend).toHaveBeenCalledOnce();
+      const callArgs = await getCallArgs();
       expect(callArgs.to).toBe("store@example.com");
       expect(callArgs.subject).toContain("キャンセル");
       expect(callArgs.html).toContain("みさき");

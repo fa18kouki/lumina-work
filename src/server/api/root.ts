@@ -6,6 +6,7 @@ import { matchRouter } from "./routers/match";
 import { interviewRouter } from "./routers/interview";
 import { messageRouter } from "./routers/message";
 import { adminRouter } from "./routers/admin";
+import { adminPanelRouter } from "./routers/admin-panel";
 import { diagnosisRouter } from "./routers/diagnosis";
 import { notificationRouter } from "./routers/notification";
 import { subscriptionRouter } from "./routers/subscription";
@@ -22,6 +23,7 @@ export const appRouter = createTRPCRouter({
   interview: interviewRouter,
   message: messageRouter,
   admin: adminRouter,
+  adminPanel: adminPanelRouter,
   diagnosis: diagnosisRouter,
   notification: notificationRouter,
   subscription: subscriptionRouter,
