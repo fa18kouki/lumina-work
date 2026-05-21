@@ -281,12 +281,17 @@ async function send(payload: EmailPayload): Promise<void> {
     payload.idempotencyKey ? { idempotencyKey: payload.idempotencyKey } : {},
   );
   if (error) {
-    // 呼び出し側 (notification dispatcher) で個別ハンドルしないので warn ログ + throw しない方針
+    // 構造化ログは context (to/subject/idempotencyKey) と共にここで出し、
+    // dispatcher (Promise.allSettled) でも channel-tagged で 1 行残るよう throw する。
+    // throw しないと dispatcher 側からは「email も成功した」ように見えて、
+    // SLO 監視 / リトライ判断 / アラート がすべて空振りになる。
     console.error("[Email] Resend send failed", {
       to: payload.to,
       subject: payload.subject,
+      idempotencyKey: payload.idempotencyKey ?? null,
       error: error.message,
     });
+    throw new Error(`Resend send failed: ${error.message}`);
   }
 }
 

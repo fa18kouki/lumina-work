@@ -111,4 +111,52 @@ describe("sendEmailNotification", () => {
     await sendEmailNotification(event);
     expect(mockSend).not.toHaveBeenCalled();
   });
+
+  it("Resend が error を返したら throw して dispatcher 側に失敗を伝える", async () => {
+    vi.stubEnv("RESEND_API_KEY", "re_test_key");
+    vi.stubEnv("EMAIL_FROM", "LUMINA <noreply@lumina.app>");
+    vi.stubEnv("AUTH_URL", "https://lumina.app");
+
+    const { sendEmailNotification } = await import(
+      "@/server/notifications/channels/email"
+    );
+
+    const event: NotificationEvent = {
+      type: "OFFER_RECEIVED",
+      payload: {
+        offerId: "offer-fail",
+        recipientUserId: "user-1",
+        castUserId: "user-1",
+        castLineUserId: null,
+        castEmail: "cast@example.com",
+        storeName: "Club Elegant",
+        storeArea: "六本木",
+        offerMessage: "メッセージ",
+      },
+    };
+
+    mockSend.mockResolvedValueOnce({
+      data: null,
+      error: { message: "rate limited" },
+    });
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    try {
+      await expect(sendEmailNotification(event)).rejects.toThrow(
+        /Resend send failed.*rate limited/,
+      );
+      // 構造化ログにも context が出ること
+      expect(consoleError).toHaveBeenCalledWith(
+        "[Email] Resend send failed",
+        expect.objectContaining({
+          to: "cast@example.com",
+          error: "rate limited",
+        }),
+      );
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
 });

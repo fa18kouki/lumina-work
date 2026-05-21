@@ -61,6 +61,11 @@ describe("sendEmailNotification - P0イベント", () => {
           offerId: "offer-1",
           storeEmail: "store@example.com",
           castNickname: "みさき",
+          // production の cast.respondToOffer は Cast/User から拾ってここに詰める。
+          // contact がある場合 = "下記の連絡先から直接ご連絡ください" / Section 表示が出る。
+          castPhone: "09011112222",
+          castEmail: "cast@example.com",
+          castLineId: null,
         },
       };
 
@@ -72,6 +77,7 @@ describe("sendEmailNotification - P0イベント", () => {
       expect(callArgs.subject).toContain("みさき");
       expect(callArgs.subject).toContain("承諾");
       expect(callArgs.html).toContain("連絡先");
+      expect(callArgs.html).toContain("09011112222");
       expect(callArgs.idempotencyKey).toBe("lumina:OFFER_ACCEPTED:offer-1");
     });
 
