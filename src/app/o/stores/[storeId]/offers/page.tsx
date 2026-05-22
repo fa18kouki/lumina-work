@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState } from "react";
+import Link from "next/link";
 import { FileText, Mail, Phone, MessageCircle, CalendarPlus } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -39,6 +40,18 @@ export default function StoreOffersPage({
         getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
       }
     );
+
+  // 承諾済オファーから対応する Match を引いてメッセージ動線を作る
+  const { data: matchesData } = trpc.match.getMatches.useQuery({
+    status: "ACCEPTED",
+    limit: 50,
+  });
+  const findMatchByCastId = (castId: string | undefined) =>
+    castId
+      ? matchesData?.matches.find(
+          (m) => m.castId === castId && m.storeId === storeId
+        )
+      : undefined;
 
   const allOffers = data?.pages.flatMap((p) => p.offers) ?? [];
 
@@ -125,25 +138,39 @@ export default function StoreOffersPage({
                         </span>
                       </div>
 
-                      {/* 承諾済みの場合のみ連絡先表示 + 面接設定 */}
+                      {/* 承諾済みの場合のみ連絡先表示 + 面接設定 + メッセージ動線 */}
                       {isAccepted && cast?.user && (
                         <div className="mt-3 p-3 bg-green-50 rounded-lg">
-                          <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                             <p className="text-xs font-medium text-green-800">連絡先情報</p>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                setScheduleTarget({
-                                  offerId: offer.id,
-                                  castNickname: cast?.nickname ?? "キャスト",
-                                })
-                              }
-                              className="!py-1 !px-2.5 !text-xs"
-                            >
-                              <CalendarPlus className="w-3.5 h-3.5 mr-1" />
-                              面接を設定
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              {(() => {
+                                const match = findMatchByCastId(cast?.id);
+                                return (
+                                  <Link
+                                    href={match ? `/o/messages/${match.id}` : "/o/messages"}
+                                    className="inline-flex items-center gap-1 rounded-md border border-green-600 bg-white px-2.5 py-1 text-xs font-medium text-green-700 hover:bg-green-100 transition-colors"
+                                  >
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                    メッセージ
+                                  </Link>
+                                );
+                              })()}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  setScheduleTarget({
+                                    offerId: offer.id,
+                                    castNickname: cast?.nickname ?? "キャスト",
+                                  })
+                                }
+                                className="!py-1 !px-2.5 !text-xs"
+                              >
+                                <CalendarPlus className="w-3.5 h-3.5 mr-1" />
+                                面接を設定
+                              </Button>
+                            </div>
                           </div>
                           <div className="flex flex-wrap gap-3 text-sm text-green-700">
                             {cast.user.email && (

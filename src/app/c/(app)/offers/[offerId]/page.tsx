@@ -23,6 +23,7 @@ import {
   Phone,
   Mail,
   ExternalLink,
+  MessageCircle,
 } from "lucide-react";
 
 export default function OfferDetailPage() {
@@ -41,6 +42,20 @@ export default function OfferDetailPage() {
   const { data: offer, isLoading, error } = trpc.cast.getOfferDetail.useQuery(
     { offerId },
     { enabled: !!session && session.user.role === "CAST" }
+  );
+
+  // 承諾済みオファーから対応する Match を引いて、チャット動線に使う
+  const { data: matchesData } = trpc.match.getMatches.useQuery(
+    { status: "ACCEPTED", limit: 50 },
+    {
+      enabled:
+        !!session &&
+        session.user.role === "CAST" &&
+        offer?.status === "ACCEPTED",
+    }
+  );
+  const matchForThisStore = matchesData?.matches.find(
+    (m) => m.store.id === offer?.store.id
   );
 
   const respondToOffer = trpc.cast.respondToOffer.useMutation({
@@ -319,10 +334,25 @@ export default function OfferDetailPage() {
       )}
 
       {offer.status === "ACCEPTED" && (
-        <div className="fixed bottom-20 md:bottom-0 left-0 right-0 bg-green-50 px-4 py-4 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-40">
-          <div className="flex items-center justify-center gap-2 text-green-700 font-medium">
-            <CheckCircle2 className="w-5 h-5" />
-            <span>承諾済み — 上記の連絡先から店舗にご連絡ください</span>
+        <div className="fixed bottom-20 md:bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-40">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-green-700 text-sm font-medium">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>承諾済み</span>
+            </div>
+            <Button
+              onClick={() =>
+                router.push(
+                  matchForThisStore
+                    ? `/c/messages/${matchForThisStore.id}`
+                    : "/c/messages"
+                )
+              }
+              className="ml-auto h-10"
+            >
+              <MessageCircle className="w-4 h-4 mr-1.5" />
+              お店とメッセージする
+            </Button>
           </div>
         </div>
       )}
