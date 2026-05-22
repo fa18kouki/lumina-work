@@ -5,6 +5,7 @@ import { prisma } from "@/server/db";
 import { REFERRAL_CONFIG } from "@/lib/constants";
 import { resolveNextUrl } from "@/app/api/auth/callback/resolve-next-url";
 import { markAdminInvitationAccepted } from "@/lib/admin-invitation-acceptance";
+import { provisionOwnerUser } from "@/lib/provision-owner-user";
 
 const DEFAULT_NEXT = "/o/dashboard";
 
@@ -58,32 +59,23 @@ export async function GET(request: NextRequest) {
   }
 
   // 2) Prisma User を冪等に provision。
-  //    - supabaseAuthId 一致 → そのまま使う
-  //    - email 一致の OWNER user (旧 supabaseAuthId が delete された) → supabaseAuthId を再リンク
-  //    - どちらも無し → User+Owner+Subscription を transaction で新規作成
+  //    招待リンク経由なので mode=invite (未存在なら User+Owner+Subscription を新規作成)。
+  //    helper が role/deletedAt/email_collision を判定し、結果を HTTP リダイレクトに割り付ける。
+  let newOwnerId: string | null = null;
   try {
-    const existingBySupabase = await prisma.user.findUnique({
-      where: { supabaseAuthId: supabaseUser.id },
-      select: { id: true },
-    });
+    const result = await provisionOwnerUser(
+      prisma,
+      {
+        id: supabaseUser.id,
+        email: supabaseUser.email ?? null,
+        email_confirmed_at: supabaseUser.email_confirmed_at ?? null,
+      },
+      "invite",
+    );
 
-    let newOwnerId: string | null = null;
-
-    if (!existingBySupabase) {
-      const existingByEmail = supabaseUser.email
-        ? await prisma.user.findFirst({
-            where: { email: supabaseUser.email, role: "OWNER" },
-            select: { id: true, supabaseAuthId: true },
-          })
-        : null;
-
-      if (existingByEmail) {
-        // auth.users 削除→再登録による supabaseAuthId 変化を吸収。
-        // 別の active な supabaseAuthId に既に紐付いていたら衝突として停止。
-        if (
-          existingByEmail.supabaseAuthId &&
-          existingByEmail.supabaseAuthId !== supabaseUser.id
-        ) {
+    if (!result.ok) {
+      switch (result.reason) {
+        case "email_collision":
           console.error(
             "[auth/callback] OWNER email collision with different supabaseAuthId",
             { email: supabaseUser.email },
@@ -91,71 +83,29 @@ export async function GET(request: NextRequest) {
           return NextResponse.redirect(
             new URL("/o/login?error=email_collision", origin),
           );
-        }
-        await prisma.user.update({
-          where: { id: existingByEmail.id },
-          data: {
-            supabaseAuthId: supabaseUser.id,
-            emailVerified: supabaseUser.email_confirmed_at
-              ? new Date(supabaseUser.email_confirmed_at)
-              : undefined,
-          },
-        });
-      } else {
-        const created = await prisma.$transaction(async (tx) => {
-          const createdUser = await tx.user.create({
-            data: {
-              email: supabaseUser.email,
-              emailVerified: supabaseUser.email_confirmed_at
-                ? new Date(supabaseUser.email_confirmed_at)
-                : null,
-              role: "OWNER",
-              supabaseAuthId: supabaseUser.id,
-            },
-          });
-
-          const createdOwner = await tx.owner.create({
-            data: {
-              userId: createdUser.id,
-              subscription: {
-                create: { plan: "FREE", status: "ACTIVE", offerLimit: 3 },
-              },
-            },
-          });
-
-          return createdOwner;
-        });
-        newOwnerId = created.id;
+        case "role_mismatch":
+          return NextResponse.redirect(
+            new URL("/o/login?error=not_owner", origin),
+          );
+        case "deleted":
+          return NextResponse.redirect(
+            new URL("/o/login?error=account_deleted", origin),
+          );
+        case "not_found":
+          // invite mode は未存在を create に倒すため、ここには来ない想定。
+          // 万一来たら user_provisioning_failed として扱う。
+          return NextResponse.redirect(
+            new URL("/o/login?error=user_provisioning_failed", origin),
+          );
       }
     }
 
-    // リファーラルコードの処理 (新規作成時のみ、失敗しても本体ログインは妨げない)
-    if (newOwnerId && refCode) {
-      try {
-        const referrer = await prisma.owner.findUnique({
-          where: { referralCode: refCode.toUpperCase() },
-          select: { id: true },
-        });
-
-        if (referrer && referrer.id !== newOwnerId) {
-          const expiresAt = new Date();
-          expiresAt.setDate(
-            expiresAt.getDate() + REFERRAL_CONFIG.expirationDays,
-          );
-
-          await prisma.referral.create({
-            data: {
-              referrerOwnerId: referrer.id,
-              referredOwnerId: newOwnerId,
-              code: refCode.toUpperCase(),
-              status: "PENDING",
-              expiresAt,
-            },
-          });
-        }
-      } catch (refErr) {
-        console.error("[auth/callback] referral create failed", refErr);
-      }
+    if (result.newlyCreated) {
+      const ownerRecord = await prisma.owner.findUnique({
+        where: { userId: result.userId },
+        select: { id: true },
+      });
+      newOwnerId = ownerRecord?.id ?? null;
     }
   } catch (e) {
     console.error("[auth/callback] failed to provision Prisma user/owner", {
@@ -166,6 +116,33 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(
       new URL("/o/login?error=user_provisioning_failed", origin),
     );
+  }
+
+  // リファーラルコードの処理 (新規作成時のみ、失敗しても本体ログインは妨げない)
+  if (newOwnerId && refCode) {
+    try {
+      const referrer = await prisma.owner.findUnique({
+        where: { referralCode: refCode.toUpperCase() },
+        select: { id: true },
+      });
+
+      if (referrer && referrer.id !== newOwnerId) {
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + REFERRAL_CONFIG.expirationDays);
+
+        await prisma.referral.create({
+          data: {
+            referrerOwnerId: referrer.id,
+            referredOwnerId: newOwnerId,
+            code: refCode.toUpperCase(),
+            status: "PENDING",
+            expiresAt,
+          },
+        });
+      }
+    } catch (refErr) {
+      console.error("[auth/callback] referral create failed", refErr);
+    }
   }
 
   // 管理画面からの招待で来た場合、AdminInvitation を ACCEPTED にマーク (best-effort)。

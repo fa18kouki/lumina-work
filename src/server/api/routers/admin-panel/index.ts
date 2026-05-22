@@ -3,6 +3,7 @@ import { createTRPCRouter } from "@/server/api/trpc";
 import { adminInviteRouter } from "./invite";
 import { adminOffersPanelRouter } from "./offers";
 import { adminStoresPanelRouter } from "./stores";
+import { adminSubscriptionsPanelRouter } from "./subscriptions";
 import { adminUsersPanelRouter } from "./users";
 
 /**
@@ -14,4 +15,5 @@ export const adminPanelRouter = createTRPCRouter({
   users: adminUsersPanelRouter,
   offers: adminOffersPanelRouter,
   stores: adminStoresPanelRouter,
+  subscriptions: adminSubscriptionsPanelRouter,
 });

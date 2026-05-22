@@ -18,84 +18,178 @@ vi.mock("@/lib/supabase-auth", () => ({
   }),
 }));
 
-// Prisma を制御可能にモック
-const mockUserFindUnique = vi.fn();
-const mockUserFindFirst = vi.fn();
-const mockUserUpdate = vi.fn();
-const mockUserCreate = vi.fn();
-const mockOwnerCreate = vi.fn();
-const mockAdminInvitationFindUnique = vi.fn();
-const mockAdminInvitationUpdateMany = vi.fn();
+// helper を mock 化して route の責務 (mode 受け取り / HTTP マッピング) だけ検証する
+const mockProvision = vi.fn();
+vi.mock("@/lib/provision-owner-user", () => ({
+  provisionOwnerUser: (...args: unknown[]) => mockProvision(...args),
+}));
+
+// markAdminInvitationAccepted の副作用は best-effort なのでスタブだけ用意
+const mockMarkAccepted = vi.fn();
+vi.mock("@/lib/admin-invitation-acceptance", () => ({
+  markAdminInvitationAccepted: (...args: unknown[]) => mockMarkAccepted(...args),
+}));
 
 vi.mock("@/server/db", () => ({
-  prisma: {
-    user: {
-      findUnique: (...args: unknown[]) => mockUserFindUnique(...args),
-      findFirst: (...args: unknown[]) => mockUserFindFirst(...args),
-      update: (...args: unknown[]) => mockUserUpdate(...args),
-      create: (...args: unknown[]) => mockUserCreate(...args),
-    },
-    owner: {
-      create: (...args: unknown[]) => mockOwnerCreate(...args),
-    },
-    adminInvitation: {
-      findUnique: (...args: unknown[]) =>
-        mockAdminInvitationFindUnique(...args),
-      updateMany: (...args: unknown[]) =>
-        mockAdminInvitationUpdateMany(...args),
-    },
-  },
+  prisma: { __sentinel: "prisma" },
 }));
 
 import { POST } from "@/app/api/auth/sync-owner-user/route";
 
-describe("POST /api/auth/sync-owner-user - soft delete 対応", () => {
+function makeRequest(body?: unknown): Request {
+  return new Request("http://localhost/api/auth/sync-owner-user", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: body === undefined ? null : JSON.stringify(body),
+  });
+}
+
+const SUPABASE_USER = {
+  id: "supabase-user-1",
+  email: "owner@example.com",
+  email_confirmed_at: new Date("2026-04-01").toISOString(),
+};
+
+describe("POST /api/auth/sync-owner-user", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetUser.mockResolvedValue({
-      data: {
-        user: {
-          id: "supabase-user-1",
-          email: "owner@example.com",
-          email_confirmed_at: new Date("2026-04-01").toISOString(),
-        },
-      },
+      data: { user: SUPABASE_USER },
       error: null,
     });
-    // 招待が無いケースをデフォルトに (markAdminInvitationAccepted は no-op)
-    mockAdminInvitationFindUnique.mockResolvedValue(null);
+    mockMarkAccepted.mockResolvedValue(undefined);
   });
 
-  it("既存メールの重複チェックで deletedAt: null を条件に含める", async () => {
-    mockUserFindUnique.mockResolvedValue(null);
-    mockUserFindFirst.mockResolvedValue(null);
-    mockUserCreate.mockResolvedValue({ id: "new-user", email: "owner@example.com" });
-    mockOwnerCreate.mockResolvedValue({ id: "owner-1" });
+  it("Supabase セッションが無いときは 401", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
 
-    await POST();
+    const res = await POST(makeRequest({ mode: "login" }));
 
-    expect(mockUserFindFirst).toHaveBeenCalledTimes(1);
-    const args = mockUserFindFirst.mock.calls[0][0];
-    expect(args.where).toMatchObject({
-      email: "owner@example.com",
-      role: "OWNER",
-      deletedAt: null,
-    });
+    expect(res.status).toBe(401);
+    expect(mockProvision).not.toHaveBeenCalled();
   });
 
-  it("既存ユーザーが soft-delete 済 (findFirst が null 相当) でも新規作成に進む", async () => {
-    mockUserFindUnique.mockResolvedValue(null);
-    // 実装側で deletedAt: null フィルタが効くため、soft-delete 済ユーザーはヒットしない
-    mockUserFindFirst.mockResolvedValue(null);
-    mockUserCreate.mockResolvedValue({ id: "new-user", email: "owner@example.com" });
-    mockOwnerCreate.mockResolvedValue({ id: "owner-1" });
+  it("body 無し POST は mode=login で扱い、未登録なら 404 を返す", async () => {
+    mockProvision.mockResolvedValue({ ok: false, reason: "not_found" });
 
-    const res = await POST();
+    const res = await POST(makeRequest());
     const body = await res.json();
 
-    expect(mockUserCreate).toHaveBeenCalledOnce();
-    expect(mockOwnerCreate).toHaveBeenCalledOnce();
-    expect(body.ok).toBe(true);
+    expect(res.status).toBe(404);
+    expect(body.error).toBe("NotFound");
+    // helper には login が渡っている
+    const calledWithMode = mockProvision.mock.calls[0][2];
+    expect(calledWithMode).toBe("login");
+  });
+
+  it("mode=login + 既存ユーザー → 200 を返す", async () => {
+    mockProvision.mockResolvedValue({
+      ok: true,
+      userId: "user-1",
+      newlyCreated: false,
+    });
+
+    const res = await POST(makeRequest({ mode: "login" }));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toEqual({ ok: true, userId: "user-1" });
+  });
+
+  it("mode=register + 新規作成 → 200 を返し、helper に register が渡る", async () => {
+    mockProvision.mockResolvedValue({
+      ok: true,
+      userId: "new-user",
+      newlyCreated: true,
+    });
+
+    const res = await POST(makeRequest({ mode: "register" }));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
     expect(body.userId).toBe("new-user");
+    expect(mockProvision.mock.calls[0][2]).toBe("register");
+  });
+
+  it("mode=invite + 新規作成 → 200 を返し、helper に invite が渡る", async () => {
+    mockProvision.mockResolvedValue({
+      ok: true,
+      userId: "invited-user",
+      newlyCreated: true,
+    });
+
+    const res = await POST(makeRequest({ mode: "invite" }));
+
+    expect(res.status).toBe(200);
+    expect(mockProvision.mock.calls[0][2]).toBe("invite");
+  });
+
+  it("role_mismatch は 409 Conflict", async () => {
+    mockProvision.mockResolvedValue({ ok: false, reason: "role_mismatch" });
+
+    const res = await POST(makeRequest({ mode: "login" }));
+
+    expect(res.status).toBe(409);
+  });
+
+  it("email_collision は 409 Conflict", async () => {
+    mockProvision.mockResolvedValue({ ok: false, reason: "email_collision" });
+
+    const res = await POST(makeRequest({ mode: "register" }));
+
+    expect(res.status).toBe(409);
+  });
+
+  it("deleted は 410 Gone", async () => {
+    mockProvision.mockResolvedValue({ ok: false, reason: "deleted" });
+
+    const res = await POST(makeRequest({ mode: "login" }));
+
+    expect(res.status).toBe(410);
+  });
+
+  it("不正な mode は login にフォールバックする", async () => {
+    mockProvision.mockResolvedValue({
+      ok: true,
+      userId: "user-1",
+      newlyCreated: false,
+    });
+
+    await POST(makeRequest({ mode: "evil-mode" }));
+
+    expect(mockProvision.mock.calls[0][2]).toBe("login");
+  });
+
+  it("成功時のみ markAdminInvitationAccepted を呼ぶ", async () => {
+    mockProvision.mockResolvedValue({
+      ok: true,
+      userId: "user-1",
+      newlyCreated: false,
+    });
+
+    await POST(makeRequest({ mode: "login" }));
+
+    expect(mockMarkAccepted).toHaveBeenCalledTimes(1);
+  });
+
+  it("失敗時は markAdminInvitationAccepted を呼ばない", async () => {
+    mockProvision.mockResolvedValue({ ok: false, reason: "not_found" });
+
+    await POST(makeRequest({ mode: "login" }));
+
+    expect(mockMarkAccepted).not.toHaveBeenCalled();
+  });
+
+  it("markAdminInvitationAccepted の失敗は本体応答に影響しない", async () => {
+    mockProvision.mockResolvedValue({
+      ok: true,
+      userId: "user-1",
+      newlyCreated: false,
+    });
+    mockMarkAccepted.mockRejectedValueOnce(new Error("boom"));
+
+    const res = await POST(makeRequest({ mode: "login" }));
+
+    expect(res.status).toBe(200);
   });
 });
