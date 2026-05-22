@@ -64,8 +64,15 @@ export function buildEmailPayload(event: NotificationEvent): EmailPayload | null
     }
 
     case "OFFER_ACCEPTED": {
-      const { storeEmail, castNickname, castPhone, castEmail, castLineId, offerId } =
-        event.payload;
+      const {
+        storeEmail,
+        castNickname,
+        castPhone,
+        castEmail,
+        castLineId,
+        selectedScheduledAt,
+        offerId,
+      } = event.payload;
       if (!storeEmail) return null;
       return {
         to: storeEmail,
@@ -76,6 +83,7 @@ export function buildEmailPayload(event: NotificationEvent): EmailPayload | null
             castPhone={castPhone}
             castEmail={castEmail}
             castLineId={castLineId}
+            selectedScheduledAt={selectedScheduledAt}
             appUrl={appUrl}
           />
         ),
