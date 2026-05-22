@@ -606,12 +606,17 @@ export const castRouter = createTRPCRouter({
 
   /**
    * オファーに回答
+   *
+   * 承諾時は店舗が事前登録した interviewSlots から 1 件を選び、
+   * Offer/Match/Interview をトランザクションで一括作成する。
    */
   respondToOffer: castProcedure
     .input(
       z.object({
         offerId: z.string(),
         accept: z.boolean(),
+        // 承諾時のみ必須。Offer.interviewSlots[selectedSlotIndex] を面接日時とする。
+        selectedSlotIndex: z.number().int().min(0).max(2).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -632,42 +637,99 @@ export const castRouter = createTRPCRouter({
         });
       }
 
-      const offer = await ctx.prisma.offer.update({
-        where: {
-          id: input.offerId,
-          castId: cast.id,
+      // 承諾時は事前にスロット選択を検証する。
+      // findUnique でスロット配列を確認してから更新するためのガード。
+      if (input.accept && input.selectedSlotIndex === undefined) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "面接候補日時を選択してください",
+        });
+      }
+
+      const existingOffer = await ctx.prisma.offer.findUnique({
+        where: { id: input.offerId },
+        select: {
+          id: true,
+          castId: true,
+          storeId: true,
+          interviewSlots: true,
         },
-        data: {
-          status: input.accept ? "ACCEPTED" : "REJECTED",
-        },
-        include: {
-          store: {
-            select: {
-              owner: {
-                select: {
-                  userId: true,
-                  user: { select: { email: true } },
+      });
+
+      if (!existingOffer || existingOffer.castId !== cast.id) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "オファーが見つかりません",
+        });
+      }
+
+      let selectedScheduledAt: Date | null = null;
+      if (input.accept) {
+        const idx = input.selectedSlotIndex as number;
+        if (existingOffer.interviewSlots.length === 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "このオファーには面接候補日時が設定されていません。店舗にお問い合わせください。",
+          });
+        }
+        if (idx >= existingOffer.interviewSlots.length) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "指定された面接候補日時が存在しません",
+          });
+        }
+        selectedScheduledAt = existingOffer.interviewSlots[idx];
+      }
+
+      // 承諾: Offer 更新 + Match 作成 + Interview SCHEDULED 作成 をアトミックに。
+      // 辞退: Offer 更新のみ。
+      const updatedOffer = await ctx.prisma.$transaction(async (tx) => {
+        const offer = await tx.offer.update({
+          where: {
+            id: input.offerId,
+            castId: cast.id,
+          },
+          data: {
+            status: input.accept ? "ACCEPTED" : "REJECTED",
+          },
+          include: {
+            store: {
+              select: {
+                owner: {
+                  select: {
+                    userId: true,
+                    user: { select: { email: true } },
+                  },
                 },
               },
             },
           },
-        },
+        });
+
+        if (input.accept && selectedScheduledAt) {
+          await tx.match.create({
+            data: {
+              castId: cast.id,
+              storeId: offer.storeId,
+              status: "ACCEPTED",
+            },
+          });
+          await tx.interview.create({
+            data: {
+              offerId: offer.id,
+              castId: cast.id,
+              storeId: offer.storeId,
+              scheduledAt: selectedScheduledAt,
+            },
+          });
+        }
+
+        return offer;
       });
 
-      // オファー承諾時にやりとりを作成
-      if (input.accept) {
-        await ctx.prisma.match.create({
-          data: {
-            castId: cast.id,
-            storeId: offer.storeId,
-            status: "ACCEPTED",
-          },
-        });
-      }
-
-      // 店舗に通知送信
-      const storeUserId = offer.store.owner.userId;
-      const storeEmail = offer.store.owner.user.email;
+      const storeUserId = updatedOffer.store.owner.userId;
+      const storeEmail = updatedOffer.store.owner.user.email;
       const castNickname = cast.nickname || "キャスト";
 
       if (input.accept) {
@@ -675,12 +737,13 @@ export const castRouter = createTRPCRouter({
           type: "OFFER_ACCEPTED",
           payload: {
             recipientUserId: storeUserId,
-            offerId: offer.id,
+            offerId: updatedOffer.id,
             storeEmail,
             castNickname,
             castLineId: cast.lineId ?? null,
             castPhone: cast.user?.phone ?? null,
             castEmail: cast.user?.email ?? null,
+            selectedScheduledAt: selectedScheduledAt?.toISOString() ?? null,
           },
         });
       } else {
@@ -688,14 +751,14 @@ export const castRouter = createTRPCRouter({
           type: "OFFER_REJECTED",
           payload: {
             recipientUserId: storeUserId,
-            offerId: offer.id,
+            offerId: updatedOffer.id,
             storeEmail,
             castNickname,
           },
         });
       }
 
-      return offer;
+      return updatedOffer;
     }),
 
   /**
