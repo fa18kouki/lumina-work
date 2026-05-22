@@ -16,6 +16,7 @@ const adminInvitationCreate = vi.fn();
 const adminInvitationUpdate = vi.fn();
 const adminInvitationUpdateMany = vi.fn();
 const adminInvitationUpsert = vi.fn();
+const userFindFirst = vi.fn();
 
 const prismaMock = {
   adminInvitation: {
@@ -27,6 +28,9 @@ const prismaMock = {
     update: (...args: unknown[]) => adminInvitationUpdate(...args),
     updateMany: (...args: unknown[]) => adminInvitationUpdateMany(...args),
     upsert: (...args: unknown[]) => adminInvitationUpsert(...args),
+  },
+  user: {
+    findFirst: (...args: unknown[]) => userFindFirst(...args),
   },
   // $transaction はコールバックに同じ prisma 形状を渡すことで、
   // tx.adminInvitation.X 呼び出しがそのまま個別 mock に届くようにする。
@@ -194,6 +198,7 @@ describe("adminPanel.invite.create", () => {
     mockGenerateLinkSuccess();
     mockResendSuccess();
     adminInvitationFindUnique.mockResolvedValue(null);
+    userFindFirst.mockResolvedValue(null);
     adminInvitationCreate.mockImplementation(({ data }) => ({
       id: "inv-new",
       ...data,
@@ -252,6 +257,61 @@ describe("adminPanel.invite.create", () => {
     ).rejects.toMatchObject({ code: "CONFLICT" });
     expect(generateLink).not.toHaveBeenCalled();
     expect(resendEmailsSend).not.toHaveBeenCalled();
+  });
+
+  it("自己登録済みオーナーの email は CONFLICT (招待を発火しない)", async () => {
+    userFindFirst.mockResolvedValue({
+      id: "user-1",
+      role: "OWNER",
+    });
+    const caller = await createCaller();
+    await expect(
+      caller.adminPanel.invite.create({
+        email: "self-registered@example.com",
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: expect.stringContaining("オーナーアカウント"),
+    });
+    expect(generateLink).not.toHaveBeenCalled();
+    expect(resendEmailsSend).not.toHaveBeenCalled();
+    expect(adminInvitationUpsert).not.toHaveBeenCalled();
+  });
+
+  it("CAST 等の別ロールで使用中の email も CONFLICT", async () => {
+    userFindFirst.mockResolvedValue({
+      id: "user-cast-1",
+      role: "CAST",
+    });
+    const caller = await createCaller();
+    await expect(
+      caller.adminPanel.invite.create({ email: "cast@example.com" }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: expect.stringContaining("別の役割"),
+    });
+    expect(generateLink).not.toHaveBeenCalled();
+    expect(resendEmailsSend).not.toHaveBeenCalled();
+    expect(adminInvitationUpsert).not.toHaveBeenCalled();
+  });
+
+  it("soft-delete 済みユーザー (deletedAt != null) は招待を許容する", async () => {
+    // user.findFirst の where に { deletedAt: null } を含めているので、
+    // 退会済みユーザーは検索結果に出てこない想定。null を返すモックで
+    // 「招待が普通に通る」ことを確認する。
+    userFindFirst.mockResolvedValue(null);
+    const caller = await createCaller();
+    const result = await caller.adminPanel.invite.create({
+      email: "rejoin@example.com",
+    });
+    expect(userFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ deletedAt: null }),
+      }),
+    );
+    expect(generateLink).toHaveBeenCalledOnce();
+    expect(resendEmailsSend).toHaveBeenCalledOnce();
+    expect(result.status).toBe("PENDING");
   });
 
   it("REVOKED 状態の email は再招待でき、PENDING に戻す", async () => {

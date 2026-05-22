@@ -26,6 +26,7 @@ function OwnerRegisterForm() {
   const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState("");
   const { addToast } = useToast();
+  const utils = trpc.useUtils();
 
   // signup フローはサーバで Supabase Auth リンク発行 + Resend SDK 送信を行う。
   // テンプレ管理 / Supabase Email Templates 依存の排除のため client から
@@ -46,6 +47,30 @@ function OwnerRegisterForm() {
     }
 
     try {
+      // requestSignup の前に DB 側の重複チェック (招待中 / 既登録) を行う。
+      // ownerAuth.requestSignup は Supabase のエラーメッセージを文字列マッチ
+      // で CONFLICT 化しているだけで「招待中」と「自己登録済み」を区別できない
+      // ため、ここで誘導文言を出し分けるための preflight を挟む。
+      const preflight = await utils.client.auth.preflightOwnerSignup.query({
+        email,
+      });
+      if (!preflight.ok) {
+        if (preflight.reason === "PENDING_INVITATION") {
+          setError(
+            "このメールアドレスは管理者から招待されています。受信した招待メールのリンクから登録を完了してください。",
+          );
+        } else if (preflight.reason === "ALREADY_REGISTERED") {
+          setError(
+            "このメールアドレスはすでにオーナーとして登録されています。ログイン画面からサインインしてください。",
+          );
+        } else {
+          setError(
+            "このメールアドレスは別の役割で登録されているため、オーナーとして登録できません。",
+          );
+        }
+        return;
+      }
+
       await requestSignup.mutateAsync({
         email,
         password,
@@ -60,7 +85,11 @@ function OwnerRegisterForm() {
           ? err.message
           : "登録に失敗しました。もう一度お試しください";
       if (code === "CONFLICT") {
-        setError("このメールアドレスは既に登録されています");
+        // preflight で取りこぼした race (preflight 〜 mutation 間に他で登録が
+        // 走った場合) の防御線。文言は preflight と整合させる。
+        setError(
+          "このメールアドレスはすでに登録されています。ログイン画面からサインインしてください。",
+        );
         return;
       }
       addToast("error", message);

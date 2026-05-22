@@ -34,7 +34,21 @@ export const adminInviteRouter = createTRPCRouter({
       //   同 email への並列リクエストが来ても、$transaction 内で findUnique → upsert を
       //   完結させることで Supabase API を 1 度しか叩かない (= 重複メール送信防止)。
       //   既に PENDING/ACCEPTED の行があれば claim 失敗扱いで CONFLICT を返す。
+      //   さらに、`/o/register` 等の自己登録経由で既に User として存在する email も
+      //   弾く: Supabase 側は inviteUserByEmail を冪等に扱ってしまうため、
+      //   AdminInvitation 行が無い "self-registered owner" に誤って招待メールが
+      //   再送される事故を防ぐためにここで DB 検証する。
       const claim = await ctx.prisma.$transaction(async (tx) => {
+        const existingUser = await tx.user.findFirst({
+          where: { email: input.email, deletedAt: null },
+          select: { id: true, role: true },
+        });
+        if (existingUser) {
+          return {
+            kind: "user-conflict" as const,
+            role: existingUser.role,
+          };
+        }
         const existing = await tx.adminInvitation.findUnique({
           where: { email: input.email },
         });
@@ -68,6 +82,16 @@ export const adminInviteRouter = createTRPCRouter({
           code: "CONFLICT",
           message:
             "この email にはすでに招待が存在します。再送が必要な場合は再送機能を使ってください。",
+        });
+      }
+
+      if (claim.kind === "user-conflict") {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message:
+            claim.role === "OWNER"
+              ? "このメールアドレスはすでにオーナーアカウントとして登録されているため招待できません。"
+              : "このメールアドレスは別の役割 (キャスト等) で登録済みのため、オーナー招待できません。",
         });
       }
 
