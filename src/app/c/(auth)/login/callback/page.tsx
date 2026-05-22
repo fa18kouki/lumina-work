@@ -3,12 +3,22 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import {
+  parseCallbackTokens,
+  resolveNextPath,
+} from "@/lib/cast-login-callback";
 import { createBrowserClient } from "@/lib/supabase-auth";
 
 /**
  * キャストの Supabase マジックリンク完了ページ。
- * メールのリンクは Supabase 経由でここに hash 付きでリダイレクトされる。
- * セッションを復元したあと Prisma User を同期し、next パラメータの先へ遷移する（無ければ /c/dashboard）。
+ *
+ * Supabase メール認証は以下の 2 経路のどちらでも届きうるため、両方を明示処理する:
+ *   - implicit flow: URL hash fragment (#access_token=...&refresh_token=...&type=...)
+ *   - PKCE flow:     query string (?code=...)
+ *
+ * `@supabase/ssr` の detectSessionInUrl 自動処理に任せると、useEffect とのレースや
+ * フロー切り替え時のセッション欠落が発生する (owner 側 RUN-503 で踏み抜き)。
+ * 明示的に setSession / exchangeCodeForSession を呼ぶことで安定させる。
  */
 function LoginCallbackContent() {
   const router = useRouter();
@@ -21,21 +31,55 @@ function LoginCallbackContent() {
 
     async function run() {
       const supabase = createBrowserClient();
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
 
-      if (cancelled) return;
-      if (sessionError) {
-        setStatus("error");
-        setMessage("セッションの取得に失敗しました。");
-        return;
-      }
-      if (!session) {
-        setStatus("error");
-        setMessage("セッションがありません。もう一度ログインしてください。");
-        return;
+      const tokens = parseCallbackTokens({
+        hash: typeof window !== "undefined" ? window.location.hash : "",
+        searchParams: new URLSearchParams(searchParams.toString()),
+      });
+
+      if (tokens.kind === "hash") {
+        const { error } = await supabase.auth.setSession({
+          access_token: tokens.accessToken,
+          refresh_token: tokens.refreshToken,
+        });
+        if (cancelled) return;
+        if (error) {
+          setStatus("error");
+          setMessage(
+            "認証リンクの有効期限が切れているか、無効です。もう一度お試しください。",
+          );
+          return;
+        }
+        // hash を履歴から消す (戻る/リロードでの再処理を防ぐ)
+        if (typeof window !== "undefined") {
+          window.history.replaceState(
+            null,
+            "",
+            window.location.pathname + window.location.search,
+          );
+        }
+      } else if (tokens.kind === "code") {
+        const { error } = await supabase.auth.exchangeCodeForSession(
+          tokens.code,
+        );
+        if (cancelled) return;
+        if (error) {
+          setStatus("error");
+          setMessage(
+            "認証コードの検証に失敗しました。もう一度ログインしてください。",
+          );
+          return;
+        }
+      } else {
+        // tokens.kind === "none": URL に手がかりが無い場合は、既存セッションの有無だけ確認する。
+        // (例: タブ復帰でこのページを直接踏んだ場合)
+        const { data, error } = await supabase.auth.getSession();
+        if (cancelled) return;
+        if (error || !data.session) {
+          setStatus("error");
+          setMessage("セッションがありません。もう一度ログインしてください。");
+          return;
+        }
       }
 
       const res = await fetch("/api/auth/sync-cast-user", { method: "POST" });
@@ -45,14 +89,12 @@ function LoginCallbackContent() {
         const body = await res.json().catch(() => ({}));
         setStatus("error");
         setMessage(
-          (body as { message?: string })?.message ?? "アカウントの同期に失敗しました。"
+          (body as { message?: string })?.message ?? "アカウントの同期に失敗しました。",
         );
         return;
       }
 
-      const nextRaw = searchParams.get("next");
-      const next =
-        nextRaw && nextRaw.startsWith("/") ? decodeURIComponent(nextRaw) : "/c/dashboard";
+      const next = resolveNextPath(searchParams.get("next"));
 
       setStatus("ok");
       setMessage("ログインしました。リダイレクトしています...");
