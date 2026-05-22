@@ -666,6 +666,11 @@ model Offer {
   message String      @db.Text
   status  OfferStatus @default(PENDING)
 
+  // 面接候補日時 (店舗が事前に登録、キャストが承諾時に1つ選ぶ)
+  // 新規 Offer は 3 件必須 (アプリ層の zod で検証)。
+  // 既存 Offer は空配列のまま (後方互換)。
+  interviewSlots DateTime[] @default([]) @map("interview_slots")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   expiresAt DateTime @map("expires_at")

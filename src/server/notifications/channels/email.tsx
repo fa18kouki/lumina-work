@@ -64,8 +64,15 @@ export function buildEmailPayload(event: NotificationEvent): EmailPayload | null
     }
 
     case "OFFER_ACCEPTED": {
-      const { storeEmail, castNickname, castPhone, castEmail, castLineId, offerId } =
-        event.payload;
+      const {
+        storeEmail,
+        castNickname,
+        castPhone,
+        castEmail,
+        castLineId,
+        selectedScheduledAt,
+        offerId,
+      } = event.payload;
       if (!storeEmail) return null;
       return {
         to: storeEmail,
@@ -76,6 +83,7 @@ export function buildEmailPayload(event: NotificationEvent): EmailPayload | null
             castPhone={castPhone}
             castEmail={castEmail}
             castLineId={castLineId}
+            selectedScheduledAt={selectedScheduledAt}
             appUrl={appUrl}
           />
         ),
@@ -258,8 +266,13 @@ async function isStoreNotificationEnabled(
   });
   const store = owner?.stores[0];
   if (!store?.notificationSettings) return true;
-  const settings = store.notificationSettings as Record<string, boolean>;
-  return settings[settingKey] !== false;
+  // Prisma の Json? は任意の JSON 値。object でない / 値が boolean でない
+  // ケースを安全に弾く。読めない時は「設定されていない = 送信する」がデフォルト。
+  const raw = store.notificationSettings;
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return true;
+  const value = (raw as Record<string, unknown>)[settingKey];
+  // 明示的に false の時だけ送信スキップ。undefined / その他は送信する。
+  return value !== false;
 }
 
 async function send(payload: EmailPayload): Promise<void> {

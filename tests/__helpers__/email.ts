@@ -39,6 +39,11 @@ export async function getEmailCallArgs(
   options: { call?: number; includeIdempotencyKey?: boolean } = {},
 ): Promise<ResolvedEmailCall> {
   const call = options.call ?? 0;
+  if (mockSend.mock.calls.length <= call) {
+    throw new Error(
+      `getEmailCallArgs: mockSend was called ${mockSend.mock.calls.length} time(s), but tried to access call index ${call}`,
+    );
+  }
   const [emailArgs, sendOptions] = mockSend.mock.calls[call] as [
     EmailSendArgs,
     SendOptions | undefined,

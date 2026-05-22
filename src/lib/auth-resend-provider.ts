@@ -54,21 +54,31 @@ export function ResendEmailProvider(): EmailConfig {
       const from = provider.from && provider.from.length > 0
         ? provider.from
         : getEmailFrom();
-      const { error } = await resend.emails.send({
-        from,
-        to: identifier,
-        subject: buildMagicLinkSubject(),
-        react: MagicLinkEmail({ url }),
-        text: buildMagicLinkText(url),
-      });
-      if (error) {
+      // resend.emails.send は通常 `{ error }` を返すが、内部の React render が
+      // throw するケース (props 不正、@react-email の SSR 失敗等) があるため、
+      // SDK 呼び出し自体も try-catch で囲み、どちらの経路でも PII マスク済みの
+      // 例外として上に伝える。
+      let errorMessage: string | null = null;
+      try {
+        const { error } = await resend.emails.send({
+          from,
+          to: identifier,
+          subject: buildMagicLinkSubject(),
+          react: MagicLinkEmail({ url }),
+          text: buildMagicLinkText(url),
+        });
+        if (error) errorMessage = error.message;
+      } catch (err: unknown) {
+        errorMessage = err instanceof Error ? err.message : String(err);
+      }
+      if (errorMessage) {
         // PII (送信先 email) を例外メッセージに乗せると Sentry / ログ集約系に
         // 平文で流れるため、masked 表現に置換して残す。
         // 例: "alice@example.com" → "a***@example.com"
         // identifier 自体は呼び出し元 (NextAuth core) と上流のリクエストで握っているので
         // 障害切り分けに困らない。
         throw new Error(
-          `Email to ${maskEmail(identifier)} could not be sent: ${error.message}`,
+          `Email to ${maskEmail(identifier)} could not be sent: ${errorMessage}`,
         );
       }
     },

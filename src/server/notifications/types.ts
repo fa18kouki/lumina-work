@@ -77,6 +77,11 @@ type OfferAcceptedPayload = BasePayload & {
   castLineId: string | null;
   castPhone: string | null;
   castEmail: string | null;
+  /**
+   * キャストが選んだ面接候補日時 (ISO8601)。
+   * interviewSlots を持たない旧 Offer 経由で承諾された場合のみ null。
+   */
+  selectedScheduledAt: string | null;
 };
 
 /** #3 オファー辞退 */

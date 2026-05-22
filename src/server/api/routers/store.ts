@@ -411,15 +411,51 @@ export const storeRouter = createTRPCRouter({
 
   /**
    * オファー送信
+   *
+   * 店舗が事前に面接候補日時を 3 件 (interviewSlots) 登録する。
+   * キャストが承諾時にその中から 1 件を選び Interview が確定する仕組み。
    */
   sendOffer: ownerProcedure
     .input(
-      z.object({
-        storeId: z.string(),
-        castId: z.string(),
-        message: z.string().min(1).max(1000),
-        expiresInDays: z.number().min(1).max(30).default(7),
-      })
+      z
+        .object({
+          storeId: z.string(),
+          castId: z.string(),
+          message: z.string().min(1).max(1000),
+          expiresInDays: z.number().min(1).max(30).default(7),
+          // 面接候補日時 (ISO 文字列、UTC でも JST でも OK)。
+          // length=3 固定。すべて未来日時 (送信時点より後) を要求する。
+          interviewSlots: z
+            .array(z.string().datetime({ offset: true }))
+            .length(3),
+        })
+        .superRefine((val, ctx) => {
+          // 未来日時かつ重複なしを要求する。
+          // client 側でも同じ validation を行うが、サーバ側がバイパスされ得るので
+          // 入力境界で必ず検査する。
+          const now = Date.now();
+          const seen = new Map<number, number>(); // timestamp -> first index seen
+          val.interviewSlots.forEach((iso, idx) => {
+            const t = new Date(iso).getTime();
+            if (!Number.isFinite(t) || t <= now) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["interviewSlots", idx],
+                message: "面接候補日時は未来の日時を指定してください",
+              });
+              return;
+            }
+            if (seen.has(t)) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["interviewSlots", idx],
+                message: "面接候補日時は重複しないようにしてください",
+              });
+              return;
+            }
+            seen.set(t, idx);
+          });
+        })
     )
     .mutation(async ({ ctx, input }) => {
       const { owner, store } = await resolveOwnerStore(
@@ -506,6 +542,7 @@ export const storeRouter = createTRPCRouter({
           castId: input.castId,
           message: input.message,
           expiresAt,
+          interviewSlots: input.interviewSlots.map((iso) => new Date(iso)),
         },
       });
 

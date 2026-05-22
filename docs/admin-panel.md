@@ -55,13 +55,15 @@ Supabase SMTP 経由で **すべて Resend から送信される** ようにな�
 |------|------|-----|
 | `ADMIN_API_KEY` | 管理画面ログイン用 + admin-session cookie の HMAC 署名鍵 | `openssl rand -base64 48` で生成 |
 
-`RESEND_API_KEY` は **Resend を Supabase SMTP の認証情報として直接** 使うため、
-アプリ側コードからは読まない。Resend ダッシュボードで発行した API キーを Supabase の
-SMTP パスワード欄にそのまま貼り付けて使う (詳細は §4)。
+`RESEND_API_KEY` は **アプリ内** と **Supabase SMTP 設定** の両方で使う。
 
-> ⚠️ ローカル開発で実際にメールを送る場合、Supabase Auth は Supabase プロジェクト単位の SMTP 設定を
-> 共有する。開発 Supabase プロジェクトに dev 用の Resend キーを別途設定するのが安全
-> (本番 Resend キーを開発に流用しない)。
+- アプリ内: `src/lib/resend.ts` が Resend SDK を初期化し、通知メール (オファー / 面接 / 招待など) を直接送る
+- Supabase SMTP: Supabase Auth (magic link 等) の送信に同じキーを Supabase の SMTP パスワード欄に貼り付ける (詳細は §4)
+
+> ⚠️ 同じキーを 2 系統で使い回すため、漏洩時の影響範囲が広い。Vercel env と Supabase ダッシュボード以外には保存しない。
+>
+> ⚠️ ローカル開発で実際にメールを送る場合、Supabase Auth は Supabase プロジェクト単位の SMTP 設定を共有する。
+> 開発 Supabase プロジェクトには dev 用 Resend キーを別途発行し、本番キーを開発に流用しない。
 
 ---
 

@@ -53,14 +53,32 @@ export async function createInAppNotification(
     }
 
     case "OFFER_ACCEPTED": {
-      const { recipientUserId, offerId, castNickname, castLineId, castPhone, castEmail } = event.payload;
+      const {
+        recipientUserId,
+        offerId,
+        castNickname,
+        castLineId,
+        castPhone,
+        castEmail,
+        selectedScheduledAt,
+      } = event.payload;
+      const body = selectedScheduledAt
+        ? `${castNickname}さんがオファーを承諾し、面接候補日時を選びました`
+        : `${castNickname}さんがオファーを承諾しました`;
       await createNotification({
         userId: recipientUserId,
         type: "OFFER_ACCEPTED",
         title: "オファー承諾",
-        body: `${castNickname}さんがオファーを承諾しました`,
+        body,
         link: "/s/offers",
-        metadata: { offerId, castNickname, castLineId, castPhone, castEmail },
+        metadata: {
+          offerId,
+          castNickname,
+          castLineId,
+          castPhone,
+          castEmail,
+          selectedScheduledAt,
+        },
       });
       return;
     }
