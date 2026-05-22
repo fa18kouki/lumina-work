@@ -47,6 +47,12 @@ export function OwnerLayoutWrapper({
           店舗一覧
         </Link>
         <Link
+          href="/o/messages"
+          className="flex flex-col items-center gap-0.5 text-xs text-[var(--text-sub)] hover:text-slate-700"
+        >
+          メッセージ
+        </Link>
+        <Link
           href="/o/subscription"
           className="flex flex-col items-center gap-0.5 text-xs text-[var(--text-sub)] hover:text-slate-700"
         >

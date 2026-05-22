@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { trpc } from "@/lib/trpc";
-import { Home, Search, Bell, User } from "lucide-react";
+import { Home, Search, Bell, MessageCircle, User } from "lucide-react";
 
 const navItems = [
   {
@@ -20,7 +20,13 @@ const navItems = [
     href: "/c/offers",
     label: "オファー",
     icon: Bell,
-    showBadge: true,
+    showOfferBadge: true,
+  },
+  {
+    href: "/c/messages",
+    label: "メッセージ",
+    icon: MessageCircle,
+    showMessageBadge: true,
   },
   {
     href: "/c/profile/edit",
@@ -36,7 +42,12 @@ export function CastNav() {
     undefined,
     { refetchInterval: 30_000 }
   );
-  const unreadCount = unreadData?.count ?? 0;
+  const { data: messageUnreadData } = trpc.message.getUnreadCount.useQuery(
+    undefined,
+    { refetchInterval: 20_000 }
+  );
+  const offerUnreadCount = unreadData?.count ?? 0;
+  const messageUnreadCount = messageUnreadData?.count ?? 0;
 
   return (
     <nav className="sticky bottom-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-100">
@@ -45,8 +56,14 @@ export function CastNav() {
         {navItems.map((item) => {
           const isActive =
             pathname === item.href ||
-            (item.href === "/c/offers" && pathname.startsWith("/c/offers"));
+            (item.href === "/c/offers" && pathname.startsWith("/c/offers")) ||
+            (item.href === "/c/messages" && pathname.startsWith("/c/messages"));
           const Icon = item.icon;
+          const badgeCount = item.showOfferBadge
+            ? offerUnreadCount
+            : item.showMessageBadge
+              ? messageUnreadCount
+              : 0;
           return (
             <li key={item.href}>
               <Link
@@ -64,9 +81,9 @@ export function CastNav() {
               >
                 <span className="relative">
                   <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
-                  {item.showBadge && unreadCount > 0 && (
+                  {badgeCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold min-w-[16px] h-4 rounded-full flex items-center justify-center px-0.5">
-                      {unreadCount > 9 ? "9+" : unreadCount}
+                      {badgeCount > 9 ? "9+" : badgeCount}
                     </span>
                   )}
                 </span>
