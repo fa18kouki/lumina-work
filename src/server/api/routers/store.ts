@@ -430,7 +430,11 @@ export const storeRouter = createTRPCRouter({
             .length(3),
         })
         .superRefine((val, ctx) => {
+          // 未来日時かつ重複なしを要求する。
+          // client 側でも同じ validation を行うが、サーバ側がバイパスされ得るので
+          // 入力境界で必ず検査する。
           const now = Date.now();
+          const seen = new Map<number, number>(); // timestamp -> first index seen
           val.interviewSlots.forEach((iso, idx) => {
             const t = new Date(iso).getTime();
             if (!Number.isFinite(t) || t <= now) {
@@ -439,7 +443,17 @@ export const storeRouter = createTRPCRouter({
                 path: ["interviewSlots", idx],
                 message: "面接候補日時は未来の日時を指定してください",
               });
+              return;
             }
+            if (seen.has(t)) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["interviewSlots", idx],
+                message: "面接候補日時は重複しないようにしてください",
+              });
+              return;
+            }
+            seen.set(t, idx);
           });
         })
     )

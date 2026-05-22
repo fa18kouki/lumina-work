@@ -159,4 +159,16 @@ describe("store.sendOffer - 面接候補日時 (interviewSlots)", () => {
     ).rejects.toBeDefined();
     expect(offerCreateMock).not.toHaveBeenCalled();
   });
+
+  it("interviewSlots に重複した日時が含まれると zod エラーになる", async () => {
+    const caller = await createOwnerCaller();
+    const dup = futureIso(2);
+    await expect(
+      caller.store.sendOffer({
+        ...validInputBase,
+        interviewSlots: [futureIso(1), dup, dup],
+      }),
+    ).rejects.toBeDefined();
+    expect(offerCreateMock).not.toHaveBeenCalled();
+  });
 });
