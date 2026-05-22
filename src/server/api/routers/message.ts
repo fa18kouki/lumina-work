@@ -30,17 +30,24 @@ export const messageRouter = createTRPCRouter({
 
       const castId = user?.cast?.id;
       const storeIds = user?.owner?.stores.map((s) => s.id) ?? [];
-      const storeId = storeIds[0];
 
-      // 自分に関連するか確認
+      // 自分に関連するか確認 (複数店舗オーナーも全店舗カバー)
+      const orClauses: Array<Record<string, unknown>> = [];
+      if (castId) orClauses.push({ castId });
+      if (storeIds.length > 0) orClauses.push({ storeId: { in: storeIds } });
+
+      if (orClauses.length === 0) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "該当するやりとりが見つからないか、メッセージを送信できません",
+        });
+      }
+
       const match = await ctx.prisma.match.findFirst({
         where: {
           id: input.matchId,
           status: "ACCEPTED",
-          OR: [
-            { castId: castId ?? "" },
-            { storeId: storeId ?? "" },
-          ],
+          OR: orClauses,
         },
         include: {
           cast: {
@@ -153,16 +160,23 @@ export const messageRouter = createTRPCRouter({
 
       const castId = user?.cast?.id;
       const storeIds = user?.owner?.stores.map((s) => s.id) ?? [];
-      const storeId = storeIds[0];
 
-      // 自分に関連するか確認
+      // 自分に関連するか確認 (複数店舗オーナーも全店舗カバー)
+      const orClauses: Array<Record<string, unknown>> = [];
+      if (castId) orClauses.push({ castId });
+      if (storeIds.length > 0) orClauses.push({ storeId: { in: storeIds } });
+
+      if (orClauses.length === 0) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "該当するやりとりが見つかりません",
+        });
+      }
+
       const match = await ctx.prisma.match.findFirst({
         where: {
           id: input.matchId,
-          OR: [
-            { castId: castId ?? "" },
-            { storeId: storeId ?? "" },
-          ],
+          OR: orClauses,
         },
       });
 
