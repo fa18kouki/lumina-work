@@ -4,37 +4,33 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Mail } from "lucide-react";
-import { createBrowserClient } from "@/lib/supabase-auth";
+import { trpc } from "@/lib/trpc";
 
 export default function OwnerForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState("");
+
+  // password reset フローはサーバで Supabase Auth リンク発行 + Resend SDK 送信を行う。
+  // client から supabase.auth.resetPasswordForEmail を直接叩くと Supabase ダッシュボードの
+  // Email Templates 設定経由になるため、文面のコード管理ができない。
+  // 詳細: docs/email-architecture.md。
+  const requestReset = trpc.ownerAuth.requestPasswordReset.useMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setIsLoading(true);
-
     try {
-      const supabase = createBrowserClient();
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/o/reset-password`,
-      });
-
-      if (resetError) {
-        setError("パスワードリセットメールの送信に失敗しました");
-        return;
-      }
-
+      await requestReset.mutateAsync({ email });
+      // mutation は email enumeration を防ぐため、存在しない email でも success を返す。
+      // UI 側もそれに合わせて「送信しました」を表示する。
       setEmailSent(true);
     } catch {
-      setError("エラーが発生しました。もう一度お試しください");
-    } finally {
-      setIsLoading(false);
+      setError("パスワードリセットメールの送信に失敗しました");
     }
   };
+
+  const isLoading = requestReset.isPending;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

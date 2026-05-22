@@ -88,9 +88,9 @@ function buildDescriptionWithStrengths(
  * 診断ページの localStorage に蓄積された回答 (DiagnosisAnswers) を、
  * ログイン後の Cast レコードに 1 度だけ反映する。
  *
- * - 認証必須 (NextAuth or Supabase)
+ * - 認証必須 (Cast は NextAuth、Owner/Admin は Supabase + sync-owner-user)
  * - role は CAST 必須
- * - Cast row が無ければ 404 (sync-cast-user / NextAuth createUser で作られている前提)
+ * - Cast row が無ければ 404 (NextAuth adapter の createUser で作られている前提)
  * - 既に diagnosisCompleted=true なら上書きせず skipped を返す
  *
  * クライアントは反映成功時に localStorage をクリアする。

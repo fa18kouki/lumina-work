@@ -2,6 +2,7 @@ import { createTRPCRouter, createCallerFactory } from "./trpc";
 import { castRouter } from "./routers/cast";
 import { storeRouter } from "./routers/store";
 import { ownerRouter } from "./routers/owner";
+import { ownerAuthRouter } from "./routers/owner-auth";
 import { matchRouter } from "./routers/match";
 import { interviewRouter } from "./routers/interview";
 import { messageRouter } from "./routers/message";
@@ -19,6 +20,7 @@ export const appRouter = createTRPCRouter({
   cast: castRouter,
   store: storeRouter,
   owner: ownerRouter,
+  ownerAuth: ownerAuthRouter,
   match: matchRouter,
   interview: interviewRouter,
   message: messageRouter,
