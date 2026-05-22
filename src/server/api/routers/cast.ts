@@ -582,6 +582,12 @@ export const castRouter = createTRPCRouter({
               preferredContactMethod: true,
             },
           },
+          interviews: {
+            where: { status: "SCHEDULED" },
+            select: { id: true, scheduledAt: true, status: true },
+            orderBy: { scheduledAt: "asc" },
+            take: 1,
+          },
         },
       });
 

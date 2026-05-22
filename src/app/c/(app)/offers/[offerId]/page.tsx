@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { AcceptOfferDialog } from "@/components/cast/accept-offer-dialog";
 import { trpc } from "@/lib/trpc";
 import { SalaryDisplay } from "@/components/store/salary-display";
 import {
@@ -32,7 +33,8 @@ export default function OfferDetailPage() {
   const offerId = params.offerId as string;
   const { data: session, status } = useAppSession();
   const utils = trpc.useUtils();
-  const [pendingAccept, setPendingAccept] = useState<boolean | null>(null);
+  const [pendingReject, setPendingReject] = useState(false);
+  const [acceptOpen, setAcceptOpen] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/c/login");
@@ -63,17 +65,17 @@ export default function OfferDetailPage() {
       utils.cast.getOfferDetail.invalidate({ offerId });
       utils.cast.getOffers.invalidate();
       utils.match.getMatches.invalidate();
+      setAcceptOpen(false);
+      setPendingReject(false);
     },
   });
 
-  const handleRespond = (accept: boolean) => {
-    setPendingAccept(accept);
+  const handleConfirmReject = () => {
+    respondToOffer.mutate({ offerId, accept: false });
   };
 
-  const handleConfirmResponse = () => {
-    if (pendingAccept === null) return;
-    respondToOffer.mutate({ offerId, accept: pendingAccept });
-    setPendingAccept(null);
+  const handleConfirmAccept = (selectedSlotIndex: number) => {
+    respondToOffer.mutate({ offerId, accept: true, selectedSlotIndex });
   };
 
   if (status === "loading" || !session || session.user.role !== "CAST") {
@@ -317,14 +319,14 @@ export default function OfferDetailPage() {
         <div className="fixed bottom-20 md:bottom-0 left-0 right-0 bg-white px-4 sm:px-6 py-3 sm:py-4 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex gap-3 z-40">
           <Button
             variant="outline"
-            onClick={() => handleRespond(false)}
+            onClick={() => setPendingReject(true)}
             isLoading={respondToOffer.isPending}
             className="flex-1 h-12"
           >
             辞退する
           </Button>
           <Button
-            onClick={() => handleRespond(true)}
+            onClick={() => setAcceptOpen(true)}
             isLoading={respondToOffer.isPending}
             className="flex-1 h-12"
           >
@@ -336,9 +338,24 @@ export default function OfferDetailPage() {
       {offer.status === "ACCEPTED" && (
         <div className="fixed bottom-20 md:bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-40">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-green-700 text-sm font-medium">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>承諾済み</span>
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <div className="flex items-center gap-2 text-green-700 text-sm font-medium">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <span>承諾済み</span>
+              </div>
+              {offer.interviews && offer.interviews.length > 0 && (
+                <span className="text-xs text-gray-600 ml-6 truncate">
+                  面接予定:{" "}
+                  {new Intl.DateTimeFormat("ja-JP", {
+                    month: "long",
+                    day: "numeric",
+                    weekday: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    timeZone: "Asia/Tokyo",
+                  }).format(new Date(offer.interviews[0].scheduledAt))}
+                </span>
+              )}
             </div>
             <Button
               onClick={() =>
@@ -348,7 +365,7 @@ export default function OfferDetailPage() {
                     : "/c/messages"
                 )
               }
-              className="ml-auto h-10"
+              className="ml-auto h-10 flex-shrink-0"
             >
               <MessageCircle className="w-4 h-4 mr-1.5" />
               お店とメッセージする
@@ -367,17 +384,24 @@ export default function OfferDetailPage() {
       )}
 
       <ConfirmDialog
-        open={pendingAccept !== null}
-        title={pendingAccept ? "オファーを承諾しますか？" : "オファーを辞退しますか？"}
-        description={
-          pendingAccept
-            ? "承諾後、店舗に通知され面接日程の調整へ進みます。"
-            : "辞退すると取り消すことはできません。よろしいですか？"
-        }
-        confirmLabel={pendingAccept ? "承諾する" : "辞退する"}
-        variant={pendingAccept ? "default" : "danger"}
-        onConfirm={handleConfirmResponse}
-        onCancel={() => setPendingAccept(null)}
+        open={pendingReject}
+        title="オファーを辞退しますか？"
+        description="辞退すると取り消すことはできません。よろしいですか？"
+        confirmLabel="辞退する"
+        variant="danger"
+        onConfirm={handleConfirmReject}
+        onCancel={() => setPendingReject(false)}
+      />
+
+      <AcceptOfferDialog
+        open={acceptOpen}
+        storeName={offer.store.name}
+        interviewSlots={(offer.interviewSlots ?? []).map((d) =>
+          new Date(d as unknown as string | Date).toISOString(),
+        )}
+        isSubmitting={respondToOffer.isPending}
+        onConfirm={handleConfirmAccept}
+        onCancel={() => setAcceptOpen(false)}
       />
     </div>
   );
