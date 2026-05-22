@@ -92,7 +92,15 @@ export async function middleware(req: NextRequest) {
     const isAdminLogin = adminDecision.to === "/admin/login";
     const isAdminRoot = adminDecision.to === "/admin";
     if (!isAdminLogin) {
-      const expectedKey = process.env.ADMIN_API_KEY ?? "";
+      const expectedKey = process.env.ADMIN_API_KEY;
+      // ADMIN_API_KEY 未設定で空文字を verifyAdminSessionCookie に渡すと、
+      // 攻撃者が「同じ空文字」で HMAC を計算したセッション cookie を持ち込んだ
+      // 場合に通過する余地ができる。adminPanelProcedure (tRPC) と同じく、
+      // 未設定時は 500 を返してフロー全体を停止する。
+      if (!expectedKey) {
+        console.error("[middleware] ADMIN_API_KEY is not configured");
+        return new NextResponse("Internal Server Error", { status: 500 });
+      }
       const cookieValue = req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
       const session = verifyAdminSessionCookie(cookieValue, expectedKey);
       if (!session.ok) {

@@ -114,6 +114,13 @@ export function AdminInviteRow({
             role="alertdialog"
             id={confirmDialogId}
             aria-labelledby={confirmTitleId}
+            onKeyDown={(e) => {
+              // Escape で閉じる。実行中 (revoke.isPending) は閉じない
+              if (e.key === "Escape" && !revoke.isPending) {
+                e.preventDefault();
+                setConfirming(false);
+              }
+            }}
             className="mt-2 rounded-md border border-red-200 bg-red-50 p-3 text-left"
           >
             <p id={confirmTitleId} className="text-xs text-red-800">
