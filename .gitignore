@@ -69,3 +69,4 @@ bun.lockb
 # Claude Code
 .claude/
 cabaret-interview-app.code-workspace
+.env*.local
