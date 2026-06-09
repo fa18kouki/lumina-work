@@ -1,5 +1,7 @@
 "use client";
 
+import { useId } from "react";
+
 interface TextFieldProps {
   label: string;
   value: string;
@@ -23,15 +25,21 @@ export function TextField({
   maxLength,
   disabled,
 }: TextFieldProps) {
+  const id = useId();
+
   return (
     <div>
-      <label className="block text-sm font-medium text-[var(--text-main)] mb-2">
+      <label
+        htmlFor={id}
+        className="block text-sm font-medium text-[var(--text-main)] mb-2"
+      >
         {label}
         {optional && (
           <span className="text-xs text-[var(--text-sub)] ml-2">(任意)</span>
         )}
       </label>
       <input
+        id={id}
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
