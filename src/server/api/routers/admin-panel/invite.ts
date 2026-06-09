@@ -10,6 +10,16 @@ import {
 } from "@/server/auth/owner-email";
 
 const emailSchema = z.string().email().max(320);
+const directOwnerCreateInput = z.object({
+  email: emailSchema,
+  password: z.string().min(8).max(128),
+  companyName: z.string().trim().max(200).optional(),
+  representativeName: z.string().trim().max(100).optional(),
+  plan: z
+    .enum(["FREE", "CASUAL", "PRO_TRIAL", "PRO_BUSINESS", "PRO_ENTERPRISE"])
+    .default("FREE"),
+  customMonthlyPriceJpy: z.number().int().min(0).nullable().optional(),
+});
 
 const listInput = z
   .object({
@@ -139,6 +149,99 @@ export const adminInviteRouter = createTRPCRouter({
         });
       }
       return { ...claim.invitation, supabaseUserId };
+    }),
+
+  createDirectOwner: adminPanelProcedure
+    .input(directOwnerCreateInput)
+    .mutation(async ({ input, ctx }) => {
+      const existingUser = await ctx.prisma.user.findFirst({
+        where: { email: input.email, deletedAt: null },
+        select: { id: true, role: true },
+      });
+      if (existingUser) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message:
+            existingUser.role === "OWNER"
+              ? "このメールアドレスはすでにオーナーアカウントとして登録されています。"
+              : "このメールアドレスは別の役割で登録済みです。",
+        });
+      }
+
+      const supabase = getSupabaseAdminClient();
+      const { data, error } = await supabase.auth.admin.createUser({
+        email: input.email,
+        password: input.password,
+        email_confirm: true,
+        user_metadata: {
+          role: "OWNER",
+          provisioned_by: "lumina-admin-panel",
+        },
+      });
+
+      if (error || !data.user?.id) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Supabase user create failed: ${error?.message ?? "missing user id"}`,
+        });
+      }
+
+      const planConfig = await ctx.prisma.subscriptionPlanConfig.findUnique({
+        where: { plan: input.plan },
+        select: { id: true, offerLimit: true, maxStores: true },
+      });
+
+      try {
+        const created = await ctx.prisma.$transaction(async (tx) => {
+          const user = await tx.user.create({
+            data: {
+              email: input.email,
+              emailVerified: new Date(),
+              role: "OWNER",
+              supabaseAuthId: data.user.id,
+            },
+          });
+
+          const owner = await tx.owner.create({
+            data: {
+              userId: user.id,
+              companyName: input.companyName?.trim() || null,
+              representativeName: input.representativeName?.trim() || null,
+              isVerified: false,
+            },
+          });
+
+          const subscription = await tx.subscription.create({
+            data: {
+              ownerId: owner.id,
+              plan: input.plan,
+              status: "ACTIVE",
+              offerLimit: planConfig?.offerLimit ?? null,
+              maxStores: planConfig?.maxStores ?? null,
+              planConfigId: planConfig?.id ?? null,
+              customMonthlyPriceJpy: input.customMonthlyPriceJpy ?? null,
+            },
+          });
+
+          return { user, owner, subscription };
+        });
+
+        return {
+          userId: created.user.id,
+          ownerId: created.owner.id,
+          email: created.user.email,
+          plan: created.subscription.plan,
+          customMonthlyPriceJpy: created.subscription.customMonthlyPriceJpy,
+        };
+      } catch (dbError) {
+        await supabase.auth.admin.deleteUser(data.user.id).catch((deleteError: unknown) => {
+          console.error("[adminPanel.invite.createDirectOwner] rollback deleteUser failed", {
+            supabaseUserId: data.user.id,
+            error: deleteError instanceof Error ? deleteError.message : String(deleteError),
+          });
+        });
+        throw dbError;
+      }
     }),
 
   resend: adminPanelProcedure

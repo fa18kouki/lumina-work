@@ -10,15 +10,40 @@ import {
 import { prisma } from "@/server/db";
 
 const inputSchema = z.object({
+  nickname: z.string().trim().min(1).max(50).optional(),
   age: z.number().int().min(18).max(99).optional(),
+  birthDate: z.string().date().optional(),
+  instagramId: z.string().trim().max(100).optional(),
+  lineId: z.string().trim().max(100).optional(),
+  currentListingUrl: z
+    .string()
+    .url()
+    .refine((u) => /^https:\/\//i.test(u), {
+      message: "https:// で始まる URL のみ許可されます",
+    })
+    .optional(),
   totalExperienceYears: z.number().min(0).max(50).optional(),
+  previousHourlyRate: z.number().int().min(0).max(1_000_000).optional(),
+  // 診断UIでは「万円」単位の選択値を返す。DBは円単位なので保存時に変換する。
+  monthlySales: z.number().int().min(0).max(100_000).optional(),
+  monthlyNominations: z.number().int().min(0).max(10_000).optional(),
   desiredAreas: z.array(z.string()).max(20).optional(),
   desiredHourlyRate: z.number().min(0).max(1_000_000).optional(),
+  // 診断UIでは「万円」単位の選択値を返す。DBは円単位なので保存時に変換する。
+  desiredMonthlyIncome: z.number().int().min(0).max(100_000).optional(),
   availableDaysPerWeek: z.number().min(1).max(7).optional(),
   alcoholTolerance: z
     .enum(["NONE", "WEAK", "MODERATE", "STRONG", "NG"])
     .optional(),
   preferredAtmosphere: z.array(z.string()).max(20).optional(),
+  preferredClientele: z.array(z.string()).max(20).optional(),
+  // 診断UIでは「万円」単位の選択値を返す。DBは円単位なので保存時に変換する。
+  birthdaySales: z.number().int().min(0).max(100_000).optional(),
+  hasVipClients: z.boolean().optional(),
+  vipClientDescription: z.string().trim().max(2_000).optional(),
+  socialFollowers: z.number().int().min(0).max(100_000_000).optional(),
+  isAvailableNow: z.boolean().optional(),
+  downtimeUntil: z.string().date().optional(),
   // BUG-6 + C-2: photos は https:// 始まりの URL のみ許可する allowlist 方式。
   //   - blob: / Blob: / BLOB: などの大小文字バリアント (case-insensitive)
   //   - data: (DoS / 巨大ペイロード)
@@ -84,6 +109,16 @@ function buildDescriptionWithStrengths(
   return `${trimmed}\n\n${strengthsLine}`;
 }
 
+function dateFromIsoDate(value: string | undefined): Date | undefined {
+  if (!value) return undefined;
+  return new Date(`${value}T00:00:00.000Z`);
+}
+
+function manYenToYen(value: number | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  return value * 10_000;
+}
+
 /**
  * 診断ページの localStorage に蓄積された回答 (DiagnosisAnswers) を、
  * ログイン後の Cast レコードに 1 度だけ反映する。
@@ -135,16 +170,40 @@ export async function POST(req: NextRequest) {
     diagnosisCompleted: true,
     diagnosisCompletedAt: new Date(),
   };
+  if (a.nickname !== undefined) data.nickname = a.nickname;
   if (a.age !== undefined) data.age = a.age;
+  if (a.birthDate !== undefined) data.birthDate = dateFromIsoDate(a.birthDate);
+  if (a.instagramId !== undefined) data.instagramId = a.instagramId;
+  if (a.lineId !== undefined) data.lineId = a.lineId;
+  if (a.currentListingUrl !== undefined)
+    data.currentListingUrl = a.currentListingUrl;
   if (a.totalExperienceYears !== undefined)
     data.totalExperienceYears = a.totalExperienceYears;
+  if (a.previousHourlyRate !== undefined)
+    data.previousHourlyRate = a.previousHourlyRate;
+  if (a.monthlySales !== undefined)
+    data.monthlySales = manYenToYen(a.monthlySales);
+  if (a.monthlyNominations !== undefined)
+    data.monthlyNominations = a.monthlyNominations;
   if (a.desiredAreas) data.desiredAreas = a.desiredAreas;
   if (a.desiredHourlyRate !== undefined)
     data.desiredHourlyRate = a.desiredHourlyRate;
+  if (a.desiredMonthlyIncome !== undefined)
+    data.desiredMonthlyIncome = manYenToYen(a.desiredMonthlyIncome);
   if (a.availableDaysPerWeek !== undefined)
     data.availableDaysPerWeek = a.availableDaysPerWeek;
   if (a.alcoholTolerance) data.alcoholTolerance = a.alcoholTolerance;
   if (a.preferredAtmosphere) data.preferredAtmosphere = a.preferredAtmosphere;
+  if (a.preferredClientele) data.preferredClientele = a.preferredClientele;
+  if (a.birthdaySales !== undefined)
+    data.birthdaySales = manYenToYen(a.birthdaySales);
+  if (a.hasVipClients !== undefined) data.hasVipClients = a.hasVipClients;
+  if (a.vipClientDescription !== undefined)
+    data.vipClientDescription = a.vipClientDescription;
+  if (a.socialFollowers !== undefined) data.socialFollowers = a.socialFollowers;
+  if (a.isAvailableNow !== undefined) data.isAvailableNow = a.isAvailableNow;
+  if (a.downtimeUntil !== undefined)
+    data.downtimeUntil = dateFromIsoDate(a.downtimeUntil);
   if (a.photos && a.photos.length > 0) data.photos = a.photos;
 
   if (a.strengths && a.strengths.length > 0) {

@@ -34,6 +34,7 @@ type EditTarget = {
   currentStatus: string;
   offerLimit: number | null;
   maxStores: number | null;
+  customMonthlyPriceJpy: number | null;
 };
 
 export function AdminSubscriptionList({ search }: AdminSubscriptionListProps) {
@@ -97,6 +98,9 @@ export function AdminSubscriptionList({ search }: AdminSubscriptionListProps) {
                 status
               </th>
               <th scope="col" className="px-4 py-3">
+                個別月額
+              </th>
+              <th scope="col" className="px-4 py-3">
                 登録日時
               </th>
               <th scope="col" className="px-4 py-3 text-right">
@@ -133,6 +137,13 @@ export function AdminSubscriptionList({ search }: AdminSubscriptionListProps) {
                       {status}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-xs text-slate-700">
+                    {subscription?.customMonthlyPriceJpy != null ? (
+                      `¥${subscription.customMonthlyPriceJpy.toLocaleString()}`
+                    ) : (
+                      <span className="text-slate-400">標準価格</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-xs text-slate-500">
                     {formatDate(u.createdAt)}
                   </td>
@@ -148,6 +159,8 @@ export function AdminSubscriptionList({ search }: AdminSubscriptionListProps) {
                           currentStatus: status,
                           offerLimit: subscription?.offerLimit ?? null,
                           maxStores: subscription?.maxStores ?? null,
+                          customMonthlyPriceJpy:
+                            subscription?.customMonthlyPriceJpy ?? null,
                         })
                       }
                       className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50"

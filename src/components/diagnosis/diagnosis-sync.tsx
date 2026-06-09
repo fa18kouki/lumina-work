@@ -45,13 +45,29 @@ export function DiagnosisSync() {
 
     // 反映できそうな値が 1 つも無ければ skip (空オブジェクトで API を叩くのを避ける)
     const hasContent =
+      !!answers.nickname ||
       answers.age !== undefined ||
+      !!answers.birthDate ||
+      !!answers.instagramId ||
+      !!answers.lineId ||
+      !!answers.currentListingUrl ||
       answers.totalExperienceYears !== undefined ||
+      answers.previousHourlyRate !== undefined ||
+      answers.monthlySales !== undefined ||
+      answers.monthlyNominations !== undefined ||
       (answers.desiredAreas && answers.desiredAreas.length > 0) ||
       answers.desiredHourlyRate !== undefined ||
+      answers.desiredMonthlyIncome !== undefined ||
       answers.availableDaysPerWeek !== undefined ||
       !!answers.alcoholTolerance ||
       (answers.preferredAtmosphere && answers.preferredAtmosphere.length > 0) ||
+      (answers.preferredClientele && answers.preferredClientele.length > 0) ||
+      answers.birthdaySales !== undefined ||
+      answers.hasVipClients !== undefined ||
+      !!answers.vipClientDescription ||
+      answers.socialFollowers !== undefined ||
+      answers.isAvailableNow !== undefined ||
+      !!answers.downtimeUntil ||
       (answers.photos && answers.photos.length > 0) ||
       (answers.strengths && answers.strengths.length > 0);
     if (!hasContent) return;
@@ -59,13 +75,31 @@ export function DiagnosisSync() {
     submittedRef.current = true;
 
     const payload: Record<string, unknown> = {};
+    if (typeof answers.nickname === "string") payload.nickname = answers.nickname;
     if (typeof answers.age === "number") payload.age = answers.age;
+    if (typeof answers.birthDate === "string") payload.birthDate = answers.birthDate;
+    if (typeof answers.instagramId === "string")
+      payload.instagramId = answers.instagramId;
+    if (typeof answers.lineId === "string") payload.lineId = answers.lineId;
+    if (
+      typeof answers.currentListingUrl === "string" &&
+      /^https:\/\//i.test(answers.currentListingUrl)
+    )
+      payload.currentListingUrl = answers.currentListingUrl;
     if (typeof answers.totalExperienceYears === "number")
       payload.totalExperienceYears = answers.totalExperienceYears;
+    if (typeof answers.previousHourlyRate === "number")
+      payload.previousHourlyRate = answers.previousHourlyRate;
+    if (typeof answers.monthlySales === "number")
+      payload.monthlySales = answers.monthlySales;
+    if (typeof answers.monthlyNominations === "number")
+      payload.monthlyNominations = answers.monthlyNominations;
     if (Array.isArray(answers.desiredAreas) && answers.desiredAreas.length > 0)
       payload.desiredAreas = answers.desiredAreas;
     if (typeof answers.desiredHourlyRate === "number")
       payload.desiredHourlyRate = answers.desiredHourlyRate;
+    if (typeof answers.desiredMonthlyIncome === "number")
+      payload.desiredMonthlyIncome = answers.desiredMonthlyIncome;
     if (typeof answers.availableDaysPerWeek === "number")
       payload.availableDaysPerWeek = answers.availableDaysPerWeek;
     if (typeof answers.alcoholTolerance === "string")
@@ -75,6 +109,23 @@ export function DiagnosisSync() {
       answers.preferredAtmosphere.length > 0
     )
       payload.preferredAtmosphere = answers.preferredAtmosphere;
+    if (
+      Array.isArray(answers.preferredClientele) &&
+      answers.preferredClientele.length > 0
+    )
+      payload.preferredClientele = answers.preferredClientele;
+    if (typeof answers.birthdaySales === "number")
+      payload.birthdaySales = answers.birthdaySales;
+    if (typeof answers.hasVipClients === "boolean")
+      payload.hasVipClients = answers.hasVipClients;
+    if (typeof answers.vipClientDescription === "string")
+      payload.vipClientDescription = answers.vipClientDescription;
+    if (typeof answers.socialFollowers === "number")
+      payload.socialFollowers = answers.socialFollowers;
+    if (typeof answers.isAvailableNow === "boolean")
+      payload.isAvailableNow = answers.isAvailableNow;
+    if (typeof answers.downtimeUntil === "string")
+      payload.downtimeUntil = answers.downtimeUntil;
     // BUG-6 + C-2: photos は https:// 始まりの URL のみ送信する allowlist 方式。
     //   blob: / Blob: / BLOB: / data: / javascript: / file:// / http:// 等を全て弾く。
     //   サーバ側 (route.ts) でも同じ allowlist で防御する。

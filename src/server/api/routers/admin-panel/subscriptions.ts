@@ -35,6 +35,8 @@ const changePlanInput = z.object({
   // 未指定なら SubscriptionPlanConfig 由来 (= プランの既定値) のまま。
   offerLimit: z.number().int().min(0).nullable().optional(),
   maxStores: z.number().int().min(1).nullable().optional(),
+  // 契約ごとに毎月請求する金額。null の場合はプラン標準価格を使う。
+  customMonthlyPriceJpy: z.number().int().min(0).nullable().optional(),
   note: z.string().max(500).optional(),
 });
 
@@ -118,6 +120,7 @@ export const adminSubscriptionsPanelRouter = createTRPCRouter({
         input.offerLimit !== undefined ? input.offerLimit : planConfig?.offerLimit ?? null;
       const maxStores =
         input.maxStores !== undefined ? input.maxStores : planConfig?.maxStores ?? null;
+      const customMonthlyPriceJpy = input.customMonthlyPriceJpy ?? null;
       const planConfigId = planConfig?.id ?? null;
 
       // 監査ログ: admin の手動操作は console に構造化して残す。
@@ -130,6 +133,7 @@ export const adminSubscriptionsPanelRouter = createTRPCRouter({
         status,
         offerLimit,
         maxStores,
+        customMonthlyPriceJpy,
         planConfigId,
         note: input.note ?? null,
       });
@@ -141,6 +145,7 @@ export const adminSubscriptionsPanelRouter = createTRPCRouter({
           status,
           offerLimit,
           maxStores,
+          customMonthlyPriceJpy,
           planConfigId,
         },
         create: {
@@ -149,6 +154,7 @@ export const adminSubscriptionsPanelRouter = createTRPCRouter({
           status,
           offerLimit,
           maxStores,
+          customMonthlyPriceJpy,
           planConfigId,
         },
       });

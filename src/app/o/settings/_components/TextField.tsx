@@ -5,7 +5,7 @@ interface TextFieldProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  type?: "text" | "email" | "tel";
+  type?: "text" | "email" | "tel" | "password";
   hint?: string;
   optional?: boolean;
   maxLength?: number;

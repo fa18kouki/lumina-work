@@ -13,19 +13,38 @@ export type DiagnosisStep =
 export type CastRank = "S" | "A" | "B" | "C";
 
 export interface DiagnosisAnswers {
-  // 基本情報
+  // 基本情報・連絡先
+  nickname?: string;
   age?: number;
+  birthDate?: string;
+  instagramId?: string;
+  lineId?: string;
+  currentListingUrl?: string;
 
   // 経験・スキル（Cast.totalExperienceYears 等に対応）
   totalExperienceYears?: number;
   previousHourlyRate?: number;
+  monthlySales?: number;
+  monthlyNominations?: number;
   alcoholTolerance?: string;
 
   // 希望条件（Cast.desiredAreas 等に対応）
   desiredAreas?: string[];
   desiredHourlyRate?: number;
+  desiredMonthlyIncome?: number;
   availableDaysPerWeek?: number;
   preferredAtmosphere?: string[];
+  preferredClientele?: string[];
+
+  // リスク回避・即日稼働
+  isAvailableNow?: boolean;
+  downtimeUntil?: string;
+
+  // Sランク査定用
+  birthdaySales?: number;
+  hasVipClients?: boolean;
+  vipClientDescription?: string;
+  socialFollowers?: number;
 
   // 強み・特徴
   strengths?: string[];

@@ -534,6 +534,8 @@ model Subscription {
   trialEndsAt          DateTime?          @map("trial_ends_at")
   currentPeriodStart   DateTime?          @map("current_period_start")
   currentPeriodEnd     DateTime?          @map("current_period_end")
+  // この契約に対して毎月請求する個別月額。null の場合は planConfig.monthlyPriceJpy を使う。
+  customMonthlyPriceJpy Int?              @map("custom_monthly_price_jpy")
 
   // プランマスタへの参照（RUN-237 で追加）
   planConfigId String?                 @map("plan_config_id")

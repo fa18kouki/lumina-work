@@ -13,6 +13,7 @@ type TabId =
   | "tax"
   | "address"
   | "billing"
+  | "credentials"
   | "referral"
   | "danger";
 
@@ -21,6 +22,7 @@ const TABS: { id: TabId; label: string; danger?: boolean }[] = [
   { id: "tax", label: "法人・税務情報" },
   { id: "address", label: "住所" },
   { id: "billing", label: "請求担当者" },
+  { id: "credentials", label: "ログイン情報" },
   { id: "referral", label: "紹介コード" },
   { id: "danger", label: "アカウント削除", danger: true },
 ];
@@ -104,6 +106,7 @@ export default function OwnerSettingsPage() {
               billingContactPhone={profile?.billingContactPhone ?? ""}
             />
           )}
+          {tab === "credentials" && <CredentialsSection />}
           {tab === "referral" && (
             <ReferralSection referralCode={profile?.referralCode ?? null} />
           )}
@@ -423,6 +426,87 @@ function BillingSection({
           placeholder="例: 03-1234-5678"
           maxLength={30}
         />
+        <SaveButton
+          isPending={mutation.isPending}
+          isSuccess={mutation.isSuccess}
+          errorMessage={mutation.error?.message}
+          onClick={handleSave}
+        />
+      </div>
+    </SectionCard>
+  );
+}
+
+/* ============== ログイン情報 ============== */
+function CredentialsSection() {
+  const [email, setEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const mutation = trpc.owner.updateCredentials.useMutation({
+    onSuccess: () => {
+      setEmail("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setLocalError(null);
+    },
+  });
+
+  const handleSave = () => {
+    setLocalError(null);
+    if (!email.trim() && !newPassword) {
+      setLocalError("変更するメールアドレスまたはパスワードを入力してください");
+      return;
+    }
+    if (newPassword && newPassword !== confirmPassword) {
+      setLocalError("確認用パスワードが一致しません");
+      return;
+    }
+    mutation.mutate({
+      email: email.trim() || undefined,
+      newPassword: newPassword || undefined,
+    });
+  };
+
+  return (
+    <SectionCard
+      title="ログイン情報"
+      description="管理者が発行した仮メール・仮パスワードは、ここから自分の情報へ変更できます。"
+    >
+      <div className="space-y-4">
+        <TextField
+          label="新しいログインメール"
+          optional
+          type="email"
+          value={email}
+          onChange={setEmail}
+          placeholder="新しいメールアドレス"
+          maxLength={320}
+        />
+        <TextField
+          label="新しいパスワード"
+          optional
+          type="password"
+          value={newPassword}
+          onChange={setNewPassword}
+          placeholder="8文字以上"
+          maxLength={128}
+        />
+        <TextField
+          label="新しいパスワード（確認）"
+          optional
+          type="password"
+          value={confirmPassword}
+          onChange={setConfirmPassword}
+          placeholder="同じパスワードを入力"
+          maxLength={128}
+        />
+        {localError && (
+          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {localError}
+          </p>
+        )}
         <SaveButton
           isPending={mutation.isPending}
           isSuccess={mutation.isSuccess}

@@ -31,13 +31,29 @@ function makeRequest(body: unknown): Request {
 }
 
 const validAnswers = {
+  nickname: "あい",
   age: 25,
+  birthDate: "2001-04-02",
+  instagramId: "@ai_lumina",
+  lineId: "ai_line",
+  currentListingUrl: "https://example.com/listing/ai",
   totalExperienceYears: 2,
+  previousHourlyRate: 5000,
+  monthlySales: 200,
+  monthlyNominations: 20,
   desiredAreas: ["新宿", "渋谷"],
   desiredHourlyRate: 4000,
+  desiredMonthlyIncome: 70,
   availableDaysPerWeek: 3,
   alcoholTolerance: "MODERATE" as const,
   preferredAtmosphere: ["落ち着いた店"],
+  preferredClientele: ["経営者・役員"],
+  birthdaySales: 300,
+  hasVipClients: true,
+  vipClientDescription: "IT企業の経営者",
+  socialFollowers: 7500,
+  isAvailableNow: false,
+  downtimeUntil: "2026-07-01",
   photos: ["https://example.com/photo1.jpg"],
 };
 
@@ -132,10 +148,29 @@ describe("POST /api/auth/apply-diagnosis-to-cast", () => {
       data: Record<string, unknown>;
     };
     expect(args.where.id).toBe("cast-1");
+    expect(args.data.nickname).toBe("あい");
     expect(args.data.age).toBe(25);
+    expect(args.data.birthDate).toEqual(new Date("2001-04-02T00:00:00.000Z"));
+    expect(args.data.instagramId).toBe("@ai_lumina");
+    expect(args.data.lineId).toBe("ai_line");
+    expect(args.data.currentListingUrl).toBe("https://example.com/listing/ai");
+    expect(args.data.totalExperienceYears).toBe(2);
+    expect(args.data.previousHourlyRate).toBe(5000);
+    expect(args.data.monthlySales).toBe(2_000_000);
+    expect(args.data.monthlyNominations).toBe(20);
     expect(args.data.desiredAreas).toEqual(["新宿", "渋谷"]);
     expect(args.data.desiredHourlyRate).toBe(4000);
+    expect(args.data.desiredMonthlyIncome).toBe(700_000);
+    expect(args.data.availableDaysPerWeek).toBe(3);
     expect(args.data.alcoholTolerance).toBe("MODERATE");
+    expect(args.data.preferredAtmosphere).toEqual(["落ち着いた店"]);
+    expect(args.data.preferredClientele).toEqual(["経営者・役員"]);
+    expect(args.data.birthdaySales).toBe(3_000_000);
+    expect(args.data.hasVipClients).toBe(true);
+    expect(args.data.vipClientDescription).toBe("IT企業の経営者");
+    expect(args.data.socialFollowers).toBe(7500);
+    expect(args.data.isAvailableNow).toBe(false);
+    expect(args.data.downtimeUntil).toEqual(new Date("2026-07-01T00:00:00.000Z"));
     expect(args.data.diagnosisCompleted).toBe(true);
     expect(args.data.diagnosisCompletedAt).toBeInstanceOf(Date);
   });

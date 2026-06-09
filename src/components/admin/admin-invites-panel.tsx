@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { AdminDirectOwnerCreateForm } from "./admin-direct-owner-create-form";
 import { AdminInviteCreateForm } from "./admin-invite-create-form";
 import { AdminInviteList } from "./admin-invite-list";
 
@@ -28,6 +29,8 @@ export function AdminInvitesPanel() {
           `/o/dashboard` にログインできるようになります。
         </p>
       </header>
+
+      <AdminDirectOwnerCreateForm />
 
       <AdminInviteCreateForm />
 

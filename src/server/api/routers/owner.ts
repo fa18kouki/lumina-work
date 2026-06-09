@@ -121,6 +121,73 @@ export const ownerRouter = createTRPCRouter({
     }),
 
   /**
+   * オーナーのログインメール / パスワード変更
+   * 管理者が仮メール・仮パスワードで作成した後、本人がログインして自分の認証情報へ変更するためのAPI。
+   */
+  updateCredentials: ownerProcedure
+    .input(
+      z
+        .object({
+          email: z.string().email().max(320).optional(),
+          newPassword: z.string().min(8).max(128).optional(),
+        })
+        .refine((v) => v.email !== undefined || v.newPassword !== undefined, {
+          message: "変更するメールアドレスまたはパスワードを入力してください",
+        }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = await ctx.prisma.user.findUnique({
+        where: { id: ctx.session.user.id },
+        select: { id: true, email: true, supabaseAuthId: true },
+      });
+      if (!user?.supabaseAuthId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "認証ユーザーが見つかりません",
+        });
+      }
+
+      const nextEmail = input.email?.trim().toLowerCase();
+      if (nextEmail && nextEmail !== user.email) {
+        const conflict = await ctx.prisma.user.findFirst({
+          where: {
+            email: nextEmail,
+            deletedAt: null,
+            id: { not: user.id },
+          },
+          select: { id: true },
+        });
+        if (conflict) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "このメールアドレスは既に使われています",
+          });
+        }
+      }
+
+      const admin = getSupabaseAdminClient();
+      const { error } = await admin.auth.admin.updateUserById(user.supabaseAuthId, {
+        ...(nextEmail ? { email: nextEmail, email_confirm: true } : {}),
+        ...(input.newPassword ? { password: input.newPassword } : {}),
+      });
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Supabase credentials update failed: ${error.message}`,
+        });
+      }
+
+      if (nextEmail && nextEmail !== user.email) {
+        await ctx.prisma.user.update({
+          where: { id: user.id },
+          data: { email: nextEmail, emailVerified: new Date() },
+        });
+      }
+
+      return { success: true as const, email: nextEmail ?? user.email };
+    }),
+
+  /**
    * 所有店舗一覧
    */
   listStores: ownerProcedure.query(async ({ ctx }) => {

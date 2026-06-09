@@ -10,6 +10,44 @@ const listInput = paginationInput.extend({
   search: z.string().trim().min(1).max(120).optional(),
 });
 
+const castCsvColumns = [
+  "user_id",
+  "cast_id",
+  "email",
+  "phone",
+  "nickname",
+  "full_name",
+  "age",
+  "birth_date",
+  "rank",
+  "id_verified",
+  "is_suspended",
+  "desired_areas",
+  "desired_hourly_rate",
+  "desired_monthly_income",
+  "available_days_per_week",
+  "instagram_id",
+  "line_id",
+  "created_at",
+] as const;
+
+function formatCsvValue(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) return value.join(" / ");
+  const text = String(value);
+  if (/[",\n\r]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+function buildCsv(rows: unknown[][]): string {
+  return [castCsvColumns, ...rows]
+    .map((row) => row.map(formatCsvValue).join(","))
+    .join("\n");
+}
+
 export const adminUsersPanelRouter = createTRPCRouter({
   list: adminPanelProcedure.input(listInput).query(async ({ ctx, input }) => {
     const users = await ctx.prisma.user.findMany({
@@ -75,5 +113,92 @@ export const adminUsersPanelRouter = createTRPCRouter({
       }
 
       return user;
+    }),
+
+  exportCastsCsv: adminPanelProcedure.mutation(async ({ ctx }) => {
+    const casts = await ctx.prisma.user.findMany({
+      where: { role: "CAST", deletedAt: null },
+      include: {
+        cast: {
+          select: {
+            id: true,
+            nickname: true,
+            fullName: true,
+            age: true,
+            birthDate: true,
+            rank: true,
+            idVerified: true,
+            isSuspended: true,
+            desiredAreas: true,
+            desiredHourlyRate: true,
+            desiredMonthlyIncome: true,
+            availableDaysPerWeek: true,
+            instagramId: true,
+            lineId: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const csv = buildCsv(
+      casts.map((user) => [
+        user.id,
+        user.cast?.id,
+        user.email,
+        user.phone,
+        user.cast?.nickname,
+        user.cast?.fullName,
+        user.cast?.age,
+        user.cast?.birthDate,
+        user.cast?.rank,
+        user.cast?.idVerified,
+        user.cast?.isSuspended,
+        user.cast?.desiredAreas,
+        user.cast?.desiredHourlyRate,
+        user.cast?.desiredMonthlyIncome,
+        user.cast?.availableDaysPerWeek,
+        user.cast?.instagramId,
+        user.cast?.lineId,
+        user.createdAt,
+      ]),
+    );
+
+    return {
+      filename: `lumina-casts-${new Date().toISOString().slice(0, 10)}.csv`,
+      csv,
+      count: casts.length,
+    };
+  }),
+
+  softDelete: adminPanelProcedure
+    .input(z.object({ userId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.prisma.user.findFirst({
+        where: { id: input.userId, deletedAt: null },
+        select: { id: true, role: true },
+      });
+
+      if (!existing) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "ユーザーが見つかりません",
+        });
+      }
+
+      if (existing.role === "ADMIN") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "管理者ユーザーは画面から削除できません",
+        });
+      }
+
+      const deleted = await ctx.prisma.user.update({
+        where: { id: input.userId },
+        data: { deletedAt: new Date() },
+        select: { id: true, deletedAt: true },
+      });
+
+      return { success: true, userId: deleted.id, deletedAt: deleted.deletedAt };
     }),
 });

@@ -31,6 +31,7 @@ interface Props {
     currentStatus: string;
     offerLimit: number | null;
     maxStores: number | null;
+    customMonthlyPriceJpy: number | null;
   };
   onClose: () => void;
   onSaved: () => void;
@@ -39,6 +40,9 @@ interface Props {
 export function AdminSubscriptionEditModal({ target, onClose, onSaved }: Props) {
   const [plan, setPlan] = useState<Plan>(target.currentPlan as Plan);
   const [status, setStatus] = useState<Status>(target.currentStatus as Status);
+  const [customMonthlyPriceJpy, setCustomMonthlyPriceJpy] = useState(
+    target.customMonthlyPriceJpy?.toString() ?? "",
+  );
   const [note, setNote] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -58,6 +62,10 @@ export function AdminSubscriptionEditModal({ target, onClose, onSaved }: Props) 
       userId: target.userId,
       plan,
       status,
+      customMonthlyPriceJpy:
+        customMonthlyPriceJpy.trim() === ""
+          ? null
+          : Number(customMonthlyPriceJpy),
       note: note.trim() || undefined,
     });
   };
@@ -65,6 +73,7 @@ export function AdminSubscriptionEditModal({ target, onClose, onSaved }: Props) 
   const isDirty =
     plan !== target.currentPlan ||
     status !== target.currentStatus ||
+    customMonthlyPriceJpy !== (target.customMonthlyPriceJpy?.toString() ?? "") ||
     note.trim().length > 0;
 
   return (
@@ -130,6 +139,28 @@ export function AdminSubscriptionEditModal({ target, onClose, onSaved }: Props) 
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="custom-monthly-price-input"
+              className="block text-xs font-medium text-slate-700"
+            >
+              個別月額（税込/円）
+            </label>
+            <input
+              id="custom-monthly-price-input"
+              type="number"
+              min={0}
+              step={1}
+              value={customMonthlyPriceJpy}
+              onChange={(e) => setCustomMonthlyPriceJpy(e.target.value)}
+              placeholder="未入力ならプラン標準価格"
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              店舗ごとに金額を調整して毎月請求する場合に入力します。
+            </p>
           </div>
 
           <div>
