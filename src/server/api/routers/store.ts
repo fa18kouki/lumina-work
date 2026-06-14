@@ -11,6 +11,75 @@ import { dispatchNotification } from "@/server/notifications";
 
 const storeIdInput = z.object({ storeId: z.string() });
 
+export function buildPublicStoreVisibilityWhere(): Prisma.StoreWhereInput {
+  return {
+    isVerified: true,
+    deletedAt: null,
+    owner: {
+      is: {
+        deletedAt: null,
+        user: {
+          is: {
+            deletedAt: null,
+          },
+        },
+      },
+    },
+  };
+}
+
+export const publicStoreListingSelect = {
+  id: true,
+  name: true,
+  area: true,
+  description: true,
+  photos: true,
+  bannerUrl: true,
+  logoUrl: true,
+  storeType: true,
+  nearestStation: true,
+  walkMinutes: true,
+  salarySystem: true,
+  benefits: true,
+  businessHours: true,
+  regularHolidays: true,
+  hasTransportation: true,
+  hasDormitory: true,
+  hasDressRental: true,
+  hasHairMakeup: true,
+  hasQuota: true,
+  drinkingRequired: true,
+  dailyPayType: true,
+  hasNursery: true,
+  atmosphereTags: true,
+  signingBonus: true,
+  trialShiftInfo: true,
+} satisfies Prisma.StoreSelect;
+
+type PublicStoreListing = Prisma.StoreGetPayload<{ select: typeof publicStoreListingSelect }>;
+
+type PublicStoreListingPrisma = {
+  store: {
+    findMany: (args: Prisma.StoreFindManyArgs) => Promise<PublicStoreListing[]>;
+  };
+};
+
+export async function getPublicStoresForListing(
+  prisma: PublicStoreListingPrisma,
+): Promise<PublicStoreListing[]> {
+  try {
+    return await prisma.store.findMany({
+      where: buildPublicStoreVisibilityWhere(),
+      select: publicStoreListingSelect,
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
+  } catch (error) {
+    console.error("[store.getPublicList] failed to fetch public stores", error);
+    return [];
+  }
+}
+
 export const storeRouter = createTRPCRouter({
   /**
    * 店舗プロフィール取得
@@ -641,38 +710,7 @@ export const storeRouter = createTRPCRouter({
    * 公開店舗一覧取得（認証不要）
    */
   getPublicList: publicProcedure.query(async ({ ctx }) => {
-    const stores = await ctx.prisma.store.findMany({
-      where: { isVerified: true },
-      select: {
-        id: true,
-        name: true,
-        area: true,
-        description: true,
-        photos: true,
-        bannerUrl: true,
-        logoUrl: true,
-        storeType: true,
-        nearestStation: true,
-        walkMinutes: true,
-        salarySystem: true,
-        benefits: true,
-        businessHours: true,
-        regularHolidays: true,
-        hasTransportation: true,
-        hasDormitory: true,
-        hasDressRental: true,
-        hasHairMakeup: true,
-        hasQuota: true,
-        drinkingRequired: true,
-        dailyPayType: true,
-        hasNursery: true,
-        atmosphereTags: true,
-        signingBonus: true,
-        trialShiftInfo: true,
-      },
-      take: 10,
-      orderBy: { createdAt: "desc" },
-    });
+    const stores = await getPublicStoresForListing(ctx.prisma);
 
     return stores;
   }),
@@ -684,7 +722,7 @@ export const storeRouter = createTRPCRouter({
     .input(z.object({ storeId: z.string() }))
     .query(async ({ ctx, input }) => {
       const store = await ctx.prisma.store.findFirst({
-        where: { id: input.storeId, isVerified: true },
+        where: { id: input.storeId, ...buildPublicStoreVisibilityWhere() },
       });
 
       if (!store) {

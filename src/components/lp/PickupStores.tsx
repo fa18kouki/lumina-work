@@ -4,80 +4,110 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { MapPin } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 
-const TABS = ["すべて", "キャバクラ", "クラブ", "ラウンジ", "ガールズバー"] as const;
+const TABS = ["すべて", "キャバクラ", "クラブ", "ラウンジ", "ガールズバー", "その他"] as const;
 
 type Tab = (typeof TABS)[number];
 
-const PICKUP_STORES = [
-  {
-    id: "1",
-    name: "Club VENUS - 銀座本店",
-    prefecture: "東京都",
-    area: "銀座（錦三）",
-    access: "銀座駅 徒歩3分",
-    storeType: "キャバクラ" as const,
-    tags: ["日払いOK"],
-    hourlyRate: 8000,
-    backRate: 60,
-    image: "/champagne-night-view.png",
-  },
-  {
-    id: "2",
-    name: "Lounge Royal - 六本木",
-    prefecture: "東京都",
-    area: "六本木",
-    access: "六本木駅 徒歩1分",
-    storeType: "ラウンジ" as const,
-    tags: ["高時給", "未経験歓迎"],
-    hourlyRate: 6000,
-    backRate: 50,
-    image: "/champagne-night-view.png",
-  },
-  {
-    id: "3",
-    name: "Night Garden - 新宿",
-    prefecture: "東京都",
-    area: "新宿・歌舞伎町",
-    access: "新宿駅 徒歩5分",
-    storeType: "キャバクラ" as const,
-    tags: ["週1OK", "送迎あり"],
-    hourlyRate: 5000,
-    backRate: 45,
-    image: "/champagne-night-view.png",
-  },
-  {
-    id: "4",
-    name: "銀座 First Lounge（サンプル）",
-    prefecture: "東京都",
-    area: "銀座",
-    access: "銀座一丁目 徒歩4分",
-    storeType: "クラブ" as const,
-    tags: ["高時給"],
-    hourlyRate: 12000,
-    backRate: 55,
-    image: "/champagne-night-view.png",
-  },
-];
+type PublicStore = {
+  id: string;
+  name: string;
+  area: string;
+  description: string | null;
+  photos: string[];
+  bannerUrl: string | null;
+  logoUrl: string | null;
+  storeType: "CABARET" | "CLUB" | "LOUNGE" | "GIRLS_BAR" | "SNACK" | "OTHER" | null;
+  nearestStation: string | null;
+  walkMinutes: number | null;
+  salarySystem: unknown;
+  benefits: string[];
+  businessHours: string | null;
+  regularHolidays: string | null;
+  hasTransportation: boolean;
+  hasDormitory: boolean;
+  hasDressRental: boolean;
+  hasHairMakeup: boolean;
+  hasQuota: boolean;
+  drinkingRequired: boolean;
+  dailyPayType: "NONE" | "PARTIAL" | "FULL";
+  hasNursery: boolean;
+  atmosphereTags: string[];
+  signingBonus: number | null;
+  trialShiftInfo: unknown;
+};
+
+type PickupStoreCard = {
+  id: string;
+  name: string;
+  area: string;
+  access: string;
+  storeType: string;
+  tab: Exclude<Tab, "すべて">;
+  tags: string[];
+  hourlyRate: number | null;
+  image: string;
+};
+
+const STORE_TYPE_LABELS: Record<NonNullable<PublicStore["storeType"]>, Exclude<Tab, "すべて">> = {
+  CABARET: "キャバクラ",
+  CLUB: "クラブ",
+  LOUNGE: "ラウンジ",
+  GIRLS_BAR: "ガールズバー",
+  SNACK: "その他",
+  OTHER: "その他",
+};
+
+function getHourlyRateMin(salarySystem: unknown): number | null {
+  if (!salarySystem || typeof salarySystem !== "object") return null;
+  const value = (salarySystem as { hourlyRateMin?: unknown }).hourlyRateMin;
+  return typeof value === "number" ? value : null;
+}
+
+export function toPickupStoreCardModel(store: PublicStore): PickupStoreCard {
+  const tab = store.storeType ? STORE_TYPE_LABELS[store.storeType] : "その他";
+  const access = store.nearestStation
+    ? `${store.nearestStation}${store.walkMinutes ? ` 徒歩${store.walkMinutes}分` : ""}`
+    : store.area;
+
+  return {
+    id: store.id,
+    name: store.name,
+    area: store.area,
+    access,
+    storeType: store.storeType ? STORE_TYPE_LABELS[store.storeType] : "掲載店舗",
+    tab,
+    tags: [...(store.benefits ?? []), ...(store.atmosphereTags ?? [])].filter(Boolean).slice(0, 2),
+    hourlyRate: getHourlyRateMin(store.salarySystem),
+    image: store.bannerUrl ?? store.photos?.[0] ?? "/champagne-night-view.png",
+  };
+}
 
 export function PickupStores() {
   const [tab, setTab] = useState<Tab>("すべて");
+  const { data: publicStores = [], isLoading, isError } = trpc.store.getPublicList.useQuery();
+
+  const stores = useMemo(
+    () => publicStores.map((store) => toPickupStoreCardModel(store)).slice(0, 6),
+    [publicStores],
+  );
 
   const filtered = useMemo(() => {
-    if (tab === "すべて") return PICKUP_STORES;
-    return PICKUP_STORES.filter((s) => s.storeType === tab);
-  }, [tab]);
+    if (tab === "すべて") return stores;
+    return stores.filter((s) => s.tab === tab);
+  }, [stores, tab]);
 
   return (
     <section className="border-t border-stone-100 bg-stone-50 py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold text-pink-500">掲載店舗</p>
+          <p className="text-sm font-semibold text-pink-500">新着店舗</p>
           <h2 className="mt-2 text-2xl font-bold text-stone-900 md:text-4xl">
-            掲載されているお店を一部紹介
+            掲載されたばかりのお店をチェック
           </h2>
           <p className="mt-3 text-sm text-stone-600">
-            実際の検索では、エリアや条件でさらに絞り込めます（掲載例・デザインイメージ）。
+            管理側で審査済みの店舗だけを、新着順に一部掲載しています。
           </p>
         </div>
 
@@ -98,52 +128,72 @@ export function PickupStores() {
           ))}
         </div>
 
-        <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((store) => (
-            <li
-              key={store.id}
-              className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md"
-            >
-              <div className="relative h-44">
-                <Image src={store.image} alt={store.name} fill className="object-cover" />
-                <div className="absolute bottom-2 left-2 flex flex-wrap gap-1.5">
-                  <span className="rounded bg-black/65 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
-                    {store.storeType}
-                  </span>
-                  {store.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded bg-black/65 px-2 py-0.5 text-xs text-white backdrop-blur-sm"
-                    >
-                      {tag}
-                    </span>
-                  ))}
+        {isLoading ? (
+          <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <li key={index} className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+                <div className="h-44 animate-pulse bg-stone-200" />
+                <div className="space-y-3 p-4">
+                  <div className="h-5 w-2/3 animate-pulse rounded bg-stone-200" />
+                  <div className="h-4 w-1/2 animate-pulse rounded bg-stone-100" />
+                  <div className="h-7 w-1/3 animate-pulse rounded bg-stone-100" />
                 </div>
-              </div>
-              <div className="p-4">
-                <h3 className="text-lg font-bold text-stone-900">{store.name}</h3>
-                <ul className="mt-2 space-y-0.5 text-sm text-stone-600">
-                  <li className="flex items-center gap-1">
-                    <span className="text-stone-400">{store.prefecture}</span>
-                  </li>
-                  <li className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 shrink-0 text-pink-400" aria-hidden />
-                    {store.area}
-                  </li>
-                  <li className="text-xs text-stone-500">{store.access}</li>
-                </ul>
-                <p className="mt-4 text-xs text-stone-500">時給（目安・サンプル）</p>
-                <p className="text-xl font-bold text-pink-500">
-                  {store.hourlyRate.toLocaleString("ja-JP")}円〜
-                </p>
-                <p className="mt-1 text-xs text-stone-500">本指名バック 最大{store.backRate}%（例）</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-
-        {filtered.length === 0 && (
-          <p className="mt-10 text-center text-sm text-stone-500">このカテゴリのサンプルは準備中です。</p>
+              </li>
+            ))}
+          </ul>
+        ) : isError ? (
+          <p className="mt-10 text-center text-sm text-stone-500">
+            新着店舗の読み込みに失敗しました。時間をおいて再度お試しください。
+          </p>
+        ) : filtered.length > 0 ? (
+          <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((store) => (
+              <li
+                key={store.id}
+                className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md"
+              >
+                <div className="relative h-44">
+                  <Image src={store.image} alt={store.name} fill className="object-cover" />
+                  <div className="absolute left-2 top-2 rounded-full bg-pink-500 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                    NEW
+                  </div>
+                  <div className="absolute bottom-2 left-2 flex flex-wrap gap-1.5">
+                    <span className="rounded bg-black/65 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
+                      {store.storeType}
+                    </span>
+                    {store.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded bg-black/65 px-2 py-0.5 text-xs text-white backdrop-blur-sm"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-4">
+                  <h3 className="text-lg font-bold text-stone-900">{store.name}</h3>
+                  <ul className="mt-2 space-y-0.5 text-sm text-stone-600">
+                    <li className="flex items-center gap-1">
+                      <span className="text-stone-400">{store.area}</span>
+                    </li>
+                    <li className="flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 text-pink-400" aria-hidden />
+                      {store.access}
+                    </li>
+                  </ul>
+                  <p className="mt-4 text-xs text-stone-500">時給目安</p>
+                  <p className="text-xl font-bold text-pink-500">
+                    {store.hourlyRate ? `${store.hourlyRate.toLocaleString("ja-JP")}円〜` : "応相談"}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-10 text-center text-sm text-stone-500">
+            現在、このカテゴリで公開中の新着店舗はありません。
+          </p>
         )}
 
         <div className="mx-auto mt-12 max-w-lg">

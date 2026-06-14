@@ -48,6 +48,59 @@ function buildCsv(rows: unknown[][]): string {
     .join("\n");
 }
 
+type SoftDeleteAdminUserTx = {
+  owner: {
+    findUnique: (args: { where: { userId: string }; select: { id: true } }) => Promise<{ id: string } | null>;
+    updateMany: (args: {
+      where: { id: string; deletedAt: null };
+      data: { deletedAt: Date };
+    }) => Promise<unknown>;
+  };
+  store: {
+    updateMany: (args: {
+      where: { ownerId: string; deletedAt: null };
+      data: { deletedAt: Date };
+    }) => Promise<unknown>;
+  };
+  user: {
+    update: (args: {
+      where: { id: string };
+      data: { deletedAt: Date };
+      select: { id: true; deletedAt: true };
+    }) => Promise<{ id: string; deletedAt: Date | null }>;
+  };
+};
+
+export async function softDeleteAdminUserWithRelations(
+  tx: SoftDeleteAdminUserTx,
+  input: { userId: string; role: "CAST" | "OWNER" | "ADMIN" },
+  now = new Date(),
+): Promise<{ id: string; deletedAt: Date | null }> {
+  if (input.role === "OWNER") {
+    const owner = await tx.owner.findUnique({
+      where: { userId: input.userId },
+      select: { id: true },
+    });
+
+    if (owner) {
+      await tx.store.updateMany({
+        where: { ownerId: owner.id, deletedAt: null },
+        data: { deletedAt: now },
+      });
+      await tx.owner.updateMany({
+        where: { id: owner.id, deletedAt: null },
+        data: { deletedAt: now },
+      });
+    }
+  }
+
+  return tx.user.update({
+    where: { id: input.userId },
+    data: { deletedAt: now },
+    select: { id: true, deletedAt: true },
+  });
+}
+
 export const adminUsersPanelRouter = createTRPCRouter({
   list: adminPanelProcedure.input(listInput).query(async ({ ctx, input }) => {
     const users = await ctx.prisma.user.findMany({
@@ -193,11 +246,12 @@ export const adminUsersPanelRouter = createTRPCRouter({
         });
       }
 
-      const deleted = await ctx.prisma.user.update({
-        where: { id: input.userId },
-        data: { deletedAt: new Date() },
-        select: { id: true, deletedAt: true },
-      });
+      const deleted = await ctx.prisma.$transaction((tx) =>
+        softDeleteAdminUserWithRelations(tx, {
+          userId: input.userId,
+          role: existing.role,
+        }),
+      );
 
       return { success: true, userId: deleted.id, deletedAt: deleted.deletedAt };
     }),
